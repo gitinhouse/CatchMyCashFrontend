@@ -1,95 +1,122 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+'use client'
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import LandingPage from './components/LandingPage';
+import FloatingElements from './components/uicomponents/FloatingElements';
+import PropertySearch from './components/PropertySearch';
+import ProgressHeader from './components/uicomponents/ProgressHeader';
+import LoadingOverlay from './components/uicomponents/LoadingOverlay';
+import  PropertyResults from './components/PropertyResults';
+import UserInformation from './components/UserInformation';
+import FormAutomation from './components/FormAutomation';
+
+
+
 
 export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.js</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [currentStep, setCurrentStep] = useState('landing');
+  const [userData, setUserData] = useState({});
+  const [propertyData, setPropertyData] = useState(null);
+  const [referralCode, setReferralCode] = useState(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+
+  
+
+  const handleStepChange = (step, data) => {
+    setIsTransitioning(true);
+    
+    setTimeout(() => {
+      setCurrentStep(step);
+      if (data) {
+        if (step === 'results') {
+          setPropertyData(data);
+        } else if (step === 'automation') {
+          setUserData(data);
+        }
+      }
+      setIsTransitioning(false);
+      window.scrollTo(0, 0);
+    }, 300);
+  };
+
+  const renderCurrentStep = () => {
+    const pageVariants = {
+      initial: { 
+        opacity: 0, 
+        y: 20, 
+        scale: 0.95 
+      },
+      in: { 
+        opacity: 1, 
+        y: 0, 
+        scale: 1,
+        transition: {
+          duration: 0.6,
+          ease: [0.16, 1, 0.3, 1]
+        }
+      },
+      out: { 
+        opacity: 0, 
+        y: -20, 
+        scale: 1.05,
+        transition: {
+          duration: 0.4,
+          ease: [0.4, 0, 1, 1]
+        }
+      }
+    };
+
+    const stepComponents = {
+      landing: <LandingPage onNext={() => handleStepChange('search')} />,
+      search: <PropertySearch onNext={(data) => handleStepChange('results', data)} />,
+      results: <PropertyResults 
+        propertyData={propertyData} 
+        onNext={() => handleStepChange('userinfo')} 
+      />,
+      userinfo: <UserInformation onNext={(data) => handleStepChange('automation', data)} />,
+      automation: <FormAutomation 
+        userData={userData} 
+        onNext={() => handleStepChange('documents')} 
+      />,
+      // documents: <DocumentUpload onNext={() => handleStepChange('tracking')} />,
+      // tracking: <CaseTracking 
+      //   onViewLeaderboard={() => handleStepChange('leaderboard')}
+      //   onCreateReferral={() => handleStepChange('referral')}
+      // />,
+      // leaderboard: <Leaderboard onBack={() => handleStepChange('tracking')} />,
+      // referral: <ReferralSystem onBack={() => handleStepChange('tracking')} />
+    };
+
+    return (
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentStep}
+          variants={pageVariants}
+          initial="initial"
+          animate="in"
+          exit="out"
+          className="w-full"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          {stepComponents[currentStep] || stepComponents.landing}
+        </motion.div>
+      </AnimatePresence>
+    );
+  };
+
+  
+
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#0D1B2A] via-[#1a2332] to-[#0D1B2A] relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none">
+        <FloatingElements />
+      </div>     
+      <ProgressHeader currentStep={currentStep}/>
+      <div className={currentStep !== 'landing' ? 'pt-24' : ''}>
+        {renderCurrentStep()}
+      </div>  
+      <LoadingOverlay isTransitioning={isTransitioning} />
     </div>
   );
 }
