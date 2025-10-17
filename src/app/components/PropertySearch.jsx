@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSearchStore } from "../store/searchStore";
 import axios from "axios";
 import {
   Search,
@@ -28,6 +29,7 @@ const PropertySearch = ({ onNext }) => {
   const [searchProgress, setSearchProgress] = useState(0);
   const [currentSearchStep, setCurrentSearchStep] = useState("");
   const [validationError, setValidationError] = useState("");
+  const { setUserData, setSearchResults } = useSearchStore();
 
   const searchSteps = [
     "Initializing secure connection...",
@@ -131,8 +133,54 @@ const PropertySearch = ({ onNext }) => {
       }, 200);
 
       const { data } = await axios.post("/api/users", payload);
+      setUserData(data);
       setSearchProgress(100);
-           
+      setTimeout(() => {
+        const mockResults = {
+          name: `${firstName.trim()} ${lastName.trim()}`,
+          address: {
+            street: address.trim(),
+            city: city.trim(),
+            state: state,
+            zipCode: zipCode.trim(),
+          },
+          properties: [
+            {
+              id: 1,
+              type: "Bank Account",
+              holder: "Wells Fargo Bank",
+              amount: "$2,847.50",
+              reportDate: "2019-03-15",
+              status: "Available",
+              lastKnownAddress: `${address.trim()}, ${city.trim()}, CA ${zipCode.trim()}`,
+            },
+            {
+              id: 2,
+              type: "Insurance Refund",
+              holder: "State Farm Insurance",
+              amount: "$1,293.00",
+              reportDate: "2020-07-22",
+              status: "Available",
+              lastKnownAddress: `${address.trim()}, ${city.trim()}, CA ${zipCode.trim()}`,
+            },
+            {
+              id: 3,
+              type: "Utility Deposit",
+              holder: "Pacific Gas & Electric",
+              amount: "$156.75",
+              reportDate: "2021-01-10",
+              status: "Available",
+              lastKnownAddress: `Previous address linked to current`,
+            },
+          ],
+          totalAmount: "$4,297.25",
+          searchTime: "4.2 seconds",
+          databasesSearched: 52,
+          addressMatches: 3,
+        };
+
+        onNext(mockResults);
+      }, 4800);
       // setTimeout(() => {
       //   onNext(data);
       // }, 500);
@@ -143,53 +191,6 @@ const PropertySearch = ({ onNext }) => {
       );
       setIsSearching(false);
     }
-
-    setTimeout(() => {
-      const mockResults = {
-        name: `${firstName.trim()} ${lastName.trim()}`,
-        address: {
-          street: address.trim(),
-          city: city.trim(),
-          state: state,
-          zipCode: zipCode.trim(),
-        },
-        properties: [
-          {
-            id: 1,
-            type: "Bank Account",
-            holder: "Wells Fargo Bank",
-            amount: "$2,847.50",
-            reportDate: "2019-03-15",
-            status: "Available",
-            lastKnownAddress: `${address.trim()}, ${city.trim()}, CA ${zipCode.trim()}`,
-          },
-          {
-            id: 2,
-            type: "Insurance Refund",
-            holder: "State Farm Insurance",
-            amount: "$1,293.00",
-            reportDate: "2020-07-22",
-            status: "Available",
-            lastKnownAddress: `${address.trim()}, ${city.trim()}, CA ${zipCode.trim()}`,
-          },
-          {
-            id: 3,
-            type: "Utility Deposit",
-            holder: "Pacific Gas & Electric",
-            amount: "$156.75",
-            reportDate: "2021-01-10",
-            status: "Available",
-            lastKnownAddress: `Previous address linked to current`,
-          },
-        ],
-        totalAmount: "$4,297.25",
-        searchTime: "4.2 seconds",
-        databasesSearched: 52,
-        addressMatches: 3,
-      };
-
-      onNext(mockResults);
-    }, 4800);
   };
 
   const isFormValid =
@@ -571,7 +572,7 @@ const PropertySearch = ({ onNext }) => {
                               }}
                               className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
                             />
-                            Searching {searchProgress.toFixed(0)}%...
+                              Searching {searchProgress.toFixed(0)}%...
                           </>
                         ) : isFormValid ? (
                           <>
@@ -581,10 +582,34 @@ const PropertySearch = ({ onNext }) => {
                         ) : (
                           <>
                             Complete Form to Continue
-                            <Lock className="h-5 w-5" />
+                           <Lock className="h-5 w-5" />
                           </>
                         )}
                       </span>
+                    </Button>
+
+                    <Button
+                      onClick={async () => {
+                        try {
+                          const res = await fetch("/api/downloadSCO");
+                          const data = await res.json();
+                          if (res.ok) {
+                           
+                            console.log(
+                              "Extracted files path:",
+                              data.extractedPath
+                            );
+                          } else {
+                            alert("Failed: " + data.error);
+                          }
+                        } catch (err) {
+                          console.error(err);
+                          alert("Something went wrong");
+                        }
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+                    >
+                      Download & Extract SCO Records
                     </Button>
                   </motion.div>
                 </motion.div>
