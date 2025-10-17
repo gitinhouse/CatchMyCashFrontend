@@ -12,7 +12,10 @@
     "@radix-ui/react-progress": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
     "@tailwindcss/postcss": "^4.1.14",
+    "axios": "^1.12.2",
     "class-variance-authority": "^0.7.1",
+    "docusign-esign": "^7.0.0",
+    "formidable": "^3.5.4",
     "framer-motion": "^12.23.24",
     "lucide-react": "^0.545.0",
     "mongoose": "^8.19.1",
@@ -26,6 +29,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "eslint": "^9",
-    "eslint-config-next": "15.5.5"
+    "eslint-config-next": "15.5.5",
+    "patch-package": "^8.0.1"
   }
 }

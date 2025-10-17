@@ -9,6 +9,10 @@ import LoadingOverlay from './components/uicomponents/LoadingOverlay';
 import  PropertyResults from './components/PropertyResults';
 import UserInformation from './components/UserInformation';
 import FormAutomation from './components/FormAutomation';
+import DocumentUpload from './components/DocumentUpload';
+import  CaseTracking  from './components/CaseTracking';
+import ReferralSystem from './components/ReferralSystem';
+import Leaderboard from './components/Leaderboared';
 
 
 
@@ -79,13 +83,13 @@ export default function Home() {
         userData={userData} 
         onNext={() => handleStepChange('documents')} 
       />,
-      // documents: <DocumentUpload onNext={() => handleStepChange('tracking')} />,
-      // tracking: <CaseTracking 
-      //   onViewLeaderboard={() => handleStepChange('leaderboard')}
-      //   onCreateReferral={() => handleStepChange('referral')}
-      // />,
-      // leaderboard: <Leaderboard onBack={() => handleStepChange('tracking')} />,
-      // referral: <ReferralSystem onBack={() => handleStepChange('tracking')} />
+      documents: <DocumentUpload onNext={() => handleStepChange('tracking')} />,
+      tracking: <CaseTracking 
+        onViewLeaderboard={() => handleStepChange('leaderboard')}
+        onCreateReferral={() => handleStepChange('referral')}
+      />,
+      leaderboard: <Leaderboard onBack={() => handleStepChange('tracking')} />,
+      referral: <ReferralSystem onBack={() => handleStepChange('tracking')} />
     };
 
     return (
