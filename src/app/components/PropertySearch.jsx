@@ -587,7 +587,7 @@ const PropertySearch = ({ onNext }) => {
                         )}
                       </span>
                     </Button>
-
+{/* 
                     <Button
                       onClick={async () => {
                         try {
@@ -610,7 +610,7 @@ const PropertySearch = ({ onNext }) => {
                       className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
                     >
                       Download & Extract SCO Records
-                    </Button>
+                    </Button> */}
                   </motion.div>
                 </motion.div>
               </motion.div>

@@ -48,3 +48,6 @@ next-env.d.ts
 .ssh/
 .viminfo
 .lesshst
+package.json
+/public/SCORecords
+tmp_All_Records.zip
