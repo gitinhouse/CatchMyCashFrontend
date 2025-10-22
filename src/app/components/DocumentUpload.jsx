@@ -44,32 +44,32 @@ const DocumentUpload = ({ onNext }) => {
   ];
 
   const handleDocuSign = async () => {
-    const firstName = userData?.first_name;
-    const lastName = userData?.last_name;
-    const email = "asd@gmail.com";
-    try {
-      const res = await fetch("/api/docusign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, lastName, email }),
-      });
-      const data = await res.json();
+    // const firstName = userData?.first_name;
+    // const lastName = userData?.last_name;
+    // const email = "asd@gmail.com";
+    // try {
+    //   const res = await fetch("/api/docusign", {
+    //     method: "POST",
+    //     headers: { "Content-Type": "application/json" },
+    //     body: JSON.stringify({ firstName, lastName, email }),
+    //   });
+    //   const data = await res.json();
 
-      if (data.signingUrl) {
-        // redirect to DocuSign embedded signing
-        window.location.href = data.signingUrl;
-      } else {
-        setError(data.error || "Something went wrong.");
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-    // window.open("about:blank", "_blank");
-    // setTimeout(() => {
-    //   setDocusignComplete(true);
-    // }, 3000);
+    //   if (data.signingUrl) {
+    //     // redirect to DocuSign embedded signing
+    //     window.location.href = data.signingUrl;
+    //   } else {
+    //     setError(data.error || "Something went wrong.");
+    //   }
+    // } catch (err) {
+    //   setError(err.message);
+    // } finally {
+    //   setLoading(false);
+    // }
+    window.open("about:blank", "_blank");
+    setTimeout(() => {
+      setDocusignComplete(true);
+    }, 3000);
   };
 
   const handleUploadClick = (docId) => {
@@ -182,7 +182,7 @@ const DocumentUpload = ({ onNext }) => {
 
         {/* Step 2: QR Code & Upload Documents */}
         <Card className="p-6 mb-8">
-          {userId && (
+          {/* {userId && (
             <Card className="p-4 mb-4 text-center bg-white">
               <h3 className="text-lg font-bold text-gray-900 mb-4">
                 Access Your Case on Mobile
@@ -196,7 +196,7 @@ const DocumentUpload = ({ onNext }) => {
               </div>
               <p className="text-gray-500 mt-2 text-sm break-words">{qrUrl}</p>
             </Card>
-          )}
+          )} */}
 
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-white">
