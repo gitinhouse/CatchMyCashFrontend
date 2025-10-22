@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.bash_history
+.cache/
+.config/
+.npm/
+.pm2/
+.ssh/
+.viminfo
+.lesshst
