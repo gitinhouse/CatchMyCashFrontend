@@ -6,6 +6,7 @@ const UserPropertySchema = new mongoose.Schema({
     ref: "UserInformation",
     required: true,
   },
+  property_id: { type: String, required: true },
   property_type: { type: String, required: true },
   property_title: { type: String, required: true },
   amount: { type: Number, required: true },

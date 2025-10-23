@@ -114,7 +114,7 @@ const PropertySearch = ({ onNext }) => {
       last_name: lastName.trim(),
       address: address.trim(),
       city: city.trim(),
-      state,
+      state:"CA",
       zip_code: zipCode.trim(),
     };
 
@@ -134,56 +134,103 @@ const PropertySearch = ({ onNext }) => {
 
       const { data } = await axios.post("/api/users", payload);
       setUserData(data);
-      setSearchProgress(100);
-      setTimeout(() => {
-        const mockResults = {
-          name: `${firstName.trim()} ${lastName.trim()}`,
-          address: {
-            street: address.trim(),
-            city: city.trim(),
-            state: state,
-            zipCode: zipCode.trim(),
-          },
-          properties: [
-            {
-              id: 1,
-              type: "Bank Account",
-              holder: "Wells Fargo Bank",
-              amount: "$2,847.50",
-              reportDate: "2019-03-15",
-              status: "Available",
-              lastKnownAddress: `${address.trim()}, ${city.trim()}, CA ${zipCode.trim()}`,
-            },
-            {
-              id: 2,
-              type: "Insurance Refund",
-              holder: "State Farm Insurance",
-              amount: "$1,293.00",
-              reportDate: "2020-07-22",
-              status: "Available",
-              lastKnownAddress: `${address.trim()}, ${city.trim()}, CA ${zipCode.trim()}`,
-            },
-            {
-              id: 3,
-              type: "Utility Deposit",
-              holder: "Pacific Gas & Electric",
-              amount: "$156.75",
-              reportDate: "2021-01-10",
-              status: "Available",
-              lastKnownAddress: `Previous address linked to current`,
-            },
-          ],
-          totalAmount: "$4,297.25",
-          searchTime: "4.2 seconds",
-          databasesSearched: 52,
-          addressMatches: 3,
-        };
 
-        onNext(mockResults);
-      }, 4800);
+      const propertypPayload = {
+        first_name: firstName.trim().toUpperCase(),
+        last_name: lastName.trim().toUpperCase(),
+        address: address.trim().toUpperCase(),
+        city: city.trim().toUpperCase(),
+        state:"CA",
+        zip_code: zipCode.trim(),
+      };
+      const { totalMatched, currentPage, pageSize, matchedProperties } =
+        await axios
+          .post("/api/filterProperty", propertypPayload)
+          .then((res) => res.data);
+
+      console.log("---API Response:", matchedProperties);
+      setSearchProgress(100);
+      // setTimeout(() => {
+      //   const mockResults = {
+      //     name: `${firstName.trim()} ${lastName.trim()}`,
+      //     address: {
+      //       street: address.trim(),
+      //       city: city.trim(),
+      //       state: state,
+      //       zipCode: zipCode.trim(),
+      //     },
+      //     properties: [
+      //       {
+      //         id: 1,
+      //         type: "Bank Account",
+      //         holder: "Wells Fargo Bank",
+      //         amount: "$2,847.50",
+      //         reportDate: "2019-03-15",
+      //         status: "Available",
+      //         lastKnownAddress: `${address.trim()}, ${city.trim()}, CA ${zipCode.trim()}`,
+      //       },
+      //       {
+      //         id: 2,
+      //         type: "Insurance Refund",
+      //         holder: "State Farm Insurance",
+      //         amount: "$1,293.00",
+      //         reportDate: "2020-07-22",
+      //         status: "Available",
+      //         lastKnownAddress: `${address.trim()}, ${city.trim()}, CA ${zipCode.trim()}`,
+      //       },
+      //       {
+      //         id: 3,
+      //         type: "Utility Deposit",
+      //         holder: "Pacific Gas & Electric",
+      //         amount: "$156.75",
+      //         reportDate: "2021-01-10",
+      //         status: "Available",
+      //         lastKnownAddress: `Previous address linked to current`,
+      //       },
+      //     ],
+      //     totalAmount: "$4,297.25",
+      //     searchTime: "4.2 seconds",
+      //     databasesSearched: 52,
+      //     addressMatches: 3,
+      //   };
+
+      //   onNext(mockResults);
+      // }, 4800);
       // setTimeout(() => {
       //   onNext(data);
       // }, 500);
+   setTimeout(() => {
+  // Transform matchedProperties into your frontend format
+  const transformedProperties = matchedProperties.map((prop, index) => ({
+    id: prop.property_id, // or use prop._id if you prefer
+    type: prop.property_type,
+    holder: prop.owner_name,
+    amount: prop.current_cash_balance || prop.cash_reported,
+    reportDate:  new Date().toISOString().split("T")[0], // If you have a date field, set it here
+    status: "Available", // Or derive from your data
+    lastKnownAddress: `${prop.owner_street_1}, ${prop.owner_city}, ${prop.owner_state} ${prop.owner_zip}`,
+  }));
+
+  const results = {
+    name: `${firstName.trim()} ${lastName.trim()}`,
+    address: {
+      street: address.trim(),
+      city: city.trim(),
+      state: state,
+      zipCode: zipCode.trim(),
+    },
+    properties: transformedProperties,
+    totalAmount: transformedProperties
+      .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
+      .toLocaleString("en-US", { style: "currency", currency: "USD" }),
+    searchTime: "4.2 seconds", // optionally calculate real time
+    databasesSearched: 52, // if you track this
+    addressMatches: totalMatched,
+  };
+
+  onNext(results);
+}, 4800);
+   
     } catch (error) {
       console.error(error);
       setValidationError(
@@ -572,7 +619,7 @@ const PropertySearch = ({ onNext }) => {
                               }}
                               className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
                             />
-                              Searching {searchProgress.toFixed(0)}%...
+                            Searching {searchProgress.toFixed(0)}%...
                           </>
                         ) : isFormValid ? (
                           <>
@@ -582,19 +629,18 @@ const PropertySearch = ({ onNext }) => {
                         ) : (
                           <>
                             Complete Form to Continue
-                           <Lock className="h-5 w-5" />
+                            <Lock className="h-5 w-5" />
                           </>
                         )}
                       </span>
                     </Button>
-{/* 
+
                     <Button
                       onClick={async () => {
                         try {
                           const res = await fetch("/api/downloadSCO");
                           const data = await res.json();
                           if (res.ok) {
-                           
                             console.log(
                               "Extracted files path:",
                               data.extractedPath
@@ -610,7 +656,7 @@ const PropertySearch = ({ onNext }) => {
                       className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
                     >
                       Download & Extract SCO Records
-                    </Button> */}
+                    </Button>
                   </motion.div>
                 </motion.div>
               </motion.div>

@@ -5,11 +5,11 @@ import User from "../../models/UserInformation";
 
 export async function POST(req) {
   try {
-    const body = await req.json();
-    const { user_id, property_type, property_title, amount, reported_date } = body;
+   
+    const { user_id, properties } = await req.json();
 
-    if (!user_id || !property_type || !property_title || !amount || !reported_date) {
-      return NextResponse.json({ error: "All fields are required" }, { status: 400 });
+    if (!user_id || !properties || !properties.length) {
+      return NextResponse.json({ error: "Invalid request data" }, { status: 400 });
     }
     await connectToDatabase();
 
@@ -18,13 +18,19 @@ export async function POST(req) {
       return NextResponse.json({ error: "User not found with provided user_id" }, { status: 404 });
     }
 
-    const newProperty = await UserProperty.create({
+    const userProperties = properties.map((p) => ({
       user_id,
-      property_type,
-      property_title,
-      amount,
-      reported_date,
-    });
+      property_id: p.id.toString(),
+      property_type: p.type,
+      property_title: p.type, 
+      amount: parseFloat(p.amount || 0),
+      reported_date: p.reportDate,
+      status: false,
+    }));
+
+    await UserProperty.insertMany(userProperties);
+
+    return NextResponse.json({ message: "User properties saved successfully" }, { status: 201 });
 
     return NextResponse.json(newProperty, { status: 201 });
   } catch (error) {

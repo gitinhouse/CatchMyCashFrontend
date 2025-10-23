@@ -1,43 +1,74 @@
-import React, { useState } from 'react';
-import { Button } from './uicomponents/Button';
-import { Card } from './uicomponents/Card';
-import { Textarea } from './uicomponents/Textarea';
-import { Shield, FileText, Clock } from 'lucide-react';
-import { InputField } from './uicomponents/InputField';
-
+import React, { useState } from "react";
+import { Button } from "./uicomponents/Button";
+import { Card } from "./uicomponents/Card";
+import { Textarea } from "./uicomponents/Textarea";
+import { Shield, FileText, Clock } from "lucide-react";
+import { InputField } from "./uicomponents/InputField";
+import { useSearchStore } from "../store/searchStore";
+import axios from "axios";
 
 const UserInformation = ({ onNext }) => {
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    state: 'CA',
-    zipCode: '',
-    dateOfBirth: '',
-    ssn: '',
-    currentEmployer: '',
-    formerEmployers: '',
-    previousAddresses: ''
+    fullName: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "CA",
+    zipCode: "",
+    dateOfBirth: "",
+    ssn: "",
+    currentEmployer: "",
+    formerEmployers: "",
+    previousAddresses: "",
   });
-
+ const { userData } = useSearchStore();
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     // Validate required fields
-    const requiredFields = ['fullName', 'email', 'phone', 'address', 'city', 'zipCode', 'dateOfBirth', 'ssn'];
-    const missingFields = requiredFields.filter(field => !formData[field]);
-    
+    const requiredFields = [
+      "fullName",
+      "email",
+      "phone",
+      "address",
+      "city",
+      "zipCode",
+      "dateOfBirth",
+      "ssn",
+    ];
+    const missingFields = requiredFields.filter((field) => !formData[field]);
+
     if (missingFields.length > 0) {
-      alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
+      console.log(
+        `Please fill in all required fields: ${missingFields.join(", ")}`
+      );
       return;
     }
-
-    onNext(formData);
+    try {
+      const payload = {
+        user_id:userData._id,
+        legal_name: formData.fullName,
+        date_of_birth:formData.dateOfBirth,
+        email_id:formData.email,
+        contact_no:formData.phone,
+        address:formData.address,
+        city:formData.city,
+        state:formData.state,
+        zip_code:formData.zipCode,
+        ssn_id:formData.ssn,
+        company_name:formData.currentEmployer,
+        formal_employer:formData.formerEmployers,
+        previous_address:formData.previousAddresses
+      };
+      const { data } = await axios.post("/api/legalDetails", payload);
+      onNext(data);
+    } catch (err) {
+      console.error("Error saving user properties:", err);
+    }
   };
 
   return (
@@ -46,7 +77,9 @@ const UserInformation = ({ onNext }) => {
       <div className="glass-card border-b border-green-500/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <h1 className="text-3xl font-bold text-green-400">CatchMyCash</h1>
-          <p className="text-gray-300 mt-1">Investigator Agreement Information</p>
+          <p className="text-gray-300 mt-1">
+            Investigator Agreement Information
+          </p>
         </div>
       </div>
 
@@ -58,7 +91,8 @@ const UserInformation = ({ onNext }) => {
             Investigator Agreement
           </h2>
           <p className="text-gray-300 mb-6">
-            We need some information to prepare your legal documents and begin the recovery process
+            We need some information to prepare your legal documents and begin
+            the recovery process
           </p>
         </div>
 
@@ -66,7 +100,9 @@ const UserInformation = ({ onNext }) => {
         <Card className="glass-card-green p-6 border border-green-500/30 mb-8">
           <div className="flex items-center mb-4">
             <Shield className="h-6 w-6 text-green-400 mr-3" />
-            <h3 className="font-bold text-green-300">Your Information is Secure</h3>
+            <h3 className="font-bold text-green-300">
+              Your Information is Secure
+            </h3>
           </div>
           <div className="grid md:grid-cols-3 gap-4 text-sm text-green-400">
             <div>• 256-bit encryption</div>
@@ -80,7 +116,9 @@ const UserInformation = ({ onNext }) => {
             <div className="grid md:grid-cols-2 gap-6">
               {/* Personal Information */}
               <div className="md:col-span-2">
-                <h3 className="text-lg font-bold text-white mb-4">Personal Information</h3>
+                <h3 className="text-lg font-bold text-white mb-4">
+                  Personal Information
+                </h3>
               </div>
 
               <div>
@@ -90,7 +128,9 @@ const UserInformation = ({ onNext }) => {
                 <InputField
                   type="text"
                   value={formData.fullName}
-                  onChange={(e) => handleInputChange('fullName', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("fullName", e.target.value)
+                  }
                   placeholder="As it appears on government documents"
                   required
                 />
@@ -103,10 +143,12 @@ const UserInformation = ({ onNext }) => {
                 <InputField
                   type="date"
                   value={formData.dateOfBirth}
-                  onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("dateOfBirth", e.target.value)
+                  }
                   required
                   className={`block`}
-                  />
+                />
               </div>
 
               <div>
@@ -116,7 +158,7 @@ const UserInformation = ({ onNext }) => {
                 <InputField
                   type="email"
                   value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
                   placeholder="your@email.com"
                   required
                 />
@@ -129,7 +171,7 @@ const UserInformation = ({ onNext }) => {
                 <InputField
                   type="number"
                   value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  onChange={(e) => handleInputChange("phone", e.target.value)}
                   placeholder="(555) 123-4567"
                   required
                 />
@@ -142,11 +184,13 @@ const UserInformation = ({ onNext }) => {
                 <InputField
                   type="number"
                   value={formData.ssn}
-                  onChange={(e) => handleInputChange('ssn', e.target.value)}
+                  onChange={(e) => handleInputChange("ssn", e.target.value)}
                   placeholder="XXX-XX-XXXX"
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">Required for identity verification</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Required for identity verification
+                </p>
               </div>
 
               <div>
@@ -156,14 +200,18 @@ const UserInformation = ({ onNext }) => {
                 <InputField
                   type="text"
                   value={formData.currentEmployer}
-                  onChange={(e) => handleInputChange('currentEmployer', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("currentEmployer", e.target.value)
+                  }
                   placeholder="Company name"
                 />
               </div>
 
               {/* Address Information */}
               <div className="md:col-span-2 mt-6">
-                <h3 className="text-lg font-bold text-white mb-4">Current Address</h3>
+                <h3 className="text-lg font-bold text-white mb-4">
+                  Current Address
+                </h3>
               </div>
 
               <div className="md:col-span-2">
@@ -173,7 +221,7 @@ const UserInformation = ({ onNext }) => {
                 <InputField
                   type="text"
                   value={formData.address}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  onChange={(e) => handleInputChange("address", e.target.value)}
                   placeholder="123 Main St, Apt 1A"
                   required
                 />
@@ -186,7 +234,7 @@ const UserInformation = ({ onNext }) => {
                 <InputField
                   type="text"
                   value={formData.city}
-                  onChange={(e) => handleInputChange('city', e.target.value)}
+                  onChange={(e) => handleInputChange("city", e.target.value)}
                   placeholder="Los Angeles"
                   required
                 />
@@ -199,7 +247,7 @@ const UserInformation = ({ onNext }) => {
                 <InputField
                   type="number"
                   value={formData.zipCode}
-                  onChange={(e) => handleInputChange('zipCode', e.target.value)}
+                  onChange={(e) => handleInputChange("zipCode", e.target.value)}
                   placeholder="90210"
                   required
                 />
@@ -207,7 +255,9 @@ const UserInformation = ({ onNext }) => {
 
               {/* Additional Information */}
               <div className="md:col-span-2 mt-6">
-                <h3 className="text-lg font-bold text-white mb-4">Additional Information</h3>
+                <h3 className="text-lg font-bold text-white mb-4">
+                  Additional Information
+                </h3>
               </div>
 
               <div className="md:col-span-2">
@@ -216,7 +266,9 @@ const UserInformation = ({ onNext }) => {
                 </label>
                 <Textarea
                   value={formData.formerEmployers}
-                  onChange={(e) => handleInputChange('formerEmployers', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("formerEmployers", e.target.value)
+                  }
                   placeholder="List any companies you've worked for that might have unclaimed property..."
                   rows={3}
                 />
@@ -228,7 +280,9 @@ const UserInformation = ({ onNext }) => {
                 </label>
                 <Textarea
                   value={formData.previousAddresses}
-                  onChange={(e) => handleInputChange('previousAddresses', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("previousAddresses", e.target.value)
+                  }
                   placeholder="List any previous addresses where you might have lived..."
                   rows={3}
                 />
@@ -250,9 +304,11 @@ const UserInformation = ({ onNext }) => {
             <div className="flex items-center flex-wrap gap-1.5 justify-between mt-8">
               <div className="flex items-center  text-blue-600">
                 <Clock className="h-5 w-5 mr-2" />
-                <span className="text-sm">Next: Automatic form preparation</span>
+                <span className="text-sm">
+                  Next: Automatic form preparation
+                </span>
               </div>
-              <Button 
+              <Button
                 type="submit"
                 className="glass-button text-white px-8 py-3 hover:text-green-200"
               >
@@ -264,6 +320,6 @@ const UserInformation = ({ onNext }) => {
       </div>
     </div>
   );
-}
+};
 
-export default UserInformation
+export default UserInformation;
