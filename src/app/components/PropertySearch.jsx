@@ -148,7 +148,7 @@ const PropertySearch = ({ onNext }) => {
           .post("/api/filterProperty", propertypPayload)
           .then((res) => res.data);
 
-      console.log("---API Response:", matchedProperties);
+     
       setSearchProgress(100);
       // setTimeout(() => {
       //   const mockResults = {
@@ -635,7 +635,7 @@ const PropertySearch = ({ onNext }) => {
                       </span>
                     </Button>
 
-                    <Button
+                    {/* <Button
                       onClick={async () => {
                         try {
                           const res = await fetch("/api/downloadSCO");
@@ -656,7 +656,7 @@ const PropertySearch = ({ onNext }) => {
                       className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
                     >
                       Download & Extract SCO Records
-                    </Button>
+                    </Button> */}
                   </motion.div>
                 </motion.div>
               </motion.div>
