@@ -22,7 +22,9 @@ const UserInformation = ({ onNext }) => {
     formerEmployers: "",
     previousAddresses: "",
   });
- const { userData } = useSearchStore();
+ const { userData, setUserAgreement } = useSearchStore();
+
+
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -64,7 +66,10 @@ const UserInformation = ({ onNext }) => {
         formal_employer:formData.formerEmployers,
         previous_address:formData.previousAddresses
       };
+     
       const { data } = await axios.post("/api/legalDetails", payload);
+      setUserAgreement(data);
+      localStorage.setItem("userAgreement", JSON.stringify(data));
       onNext(data);
     } catch (err) {
       console.error("Error saving user properties:", err);

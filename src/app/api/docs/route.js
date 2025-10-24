@@ -1,39 +1,82 @@
-import { NextResponse } from "next/server";
-import connectToDatabase from "../../lib/mongodb";
-import userDocs from "../../models/userDocs";
-import User from "../../models/UserInformation";
+import fs from "fs";
+import path from "path";
+import connectToDatabase from "../../lib/mongodb.js";
+import User from "../../models/UserInformation.js";
+import UserDocs from "../../models/userDocs.js";
+
+export const config = { api: { bodyParser: false } };
 
 export async function POST(req) {
   try {
-    const body = await req.json();
-    const { user_id,case_id, proof_id, ssn_id, adress_proof, signed_doc } = body;
-
-    if (!user_id || !case_id || !proof_id || !ssn_id || !adress_proof || !signed_doc) {
-      return NextResponse.json({ error: "All fields are required" }, { status: 400 });
-    }
     await connectToDatabase();
 
+    const uploadDir = path.join(process.cwd(), "uploads");
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+    const formData = await req.formData();
+
+    const user_id = formData.get("user_id")?.toString();
+    const case_id = formData.get("case_id")?.toString();
+    const signed_doc = formData.get("signed_doc")?.toString();
+    if (!user_id || !case_id)
+      return new Response(
+        JSON.stringify({ error: "user_id and case_id required" }),
+        { status: 400 }
+      );
+
     const userExists = await User.findById(user_id);
-    if (!userExists) {
-      return NextResponse.json({ error: "User not found with provided user_id" }, { status: 404 });
+    if (!userExists)
+      return new Response(JSON.stringify({ error: "User not found" }), {
+        status: 404,
+      });
+
+    const docMapping = {
+      proof_id: "proof_id",
+      ssn_id: "ssn_id",
+      adress_proof: "adress_proof",
+      brith_proof: "brith_proof",
+      employee_proof: "employee_proof",
+    };
+
+    const documentPaths = {};
+
+    for (const [formKey, dbKey] of Object.entries(docMapping)) {
+      const file = formData.get(formKey); 
+      if (file && file.arrayBuffer) {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const filename = Date.now() + "-" + file.name;
+        const filePath = path.join(uploadDir, filename);
+        fs.writeFileSync(filePath, buffer);
+        documentPaths[dbKey] = filename;
+      }
     }
 
-    const newDocs = await userDocs.create({
+    // Check required files
+    const requiredFields = ["proof_id", "ssn_id", "adress_proof"];
+    for (const field of requiredFields) {
+      if (!documentPaths[field])
+        return new Response(JSON.stringify({ error: `${field} is required` }), {
+          status: 400,
+        });
+    }
+
+    const newDocs = await UserDocs.create({
       user_id,
       case_id,
-      proof_id,
-      ssn_id,
-      adress_proof,
       signed_doc,
+      ...documentPaths,
     });
 
-    return NextResponse.json(newDocs, { status: 201 });
-  } catch (error) {
-    console.error("POST /api/property error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return new Response(JSON.stringify(newDocs), { status: 201 });
+  } catch (err) {
+    console.error(err);
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+    });
   }
 }
 
+// GET endpoint remains unchanged
 export async function GET(req) {
   try {
     await connectToDatabase();
@@ -42,17 +85,21 @@ export async function GET(req) {
     const case_id = searchParams.get("case_id");
 
     if (case_id) {
-      const caseDocs = await userDocs.findById(case_id).populate("user_id", "first_name last_name email");
+      const caseDocs = await userDocs
+        .findById(case_id)
+        .populate("user_id", "first_name last_name email");
       if (!caseDocs) {
         return NextResponse.json({ error: "Docs not found" }, { status: 404 });
       }
       return NextResponse.json(caseDocs);
     } else {
-      const allProperties = await userDocs.find({}).populate("user_id", "first_name last_name email");
-      return NextResponse.json(allProperties);
+      const allDocs = await userDocs
+        .find({})
+        .populate("user_id", "first_name last_name email");
+      return NextResponse.json(allDocs);
     }
   } catch (error) {
-    console.error("GET /api/property error:", error);
+    console.error("GET /api/uploadDocs error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

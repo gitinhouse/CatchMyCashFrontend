@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import fs from "fs";
 import path from "path";
 import docusign from "docusign-esign";
+import { PDFDocument } from "pdf-lib";
 import { NextResponse } from "next/server";
 
 export async function POST(req) {
@@ -10,20 +11,24 @@ export async function POST(req) {
     const { firstName, lastName, email } = await req.json();
 
     if (!firstName || !lastName || !email) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
     }
 
-    // Initialize DocuSign client with proper sandbox OAuth and API base paths
+    // Initialize DocuSign client
     const dsApiClient = new docusign.ApiClient();
     dsApiClient.setOAuthBasePath("account-d.docusign.com");
     dsApiClient.setBasePath("https://demo.docusign.net/restapi");
 
     // Load private RSA key
     const privateKeyPath = path.join(process.cwd(), "private.pem");
-    if (!fs.existsSync(privateKeyPath)) throw new Error("Private key file not found");
+    if (!fs.existsSync(privateKeyPath))
+      throw new Error("Private key file not found");
     const privateKey = fs.readFileSync(privateKeyPath, "utf8");
 
-    // Request JWT user token
+    // Request JWT token
     const results = await dsApiClient.requestJWTUserToken(
       process.env.INTEGRATION_KEY.trim(),
       process.env.USER_ID.trim(),
@@ -38,13 +43,21 @@ export async function POST(req) {
 
     const envelopesApi = new docusign.EnvelopesApi(dsApiClient);
     const accountId = process.env.API_ACCOUNT_ID.trim();
-
-    // Load PDF document
-    const pdfPath = path.join(process.cwd(), "src", "app", "pdf", "agreement.pdf");
+    // Load PDF and determine last page
+    const pdfPath = path.join(
+      process.cwd(),
+      "src",
+      "app",
+      "pdf",
+      "agreement.pdf"
+    );
     if (!fs.existsSync(pdfPath)) throw new Error("PDF file not found");
-    const pdfBase64 = fs.readFileSync(pdfPath).toString("base64");
+    const pdfBytes = fs.readFileSync(pdfPath);
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+    const numberOfPages = pdfDoc.getPageCount();
 
-    // Prepare envelope definition
+    const pdfBase64 = pdfBytes.toString("base64");
+    // Create envelope definition
     const envelopeDefinition = new docusign.EnvelopeDefinition();
     envelopeDefinition.emailSubject = "Please sign this document";
     envelopeDefinition.documents = [
@@ -55,34 +68,36 @@ export async function POST(req) {
         documentId: "1",
       },
     ];
-    envelopeDefinition.recipients = {
-      signers: [
-        {
-          email,
-          name: `${firstName} ${lastName}`,
-          recipientId: "1",
-          routingOrder: "1",
-          clientUserId: "1234",
-          tabs: {
-            signHereTabs: [
-              {
-                documentId: "1",
-                pageNumber: "1",
-                xPosition: "100",
-                yPosition: "150",
-              },
-            ],
-          },
-        },
-      ],
-    };
+
+    // Create signer
+    const signer = new docusign.Signer();
+    signer.email = email;
+    signer.name = `${firstName} ${lastName}`;
+    signer.recipientId = "1";
+    signer.routingOrder = "1";
+    signer.clientUserId = "1234"; // embedded signing
+
+    // SignHere tab on the last page
+    const signHere = new docusign.SignHere();
+    signHere.documentId = "1";
+    signHere.pageNumber = numberOfPages.toString();
+    signHere.xPosition = "100"; // adjust as needed
+    signHere.yPosition = "740"; // adjust as needed
+
+    const tabs = new docusign.Tabs();
+    tabs.signHereTabs = [signHere];
+    signer.tabs = tabs;
+
+    envelopeDefinition.recipients = { signers: [signer] };
     envelopeDefinition.status = "sent";
 
-    // Create envelope and get ID
-    const envelopeResponse = await envelopesApi.createEnvelope(accountId, { envelopeDefinition });
+    // Create envelope
+    const envelopeResponse = await envelopesApi.createEnvelope(accountId, {
+      envelopeDefinition,
+    });
     const envelopeId = envelopeResponse.envelopeId;
 
-    // Create recipient view (embedded signing URL)
+    // Create recipient view (embedded signing)
     const viewRequest = new docusign.RecipientViewRequest();
     viewRequest.returnUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/signed?envelopeId=${envelopeId}`;
     viewRequest.authenticationMethod = "none";
@@ -90,13 +105,24 @@ export async function POST(req) {
     viewRequest.userName = `${firstName} ${lastName}`;
     viewRequest.clientUserId = "1234";
 
-    const recipientView = await envelopesApi.createRecipientView(accountId, envelopeId, {
-      recipientViewRequest: viewRequest,
+    const recipientView = await envelopesApi.createRecipientView(
+      accountId,
+      envelopeId,
+      {
+        recipientViewRequest: viewRequest,
+      }
+    );
+    return NextResponse.json({
+      success: true,
+      signingUrl: recipientView.url,
+      envelopeId,
     });
-
-    return NextResponse.json({ success: true, signingUrl: recipientView.url, envelopeId });
   } catch (err) {
-    console.error("DocuSign sendEnvelope error:", err.response?.body || err.message || err);
+    console.error(
+      "DocuSign sendEnvelope error:",
+      err.response?.body || err.message || err
+    );
+
     if (
       err.response?.body?.error === "invalid_grant" &&
       err.response?.body?.error_description?.includes("consent")
@@ -109,6 +135,10 @@ export async function POST(req) {
         { status: 400 }
       );
     }
-    return NextResponse.json({ error: "Failed to create envelope" }, { status: 500 });
+
+    return NextResponse.json(
+      { error: "Failed to create envelope" },
+      { status: 500 }
+    );
   }
 }

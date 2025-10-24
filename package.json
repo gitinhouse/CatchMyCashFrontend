@@ -18,11 +18,12 @@
     "csv-parser": "^3.2.0",
     "docusign-esign": "^7.0.0",
     "dotenv": "^17.2.3",
-    "formidable": "^3.5.4",
     "framer-motion": "^12.23.24",
     "lucide-react": "^0.545.0",
     "mongoose": "^8.19.1",
+    "multiparty": "^4.2.3",
     "next": "15.5.5",
+    "pdf-lib": "^1.17.1",
     "postcss": "^8.5.6",
     "qrcode.react": "^4.2.0",
     "react": "19.1.0",
@@ -30,6 +31,7 @@
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.14",
     "unzipper": "^0.12.3",
+    "uuid": "^13.0.0",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Button } from "./uicomponents/Button";
 import { Card } from "./uicomponents/Card";
 import { Badge } from "./uicomponents/Badge";
+import axios from "axios";
 import {
   Upload,
   FileText,
@@ -15,6 +16,7 @@ import { QRCodeSVG } from "qrcode.react";
 
 const DocumentUpload = ({ onNext }) => {
   const [uploadedDocs, setUploadedDocs] = useState([]);
+  const [uploadedFiles, setUploadedFiles] = useState({});
   const [isScanning, setIsScanning] = useState(false);
   const [docusignComplete, setDocusignComplete] = useState(false);
   const [selectedDocId, setSelectedDocId] = useState(null);
@@ -25,8 +27,14 @@ const DocumentUpload = ({ onNext }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const { userData } = useSearchStore();
-
+  const {
+    userData,
+    userAgreement,
+    userSignedAgreement,
+    setUserData,
+    setUserAgreement,
+    setuserSignedAgreement,
+  } = useSearchStore();
   const requiredDocuments = [
     { id: "id", name: "Government-issued Photo ID", required: true },
     { id: "ssn", name: "Social Security Card or W2", required: true },
@@ -43,33 +51,57 @@ const DocumentUpload = ({ onNext }) => {
     },
   ];
 
-  const handleDocuSign = async () => {
-    // const firstName = userData?.first_name;
-    // const lastName = userData?.last_name;
-    // const email = "asd@gmail.com";
-    // try {
-    //   const res = await fetch("/api/docusign", {
-    //     method: "POST",
-    //     headers: { "Content-Type": "application/json" },
-    //     body: JSON.stringify({ firstName, lastName, email }),
-    //   });
-    //   const data = await res.json();
+  useEffect(() => {
+    if (!userData) {
+      const savedUserData = localStorage.getItem("userData");
+      if (savedUserData) setUserData(JSON.parse(savedUserData));
+    }
 
-    //   if (data.signingUrl) {
-    //     // redirect to DocuSign embedded signing
-    //     window.location.href = data.signingUrl;
-    //   } else {
-    //     setError(data.error || "Something went wrong.");
-    //   }
-    // } catch (err) {
-    //   setError(err.message);
-    // } finally {
-    //   setLoading(false);
-    // }
-    window.open("about:blank", "_blank");
-    setTimeout(() => {
+    if (!userAgreement) {
+      const savedAgreement = localStorage.getItem("userAgreement");
+      if (savedAgreement) setUserAgreement(JSON.parse(savedAgreement));
+    }
+
+    if (!userSignedAgreement) {
+      const savedSigned = localStorage.getItem("signedDoc");
+      if (savedSigned) setuserSignedAgreement(JSON.parse(savedSigned));
+    }
+  }, []);
+
+  useEffect(() => {
+    console.log("48---", userData, userAgreement, userSignedAgreement);
+    if (userSignedAgreement != null) {
       setDocusignComplete(true);
-    }, 3000);
+    }
+  }, [userSignedAgreement]);
+
+  const handleDocuSign = async () => {
+    const firstName = userData?.first_name;
+    const lastName = userData?.last_name;
+    const email = userAgreement?.email_id;
+    try {
+      const res = await fetch("/api/docusign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firstName, lastName, email }),
+      });
+      const data = await res.json();
+
+      if (data.signingUrl) {
+        // redirect to DocuSign embedded signing
+        window.location.href = data.signingUrl;
+      } else {
+        setError(data.error || "Something went wrong.");
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+    // window.open("about:blank", "_blank");
+    // setTimeout(() => {
+    //   setDocusignComplete(true);
+    // }, 3000);
   };
 
   const handleUploadClick = (docId) => {
@@ -79,8 +111,12 @@ const DocumentUpload = ({ onNext }) => {
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
-    if (file && selectedDocId && !uploadedDocs.includes(selectedDocId)) {
-      setUploadedDocs((prev) => [...prev, selectedDocId]);
+    if (file && selectedDocId) {
+      setUploadedDocs((prev) => [
+        ...prev.filter((id) => id !== selectedDocId),
+        selectedDocId,
+      ]); // optional: avoid duplicates
+      setUploadedFiles((prev) => ({ ...prev, [selectedDocId]: file }));
     }
     event.target.value = "";
   };
@@ -92,8 +128,12 @@ const DocumentUpload = ({ onNext }) => {
 
   const handleScanChange = (event) => {
     const file = event.target.files[0];
-    if (file && scanTargetDocId && !uploadedDocs.includes(scanTargetDocId)) {
-      setUploadedDocs((prev) => [...prev, scanTargetDocId]);
+    if (file && scanTargetDocId) {
+      setUploadedDocs((prev) => [
+        ...prev.filter((id) => id !== scanTargetDocId),
+        scanTargetDocId,
+      ]);
+      setUploadedFiles((prev) => ({ ...prev, [scanTargetDocId]: file }));
     }
     event.target.value = "";
   };
@@ -106,9 +146,38 @@ const DocumentUpload = ({ onNext }) => {
   const userId = userData?._id;
   const qrUrl = userId ? `${window.location.origin}/upload?id=${userId}` : null;
 
-  useEffect(() => {
-    console.log("-- user data --", userData);
-  }, [userData]);
+  const handleSubmitCase = async () => {
+    if (!userData?._id) return console.error("User ID missing");
+
+    const formData = new FormData();
+    formData.append("user_id", userData._id);
+    formData.append("case_id", "12");
+    formData.append("signed_doc", "ok");
+    // Map frontend doc IDs to backend field names
+    const docKeyMap = {
+      id: "proof_id",
+      ssn: "ssn_id",
+      address: "adress_proof",
+      birth: "brith_proof",
+      employment: "employee_proof",
+    };
+    Object.entries(docKeyMap).forEach(([frontendKey, backendKey]) => {
+      const file = uploadedFiles[frontendKey];
+      if (file) formData.append(backendKey, file); 
+    });
+
+    try {
+      const res = await fetch("/api/docs", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      console.log("Upload successful:", data);
+      onNext();
+    } catch (err) {
+      console.error("Upload failed:", err);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -330,7 +399,7 @@ const DocumentUpload = ({ onNext }) => {
                 </p>
               </div>
               <Button
-                onClick={onNext}
+                onClick={handleSubmitCase}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-12 py-4 text-xl rounded-lg"
               >
                 Submit My Case

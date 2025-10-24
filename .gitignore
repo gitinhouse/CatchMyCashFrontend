@@ -51,3 +51,6 @@ next-env.d.ts
 package.json
 /public/SCORecords
 tmp_All_Records.zip
+/uploads
+/documents
+/lib/middleware
