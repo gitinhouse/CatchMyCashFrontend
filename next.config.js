@@ -10,4 +10,4 @@ const nextConfig = {
   serverComponentsExternalPackages: ['docusign-esign'],
 };
 
-module.exports = nextConfig;
+export default nextConfig;

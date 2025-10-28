@@ -22,11 +22,14 @@ const UserInformation = ({ onNext }) => {
     formerEmployers: "",
     previousAddresses: "",
   });
- const { userData, setUserAgreement } = useSearchStore();
-
-
+  const { userData, setUserAgreement } = useSearchStore();
+  const [errors, setErrors] = useState({
+    phone: "",
+    ssn: "",
+  });
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
   const handleSubmit = async (e) => {
@@ -50,23 +53,40 @@ const UserInformation = ({ onNext }) => {
       );
       return;
     }
+
+    let newErrors = {};
+
+    const phoneDigits = formData.phone.replace(/\D/g, "");
+    if (phoneDigits.length !== 10) {
+      newErrors.phone = "Phone number must be exactly 10 digits.";
+    }
+
+    const ssnDigits = formData.ssn.replace(/\D/g, "");
+    if (ssnDigits.length !== 9) {
+      newErrors.ssn = "SSN must be exactly 9 digits.";
+    }
+
+    // Stop submission if any validation fails
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
     try {
       const payload = {
-        user_id:userData._id,
+        user_id: userData._id,
         legal_name: formData.fullName,
-        date_of_birth:formData.dateOfBirth,
-        email_id:formData.email,
-        contact_no:formData.phone,
-        address:formData.address,
-        city:formData.city,
-        state:formData.state,
-        zip_code:formData.zipCode,
-        ssn_id:formData.ssn,
-        company_name:formData.currentEmployer,
-        formal_employer:formData.formerEmployers,
-        previous_address:formData.previousAddresses
+        date_of_birth: formData.dateOfBirth,
+        email_id: formData.email,
+        contact_no: formData.phone,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        zip_code: formData.zipCode,
+        ssn_id: formData.ssn,
+        company_name: formData.currentEmployer,
+        formal_employer: formData.formerEmployers,
+        previous_address: formData.previousAddresses,
       };
-     
       const { data } = await axios.post("/api/legalDetails", payload);
       setUserAgreement(data);
       localStorage.setItem("userAgreement", JSON.stringify(data));
@@ -178,8 +198,12 @@ const UserInformation = ({ onNext }) => {
                   value={formData.phone}
                   onChange={(e) => handleInputChange("phone", e.target.value)}
                   placeholder="(555) 123-4567"
+                  maxLength={10}
                   required
                 />
+                {errors.phone && (
+                  <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
+                )}
               </div>
 
               <div>
@@ -191,11 +215,15 @@ const UserInformation = ({ onNext }) => {
                   value={formData.ssn}
                   onChange={(e) => handleInputChange("ssn", e.target.value)}
                   placeholder="XXX-XX-XXXX"
+                  maxLength={9}
                   required
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Required for identity verification
                 </p>
+                {errors.ssn && (
+                  <p className="text-red-500 text-xs mt-1">{errors.ssn}</p>
+                )}
               </div>
 
               <div>

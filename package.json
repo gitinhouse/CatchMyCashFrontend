@@ -1,11 +1,12 @@
 {
+    "type": "module",
   "name": "catchmycashfrontend",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 6045",
+    "dev": "node server.js",
     "build": "next build",
-    "start": "next start -p 6045 -H 0.0.0.0",
+    "start": "NODE_ENV=production node server.js",
     "lint": "eslint"
   },
   "dependencies": {
@@ -20,7 +21,7 @@
     "dotenv": "^17.2.3",
     "framer-motion": "^12.23.24",
     "lucide-react": "^0.545.0",
-    "mongoose": "^8.19.1",
+    "mongoose": "^8.19.2",
     "multiparty": "^4.2.3",
     "next": "15.5.5",
     "pdf-lib": "^1.17.1",
@@ -32,6 +33,7 @@
     "tailwindcss": "^4.1.14",
     "unzipper": "^0.12.3",
     "uuid": "^13.0.0",
+    "ws": "^8.18.3",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

@@ -1,9 +1,9 @@
+"use client";
+import { useSearchParams, useRouter } from "next/navigation";
 import React, { useState, useRef, useEffect } from "react";
-import { Button } from "./uicomponents/Button";
-import { Card } from "./uicomponents/Card";
-import { Badge } from "./uicomponents/Badge";
-import { useWebSocket } from "../hooks/useWebSocket";
-import axios from "axios";
+import { Button } from "../components/uicomponents/Button";
+import { Card } from "../components/uicomponents/Card";
+import { Badge } from "../components/uicomponents/Badge";
 import {
   Upload,
   FileText,
@@ -12,33 +12,37 @@ import {
   AlertCircle,
   Scan,
 } from "lucide-react";
-import { useSearchStore } from "../store/searchStore";
-import { QRCodeSVG } from "qrcode.react";
 
-const DocumentUpload = ({ onNext }) => {
+const userDocs = () => {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [userId, setUserId] = useState();
+  const [caseId, setCaseId] = useState();
+
   const [uploadedDocs, setUploadedDocs] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState({});
   const [isScanning, setIsScanning] = useState(false);
-  const [docusignComplete, setDocusignComplete] = useState(false);
+
   const [selectedDocId, setSelectedDocId] = useState(null);
   const [scanTargetDocId, setScanTargetDocId] = useState(null);
-  const [socketMessage, setSocketMessage] = useState(null);
 
   const fileInputRef = useRef(null);
   const scanInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const hasRun = useRef(false);
-  const {
-    userData,
-    userAgreement,
-    userSignedAgreement,
-    setUserData,
-    setUserAgreement,
-    setuserSignedAgreement,
-    userCase,
-    setUserCase,
-  } = useSearchStore();
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+
+  useEffect(() => {
+    const Id = searchParams.get("Id");
+    const caseId = searchParams.get("caseId");
+    setUserId(Id);
+    setCaseId(caseId);
+
+    if (!Id && !caseId) {
+      router.push("/");
+    }
+  }, [searchParams, router]);
+
   const requiredDocuments = [
     { id: "id", name: "Government-issued Photo ID", required: true },
     { id: "ssn", name: "Social Security Card or W2", required: true },
@@ -55,134 +59,6 @@ const DocumentUpload = ({ onNext }) => {
     },
   ];
 
-  const [connectSocket, setConnectSocket] = useState(false);
-
-  // Dynamically build the WS URL (works locally + production)
-  const baseUrl = process.env.NEXT_PUBLIC_WS_URL || window.location.origin;
-  const wsUrl = baseUrl.replace(/^http/, "ws");
-
-  const { socket, isConnected, message } = useWebSocket(wsUrl, connectSocket);
-
-  useEffect(() => {
-    if (message && message.type === "documents_submitted") {
-      console.log("Message received:", message);
-      setSocketMessage(message);
-
-      const docs = message.documents || {};
-
-      const docKeyMap = {
-        proof_id: "id",
-        ssn_id: "ssn",
-        adress_proof: "address",
-        brith_proof: "birth",
-        employee_proof: "employment",
-      };
-
-      const uploadedIds = Object.entries(docs)
-        .filter(([key, value]) => value === true)
-        .map(([key]) => docKeyMap[key])
-        .filter(Boolean);
-
-      setUploadedDocs((prev) => {
-        const merged = new Set([...prev, ...uploadedIds]);
-        return Array.from(merged);
-      });
-    }
-  }, [message]);
-
-  useEffect(() => {
-    if (!userData) {
-      const savedUserData = localStorage.getItem("userData");
-      if (savedUserData) setUserData(JSON.parse(savedUserData));
-    }
-
-    if (!userAgreement) {
-      const savedAgreement = localStorage.getItem("userAgreement");
-      if (savedAgreement) setUserAgreement(JSON.parse(savedAgreement));
-    }
-
-    if (!userSignedAgreement) {
-      const savedSigned = localStorage.getItem("signedDoc");
-      if (savedSigned) setuserSignedAgreement(JSON.parse(savedSigned));
-    }
-  }, [userData]);
-
-  useEffect(() => {
-    if (docusignComplete && !connectSocket) {
-      console.log("DocuSign complete — starting WebSocket listener...");
-      setConnectSocket(true);
-    }
-  }, [docusignComplete]);
-
-  useEffect(() => {
-    async function createCaseIfSigned() {
-      if (hasRun.current) return;
-      hasRun.current = true;
-      if (userSignedAgreement != null) {
-        try {
-          const userRecord = JSON.parse(
-            localStorage.getItem("userData") || "{}"
-          );
-          const userSignedDoc = JSON.parse(
-            localStorage.getItem("signedDoc") || "{}"
-          );
-          const userId = userData?._id || userRecord?._id;
-          if (!userId) {
-            console.error("No user ID found in state or localStorage");
-            return;
-          }
-
-          const signedFilePath =
-            userSignedAgreement?.filePath || userSignedDoc?.filePath;
-
-          const payload = { user_id: userId };
-          const response = await axios.post("/api/case", payload);
-
-          localStorage.setItem("userCase", JSON.stringify(response.data));
-          setUserCase(response.data);
-
-          const docsPayload = {
-            user_id: userId,
-            case_id: response.data._id,
-            signed_doc: signedFilePath,
-          };
-          const docsResponse = await axios.post("/api/docs", docsPayload);
-
-          console.log("Docs response:", docsResponse.data);
-          setDocusignComplete(true);
-        } catch (error) {
-          console.error("Error creating case:", error);
-        }
-      }
-    }
-
-    createCaseIfSigned();
-  }, [userSignedAgreement]);
-
-  const handleDocuSign = async () => {
-    const firstName = userData?.first_name;
-    const lastName = userData?.last_name;
-    const email = userAgreement?.email_id;
-    try {
-      const res = await fetch("/api/docusign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, lastName, email }),
-      });
-      const data = await res.json();
-
-      if (data.signingUrl) {
-        window.location.href = data.signingUrl;
-      } else {
-        setError(data.error || "Something went wrong.");
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleUploadClick = (docId) => {
     setSelectedDocId(docId);
     if (fileInputRef.current) fileInputRef.current.click();
@@ -194,7 +70,7 @@ const DocumentUpload = ({ onNext }) => {
       setUploadedDocs((prev) => [
         ...prev.filter((id) => id !== selectedDocId),
         selectedDocId,
-      ]); // optional: avoid duplicates
+      ]); 
       setUploadedFiles((prev) => ({ ...prev, [selectedDocId]: file }));
     }
     event.target.value = "";
@@ -221,44 +97,90 @@ const DocumentUpload = ({ onNext }) => {
     .filter((doc) => doc.required)
     .every((doc) => uploadedDocs.includes(doc.id));
 
-  const canProceed = docusignComplete && requiredDocsUploaded;
-  const userId = userData?._id;
-  const caseId = userCase?._id;
-  const qrUrl = userId
-    ? `${window.location.origin}/userDocs?Id=${userId}&caseId=${caseId}`
-    : null;
+  const canProceed = requiredDocsUploaded;
 
   const handleSubmitCase = async () => {
-    if (!userData?._id) return console.error("User ID missing");
     try {
-      if (message.type !== "documents_submitted") {
-        console.log("-- with API");
-        const formData = new FormData();
-        formData.append("case_id", userCase?._id);
-        const docKeyMap = {
-          id: "proof_id",
-          ssn: "ssn_id",
-          address: "adress_proof",
-          birth: "brith_proof",
-          employment: "employee_proof",
-        };
-        Object.entries(docKeyMap).forEach(([frontendKey, backendKey]) => {
-          const file = uploadedFiles[frontendKey];
-          if (file) formData.append(backendKey, file);
-        });
+      setLoading(true);
+      setError(null);
+      const formData = new FormData();
+      formData.append("case_id", caseId);
+      const docKeyMap = {
+        id: "proof_id",
+        ssn: "ssn_id",
+        address: "adress_proof",
+        birth: "brith_proof",
+        employment: "employee_proof",
+      };
+      Object.entries(docKeyMap).forEach(([frontendKey, backendKey]) => {
+        const file = uploadedFiles[frontendKey];
+        if (file) formData.append(backendKey, file);
+      });
 
-        const res = await fetch("/api/docs", {
-          method: "PUT",
-          body: formData,
-        });
-        const data = await res.json();
-        localStorage.setItem("userAllDocs", JSON.stringify(data));
-      }
-      onNext();
+      const res = await fetch("/api/docs", {
+        method: "PUT",
+        body: formData,
+      });
+      const data = await res.json();
+      sendWebSocketUpdate(uploadedFiles);
+      setShowSuccessPopup(true);
     } catch (err) {
       console.error("Upload failed:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
+
+const sendWebSocketUpdate = (uploadedFiles, attempt = 1) => {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_WS_URL || window.location.origin;
+   const wsUrl = baseUrl.replace(/^http/, "ws");
+    const socket = new WebSocket(wsUrl);
+
+    socket.onopen = () => {
+      const documentStatus = {
+        proof_id: !!uploadedFiles.id,
+        ssn_id: !!uploadedFiles.ssn,
+        adress_proof: !!uploadedFiles.address,
+        brith_proof: !!uploadedFiles.birth,
+        employee_proof: !!uploadedFiles.employment,
+      };
+
+      const message = {
+        type: "documents_submitted",
+        caseId,
+        userId,
+        documents: documentStatus,
+        timestamp: new Date().toISOString(),
+      };
+
+      console.log(" Sending WebSocket message:", message);
+      socket.send(JSON.stringify(message));
+
+      setTimeout(() => {
+        console.log(" Closing WebSocket connection...");
+        socket.close();
+      }, 500);
+    };
+
+    socket.onerror = (err) => {
+      console.error(` WebSocket error (attempt ${attempt}):`, err);
+      socket.close();
+      if (attempt < 3) {
+        console.log(` Retrying WebSocket connection (attempt ${attempt + 1})...`);
+        setTimeout(() => sendWebSocketUpdate(uploadedFiles, attempt + 1), 1000);
+      }
+    };
+
+    socket.onclose = (e) => {
+      console.log(` WebSocket closed (code: ${e.code})`);
+    };
+  } catch (err) {
+    console.error(" WebSocket send failed:", err);
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -266,7 +188,7 @@ const DocumentUpload = ({ onNext }) => {
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <h1 className="text-3xl font-bold text-blue-900">FindMyMoney</h1>
-          <p className="text-gray-600 mt-1">Document Collection & Signatures</p>
+          <p className="text-gray-600 mt-1">Document Collection </p>
         </div>
       </div>
 
@@ -275,7 +197,7 @@ const DocumentUpload = ({ onNext }) => {
         <div className="text-center mb-8">
           <FileText className="h-12 w-12 text-blue-600 mx-auto mb-4" />
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Sign Documents & Upload ID
+            Upload Proofs
           </h2>
           <p className="text-gray-600 mb-6">
             Complete the legal process by signing forms and providing identity
@@ -283,71 +205,8 @@ const DocumentUpload = ({ onNext }) => {
           </p>
         </div>
 
-        {/* Step 1: Digital Signatures */}
-        <Card className="p-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-white">
-              Step 1: Digital Signatures
-            </h3>
-            {docusignComplete && (
-              <Badge className="bg-green-500">
-                <CheckCircle className="h-4 w-4 mr-1" />
-                Completed
-              </Badge>
-            )}
-          </div>
-
-          {!docusignComplete ? (
-            <div>
-              <p className="text-gray-600 mb-4">
-                Sign your investigator agreement and authorization forms via
-                DocuSign
-              </p>
-              <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-4">
-                <h4 className="font-medium text-blue-800 mb-2">
-                  Documents to Sign:
-                </h4>
-                <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• Investigator Services Agreement</li>
-                  <li>• State Controller's Office Authorization Form</li>
-                  <li>• Identity Verification Affidavit</li>
-                </ul>
-              </div>
-              <Button
-                onClick={handleDocuSign}
-                className="bg-orange-600 hover:bg-orange-700 text-white cursor-pointer sm:px-4 px-2"
-              >
-                Open DocuSign to Sign Documents
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center text-green-600">
-              <CheckCircle className="h-6 w-6 mr-2" />
-              <span className="w-[90%]">
-                All documents have been signed successfully
-              </span>
-            </div>
-          )}
-        </Card>
-
         {/* Step 2: QR Code & Upload Documents */}
         <Card className="p-6 mb-8">
-          {userId && docusignComplete && (
-            <Card className="p-4 mb-4 text-center bg-white">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">
-                Access Your Case on Mobile
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Scan this QR code with your mobile device to upload your
-                document
-              </p>
-              <div className="inline-block p-4 rounded-lg bg-gray-100">
-                <QRCodeSVG value={qrUrl} size={180} fgColor="#1D4ED8" />
-              </div>
-              <p className="text-gray-500 mt-2 text-sm break-words">{qrUrl}</p>
-            </Card>
-          )}
-
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-white">
               Step 2: Upload Supporting Documents
@@ -447,14 +306,6 @@ const DocumentUpload = ({ onNext }) => {
           </h3>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span>Digital Signatures</span>
-              {docusignComplete ? (
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              ) : (
-                <div className="w-5 h-5 border-2 border-gray-300 rounded-full"></div>
-              )}
-            </div>
-            <div className="flex items-center justify-between">
               <span>Required Documents</span>
               {requiredDocsUploaded ? (
                 <CheckCircle className="h-5 w-5 text-green-600" />
@@ -518,8 +369,32 @@ const DocumentUpload = ({ onNext }) => {
         onChange={handleScanChange}
         className="hidden"
       />
+
+      {showSuccessPopup && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center">
+            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              Documents Submitted!
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Your documents have been successfully uploaded and linked to your
+              case.
+            </p>
+            <Button
+              onClick={() => {
+                setShowSuccessPopup(false);
+                router.push("/");
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
+            >
+              OK
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default DocumentUpload;
+export default userDocs;
