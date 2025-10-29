@@ -5,10 +5,17 @@ import path from "path";
 import docusign from "docusign-esign";
 import { PDFDocument } from "pdf-lib";
 import { NextResponse } from "next/server";
+import { fillInvestigatorAgreement } from "../../../utils/fillPDF";
 
 export async function POST(req) {
   try {
-    const { firstName, lastName, email } = await req.json();
+    const {
+      firstName,
+      lastName,
+      email,
+      searchResults: rawResults,
+      userAgreement: rawData,
+    } = await req.json();
 
     if (!firstName || !lastName || !email) {
       return NextResponse.json(
@@ -16,7 +23,60 @@ export async function POST(req) {
         { status: 400 }
       );
     }
+    let searchResults;
+    let userAgreement;
+    try {
+      if (typeof rawResults === "string") {
+        const onceParsed = JSON.parse(rawResults);
+        searchResults =
+          typeof onceParsed === "string" ? JSON.parse(onceParsed) : onceParsed;
+      } else {
+        searchResults = rawResults;
+      }
 
+      if (typeof rawData === "string") {
+        const onceParsed = JSON.parse(rawData);
+        userAgreement =
+          typeof onceParsed === "string" ? JSON.parse(onceParsed) : onceParsed;
+      } else {
+        userAgreement = rawData;
+      }
+    } catch (err) {
+      console.error("Failed to parse searchResults:", err);
+      searchResults = [];
+    }
+
+    const property = searchResults?.[0];
+    const claimantAddress = [
+      property?.owner_street_1,
+      property?.owner_city,
+      property?.owner_state,
+      property?.owner_zip,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const claimInitial = Number(
+      (property?.current_cash_balance * 0.9).toFixed(2)
+    );
+    const investigatorInitial = Number(
+      (property?.current_cash_balance * 0.1).toFixed(2)
+    );
+
+    const filledPdfBytes = await fillInvestigatorAgreement({
+      claimantName: `${firstName} ${lastName}`,
+      investigatorName: "Catch My Cash LLC",
+      claimantEmail: email,
+      claimantAddress,
+      percentage: "10%",
+      Amount: property?.current_cash_balance,
+      propertyId: property?.property_id,
+      propertyType: property?.property_type,
+      claimInitial: claimInitial.toString(),
+      investigatorInitial: investigatorInitial.toString(),
+      date: new Date().toLocaleDateString(),
+      contactNo: userAgreement?.contact_no,
+      ssnId: userAgreement?.ssn_id,
+    });
     // Initialize DocuSign client
     const dsApiClient = new docusign.ApiClient();
     dsApiClient.setOAuthBasePath("account-d.docusign.com");
@@ -49,7 +109,7 @@ export async function POST(req) {
       "src",
       "app",
       "pdf",
-      "agreement.pdf"
+      filledPdfBytes?.fileName
     );
     if (!fs.existsSync(pdfPath)) throw new Error("PDF file not found");
     const pdfBytes = fs.readFileSync(pdfPath);
@@ -69,20 +129,19 @@ export async function POST(req) {
       },
     ];
 
-    // Create signer
     const signer = new docusign.Signer();
     signer.email = email;
     signer.name = `${firstName} ${lastName}`;
     signer.recipientId = "1";
     signer.routingOrder = "1";
-    signer.clientUserId = "1234"; // embedded signing
+    signer.clientUserId = "1234"; 
 
-    // SignHere tab on the last page
+   
     const signHere = new docusign.SignHere();
     signHere.documentId = "1";
     signHere.pageNumber = numberOfPages.toString();
-    signHere.xPosition = "100"; // adjust as needed
-    signHere.yPosition = "740"; // adjust as needed
+    signHere.xPosition = "100"; 
+    signHere.yPosition = "740"; 
 
     const tabs = new docusign.Tabs();
     tabs.signHereTabs = [signHere];

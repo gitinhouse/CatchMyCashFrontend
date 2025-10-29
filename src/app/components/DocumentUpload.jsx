@@ -38,6 +38,8 @@ const DocumentUpload = ({ onNext }) => {
     setuserSignedAgreement,
     userCase,
     setUserCase,
+    searchResults,
+    setSearchResults
   } = useSearchStore();
   const requiredDocuments = [
     { id: "id", name: "Government-issued Photo ID", required: true },
@@ -105,7 +107,11 @@ const DocumentUpload = ({ onNext }) => {
       const savedSigned = localStorage.getItem("signedDoc");
       if (savedSigned) setuserSignedAgreement(JSON.parse(savedSigned));
     }
-  }, [userData]);
+    if(!searchResults){
+       const savedProperty = localStorage.getItem("propertyData");
+      if (savedProperty) setSearchResults(JSON.parse(savedProperty));
+    }
+  }, [userData,searchResults,userSignedAgreement,userAgreement]);
 
   useEffect(() => {
     if (docusignComplete && !connectSocket) {
@@ -167,7 +173,7 @@ const DocumentUpload = ({ onNext }) => {
       const res = await fetch("/api/docusign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, lastName, email }),
+        body: JSON.stringify({ firstName, lastName, email, searchResults,  userAgreement }),
       });
       const data = await res.json();
 
