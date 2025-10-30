@@ -17,6 +17,7 @@ const UserDocsSchema = new mongoose.Schema({
   brith_proof: { type: String, required: false },
   employee_proof: { type: String, required: false },
   signed_doc: { type: String, required: true },
+  claim_doc: { type: String, required: false },
   createdAt: { type: Date, default: Date.now },
 });
 

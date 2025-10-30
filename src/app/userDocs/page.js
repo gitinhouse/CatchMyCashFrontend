@@ -13,7 +13,7 @@ import {
   Scan,
 } from "lucide-react";
 
-const userDocs = () => {
+const UserDocs = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [userId, setUserId] = useState();
@@ -51,6 +51,7 @@ const userDocs = () => {
       name: "Proof of Address (utility bill, bank statement)",
       required: true,
     },
+    { id: "claim", name: "Claim Form", required: false },
     { id: "birth", name: "Birth Certificate", required: false },
     {
       id: "employment",
@@ -70,7 +71,7 @@ const userDocs = () => {
       setUploadedDocs((prev) => [
         ...prev.filter((id) => id !== selectedDocId),
         selectedDocId,
-      ]); 
+      ]);
       setUploadedFiles((prev) => ({ ...prev, [selectedDocId]: file }));
     }
     event.target.value = "";
@@ -111,6 +112,7 @@ const userDocs = () => {
         address: "adress_proof",
         birth: "brith_proof",
         employment: "employee_proof",
+        claim: "claim_doc",
       };
       Object.entries(docKeyMap).forEach(([frontendKey, backendKey]) => {
         const file = uploadedFiles[frontendKey];
@@ -132,55 +134,59 @@ const userDocs = () => {
     }
   };
 
-const sendWebSocketUpdate = (uploadedFiles, attempt = 1) => {
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_WS_URL || window.location.origin;
-   const wsUrl = baseUrl.replace(/^http/, "ws");
-    const socket = new WebSocket(wsUrl);
+  const sendWebSocketUpdate = (uploadedFiles, attempt = 1) => {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_WS_URL || window.location.origin;
+      const wsUrl = baseUrl.replace(/^http/, "ws");
+      const socket = new WebSocket(wsUrl);
 
-    socket.onopen = () => {
-      const documentStatus = {
-        proof_id: !!uploadedFiles.id,
-        ssn_id: !!uploadedFiles.ssn,
-        adress_proof: !!uploadedFiles.address,
-        brith_proof: !!uploadedFiles.birth,
-        employee_proof: !!uploadedFiles.employment,
+      socket.onopen = () => {
+        const documentStatus = {
+          proof_id: !!uploadedFiles.id,
+          ssn_id: !!uploadedFiles.ssn,
+          adress_proof: !!uploadedFiles.address,
+          brith_proof: !!uploadedFiles.birth,
+          employee_proof: !!uploadedFiles.employment,
+        };
+
+        const message = {
+          type: "documents_submitted",
+          caseId,
+          userId,
+          documents: documentStatus,
+          timestamp: new Date().toISOString(),
+        };
+
+        console.log(" Sending WebSocket message:", message);
+        socket.send(JSON.stringify(message));
+
+        setTimeout(() => {
+          console.log(" Closing WebSocket connection...");
+          socket.close();
+        }, 500);
       };
 
-      const message = {
-        type: "documents_submitted",
-        caseId,
-        userId,
-        documents: documentStatus,
-        timestamp: new Date().toISOString(),
-      };
-
-      console.log(" Sending WebSocket message:", message);
-      socket.send(JSON.stringify(message));
-
-      setTimeout(() => {
-        console.log(" Closing WebSocket connection...");
+      socket.onerror = (err) => {
+        console.error(` WebSocket error (attempt ${attempt}):`, err);
         socket.close();
-      }, 500);
-    };
+        if (attempt < 3) {
+          console.log(
+            ` Retrying WebSocket connection (attempt ${attempt + 1})...`
+          );
+          setTimeout(
+            () => sendWebSocketUpdate(uploadedFiles, attempt + 1),
+            1000
+          );
+        }
+      };
 
-    socket.onerror = (err) => {
-      console.error(` WebSocket error (attempt ${attempt}):`, err);
-      socket.close();
-      if (attempt < 3) {
-        console.log(` Retrying WebSocket connection (attempt ${attempt + 1})...`);
-        setTimeout(() => sendWebSocketUpdate(uploadedFiles, attempt + 1), 1000);
-      }
-    };
-
-    socket.onclose = (e) => {
-      console.log(` WebSocket closed (code: ${e.code})`);
-    };
-  } catch (err) {
-    console.error(" WebSocket send failed:", err);
-  }
-};
-
+      socket.onclose = (e) => {
+        console.log(` WebSocket closed (code: ${e.code})`);
+      };
+    } catch (err) {
+      console.error(" WebSocket send failed:", err);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -326,8 +332,7 @@ const sendWebSocketUpdate = (uploadedFiles, attempt = 1) => {
                   All Documents Collected!
                 </h3>
                 <p className="text-gray-600">
-                  Your case is ready for submission to the State Controller's
-                  Office
+                  {"Your case is ready for submission to the State Controller's Office"}
                 </p>
               </div>
               <Button
@@ -397,4 +402,4 @@ const sendWebSocketUpdate = (uploadedFiles, attempt = 1) => {
   );
 };
 
-export default userDocs;
+export default UserDocs;

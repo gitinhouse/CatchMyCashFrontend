@@ -10,6 +10,7 @@ export async function fillInvestigatorAgreement(formData) {
     const pages = pdfDoc.getPages();
     const firstPage = pages[0];
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const form = pdfDoc.getForm();
 
     const {
       claimantName,
@@ -25,54 +26,136 @@ export async function fillInvestigatorAgreement(formData) {
       investigatorInitial,
       contactNo,
       ssnId,
+      security,
     } = formData;
+
+     try {
+      const checkFields = form.getFields().map(f => f.getName());
+      const checkBox = form.getCheckBox("Check if attaching additional accounts");
+      checkBox.check();
+    } catch (e) {
+      console.warn("Checkbox field not found or not fillable:", e);
+    }
 
     firstPage.drawText(claimantName || "", {
       x: 320,
       y: 700,
       size: 10,
       font,
-      color: rgb(0, 0, 0)
+      color: rgb(0, 0, 0),
     });
     firstPage.drawText(investigatorName || "", {
       x: 180,
       y: 685,
       size: 10,
       font,
-      color: rgb(0, 0, 0)
+      color: rgb(0, 0, 0),
     });
-    firstPage.drawText(claimantName || "", { x: 180, y: 620, size: 10, font,color: rgb(0, 0, 0) });
+    firstPage.drawText(claimantName || "", {
+      x: 180,
+      y: 620,
+      size: 10,
+      font,
+      color: rgb(0, 0, 0),
+    });
     firstPage.drawText(claimantAddress || "", {
       x: 180,
       y: 585,
       size: 10,
       font,
-      color: rgb(0, 0, 0)
+      color: rgb(0, 0, 0),
     });
-    firstPage.drawText(Amount, { x: 450, y: 545, size: 10, font,color: rgb(0, 0, 0) });
-    firstPage.drawText(propertyType, { x: 180, y: 565, size: 10, font,color: rgb(0, 0, 0) });
-    firstPage.drawText(propertyId, { x: 450, y: 525, size: 10, font ,color: rgb(0, 0, 0)});
+    firstPage.drawText(Amount, {
+      x: 450,
+      y: 545,
+      size: 10,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    firstPage.drawText(propertyType, {
+      x: 180,
+      y: 545,
+      size: 10,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    firstPage.drawText(propertyId, {
+      x: 450,
+      y: 525,
+      size: 10,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    firstPage.drawText(security, {
+      x: 170,
+      y: 525,
+      size: 10,
+      font,
+      color: rgb(0, 0, 0),
+    });
     firstPage.drawText(percentage ? `${percentage}` : "10%", {
       x: 180,
       y: 390,
       size: 10,
       font,
-      color: rgb(0, 0, 0)
+      color: rgb(0, 0, 0),
     });
-    firstPage.drawText(claimInitial, { x: 330, y: 390, size: 10, font,color: rgb(0, 0, 0) });
-    firstPage.drawText(investigatorInitial, { x: 500, y: 390, size: 10, font,color: rgb(0, 0, 0) });
-    firstPage.drawText(claimantName, { x: 180, y: 220, size: 10, font,color: rgb(0, 0, 0) });
+    firstPage.drawText(claimInitial, {
+      x: 330,
+      y: 390,
+      size: 10,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    firstPage.drawText(investigatorInitial, {
+      x: 500,
+      y: 390,
+      size: 10,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    firstPage.drawText(claimantName, {
+      x: 180,
+      y: 220,
+      size: 10,
+      font,
+      color: rgb(0, 0, 0),
+    });
     firstPage.drawText(date || new Date().toLocaleDateString(), {
       x: 450,
       y: 220,
       size: 10,
       font,
-      color: rgb(0, 0, 0)
+      color: rgb(0, 0, 0),
     });
-    firstPage.drawText(claimantEmail || "", { x: 180, y: 200, size: 10, font,color: rgb(0, 0, 0) });
-    firstPage.drawText(claimantEmail || "", { x: 180, y: 185, size: 10, font,color: rgb(0, 0, 0) });
-    firstPage.drawText(contactNo || "", { x: 450, y: 185, size: 10, font,color: rgb(0, 0, 0) });
-    firstPage.drawText(ssnId || "", { x: 350, y: 150, size: 10, font,color: rgb(0, 0, 0) });
+    firstPage.drawText(claimantEmail || "", {
+      x: 180,
+      y: 200,
+      size: 10,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    firstPage.drawText(claimantEmail || "", {
+      x: 180,
+      y: 185,
+      size: 10,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    firstPage.drawText(contactNo || "", {
+      x: 450,
+      y: 185,
+      size: 10,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    firstPage.drawText(ssnId || "", {
+      x: 350,
+      y: 150,
+      size: 10,
+      font,
+      color: rgb(0, 0, 0),
+    });
 
     const newPdfBytes = await pdfDoc.save();
 

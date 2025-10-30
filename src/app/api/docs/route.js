@@ -65,6 +65,7 @@ export async function PUT(req) {
       adress_proof: "adress_proof",
       brith_proof: "brith_proof",
       employee_proof: "employee_proof",
+      claim_doc:"claim_doc"
     };
 
     const documentPaths = {};

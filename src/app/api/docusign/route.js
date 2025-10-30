@@ -76,6 +76,7 @@ export async function POST(req) {
       date: new Date().toLocaleDateString(),
       contactNo: userAgreement?.contact_no,
       ssnId: userAgreement?.ssn_id,
+      security: "N/A",
     });
     // Initialize DocuSign client
     const dsApiClient = new docusign.ApiClient();

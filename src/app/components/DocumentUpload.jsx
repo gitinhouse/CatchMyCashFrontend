@@ -49,6 +49,7 @@ const DocumentUpload = ({ onNext }) => {
       name: "Proof of Address (utility bill, bank statement)",
       required: true,
     },
+    { id: "claim", name: "Claim Form", required: false },
     { id: "birth", name: "Birth Certificate", required: false },
     {
       id: "employment",
@@ -78,6 +79,7 @@ const DocumentUpload = ({ onNext }) => {
         adress_proof: "address",
         brith_proof: "birth",
         employee_proof: "employment",
+        claim_doc: "claim"
       };
 
       const uploadedIds = Object.entries(docs)
@@ -238,7 +240,6 @@ const DocumentUpload = ({ onNext }) => {
     if (!userData?._id) return console.error("User ID missing");
     try {
       if (message.type !== "documents_submitted") {
-        console.log("-- with API");
         const formData = new FormData();
         formData.append("case_id", userCase?._id);
         const docKeyMap = {
@@ -247,6 +248,7 @@ const DocumentUpload = ({ onNext }) => {
           address: "adress_proof",
           birth: "brith_proof",
           employment: "employee_proof",
+          claim: "claim_doc"
         };
         Object.entries(docKeyMap).forEach(([frontendKey, backendKey]) => {
           const file = uploadedFiles[frontendKey];

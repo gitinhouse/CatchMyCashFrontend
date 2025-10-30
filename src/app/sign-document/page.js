@@ -15,10 +15,18 @@ export default function SignDocumentPage() {
     setError(null);
 
     try {
+      const savedProperty = JSON.parse(localStorage.getItem("propertyData"));
+      const savedAgreement = JSON.parse(localStorage.getItem("userAgreement"));
       const res = await fetch("/api/docusign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, lastName, email }),
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email,
+          searchResults: savedProperty,
+          userAgreement: savedAgreement,
+        }),
       });
 
       const data = await res.json();
@@ -39,7 +47,9 @@ export default function SignDocumentPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
       <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-md">
-        <h1 className="text-2xl font-semibold mb-6 text-center">Sign the Agreement</h1>
+        <h1 className="text-2xl font-semibold mb-6 text-center">
+          Sign the Agreement
+        </h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
