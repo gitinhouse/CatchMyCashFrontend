@@ -45,7 +45,7 @@ export async function POST(req) {
       console.error("Failed to parse searchResults:", err);
       searchResults = [];
     }
-
+    const allProperty = searchResults;
     const property = searchResults?.[0];
     const claimantAddress = [
       property?.owner_street_1,
@@ -55,28 +55,23 @@ export async function POST(req) {
     ]
       .filter(Boolean)
       .join(" ");
-    const claimInitial = Number(
-      (property?.current_cash_balance * 0.9).toFixed(2)
-    );
-    const investigatorInitial = Number(
-      (property?.current_cash_balance * 0.1).toFixed(2)
-    );
 
     const filledPdfBytes = await fillInvestigatorAgreement({
       claimantName: `${firstName} ${lastName}`,
-      investigatorName: "Catch My Cash LLC",
+      claimantNameInitial: `${firstName.charAt(0).toUpperCase()}${lastName
+        .charAt(0)
+        .toUpperCase()}*`,
+      investigatorNameInitial: "EC",
+      investigatorName: "Platform Builders LLC",
       claimantEmail: email,
       claimantAddress,
       percentage: "10%",
-      Amount: property?.current_cash_balance,
       propertyId: property?.property_id,
       propertyType: property?.property_type,
-      claimInitial: claimInitial.toString(),
-      investigatorInitial: investigatorInitial.toString(),
       date: new Date().toLocaleDateString(),
       contactNo: userAgreement?.contact_no,
       ssnId: userAgreement?.ssn_id,
-      security: "N/A",
+      allProperty: allProperty,
     });
     // Initialize DocuSign client
     const dsApiClient = new docusign.ApiClient();

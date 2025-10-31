@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   Clock,
@@ -54,6 +54,8 @@ const ResonsArray = [
 ];
 
 const LandingPage = ({ onNext }) => {
+  const router = useRouter();
+
   const [stats, setStats] = useState({
     totalRecovered: 0,
     happyClients: 0,
@@ -78,7 +80,9 @@ const LandingPage = ({ onNext }) => {
       maximumFractionDigits: 0,
     }).format(amount);
   };
-
+  const handleLogin = async () => {
+    router.push("/userLogin");
+  };
   return (
     <div className="min-h-screen relative">
       {/* Animated Header */}
@@ -102,6 +106,20 @@ const LandingPage = ({ onNext }) => {
                 California's Premier Unclaimed Property Recovery Service
               </p>
             </div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 1 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Button
+                onClick={handleLogin}
+                className="glass-button text-white px-12 py-6 sm:text-[20px] text-[16px] rounded-xl hover:text-teal-200 pulse-glow"
+              >
+                <span className="flex items-center gap-3">Login</span>
+              </Button>
+            </motion.div>
           </motion.div>
         </div>
       </motion.div>
