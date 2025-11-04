@@ -27,6 +27,7 @@
         "mongoose": "^8.19.2",
         "multiparty": "^4.2.3",
         "next": "15.5.5",
+        "node-cron": "^4.2.1",
         "nodemailer": "^7.0.10",
         "pdf-lib": "^1.17.1",
         "postcss": "^8.5.6",

@@ -1,6 +1,7 @@
 // server.js
 import { WebSocketServer } from "ws";
 import { createServer } from "http";
+import startCronJobs from "./src/app/lib/cron.js";
 import next from "next";
 
 const dev = process.env.NODE_ENV !== "production";
@@ -18,7 +19,7 @@ app.prepare().then(() => {
   httpServer.listen(PORT, () => {
     console.log(` Next.js app running at http://stack.brstdev.com:${PORT}`);
   });
-
+  startCronJobs();
   const wss = new WebSocketServer({ port: WS_PORT });
   console.log(`WebSocket server running at ws://stack.brstdev.com:${WS_PORT}`);
 
