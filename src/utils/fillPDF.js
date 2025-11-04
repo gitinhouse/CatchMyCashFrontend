@@ -67,10 +67,10 @@ export async function fillInvestigatorAgreement(formData) {
         .setText(`$${allProperty?.[0].current_cash_balance || ""}`);
       form.getTextField("Property ID").setText(propertyId || "");
       form.getTextField("Type of Account").setText(propertyType || "");
-      form
-        .getTextField("Claimant's Initials")
-        .setText(claimantNameInitial || "");
-      form.getTextField("Claimant Initials").setText(claimantNameInitial || "");
+      // form
+      //   .getTextField("Claimant's Initials")
+      //   .setText(claimantNameInitial || "");
+      // form.getTextField("Claimant Initials").setText(claimantNameInitial || "");
       form
         .getTextField("Investigator's Initials")
         .setText(investigatorNameInitial || "");
@@ -134,9 +134,9 @@ export async function fillInvestigatorAgreement(formData) {
         getFieldFlexible(form, `Property ID (${i})`)?.setText(
           prop.property_id || ""
         );
-        getFieldFlexible(form, `Claimant's Initials (${i})`)?.setText(
-          claimantNameInitial || ""
-        );
+        // getFieldFlexible(form, `Claimant's Initials (${i})`)?.setText(
+        //   claimantNameInitial || ""
+        // );
       });
     } catch (e) {
       console.warn("Checkbox field not found or not fillable:", e);

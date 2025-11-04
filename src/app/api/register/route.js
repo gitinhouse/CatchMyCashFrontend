@@ -4,19 +4,22 @@ import jwt from "jsonwebtoken";
 import connectToDatabase from "../../lib/mongodb";
 import UserLogin from "../../models/userLogin";
 import mongoose from "mongoose";
+import { sendEmail } from "../../lib/mailer";
+import { generateRandomPassword } from "../../lib/utils";
 
 export async function POST(req) {
   try {
     await connectToDatabase();
 
-    const { userEmail, userPassword, user_id, userType } = await req.json();
-
-    if (!userEmail || !userPassword) {
+    const { userEmail, user_id, userType } = await req.json();
+    
+    if (!userEmail ) {
       return NextResponse.json(
-        { message: "Email and password are required" },
+        { message: "Email is required" },
         { status: 400 }
       );
     }
+   
    const mongooseUserId = new mongoose.Types.ObjectId(user_id);
 
     const existingUser = await UserLogin.findOne({
@@ -33,6 +36,7 @@ export async function POST(req) {
 
       return NextResponse.json({ message }, { status: 409 });
     }
+     const userPassword = generateRandomPassword(10);
     const hashedPassword = await bcrypt.hash(userPassword, 10);
 
     const newUser = await UserLogin.create({
@@ -54,9 +58,31 @@ export async function POST(req) {
       { expiresIn: process.env.JWT_EXPIRES_IN || "1d" }
     );
 
+     const credentialsHTML = `
+      <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+        <tr>
+          <td style="padding: 10px; border: 1px solid #eaeaea; background-color: #f9fafb;"><strong>Email:</strong></td>
+          <td style="padding: 10px; border: 1px solid #eaeaea;">${newUser.userEmail}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #eaeaea; background-color: #f9fafb;"><strong>Password:</strong></td>
+          <td style="padding: 10px; border: 1px solid #eaeaea;">${userPassword}</td>
+        </tr>
+      </table>
+      <p style="margin-top: 20px; color: #444;">You can now log in to your account.</p>
+    `;
+
+     await sendEmail(
+      newUser.userEmail,
+      "Welcome to Our Platform 🎉",
+     `Hi ${newUser.userEmail},<br>Welcome aboard! Your account has been created successfully. Here are your login details:`,
+     credentialsHTML
+      
+    );
+
     return NextResponse.json(
       {
-        message: "User registered ok successfully",
+        message: "User registered successfully",
         token,
         user: {
           id: newUser._id,

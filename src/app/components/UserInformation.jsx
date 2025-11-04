@@ -22,7 +22,7 @@ const UserInformation = ({ onNext }) => {
     formerEmployers: "",
     previousAddresses: "",
   });
-  const { userData, setUserAgreement } = useSearchStore();
+  const { userData, setUserAgreement, setUserLogin } = useSearchStore();
   const [errors, setErrors] = useState({
     phone: "",
     ssn: "",
@@ -90,6 +90,14 @@ const UserInformation = ({ onNext }) => {
       const { data } = await axios.post("/api/legalDetails", payload);
       setUserAgreement(data);
       localStorage.setItem("userAgreement", JSON.stringify(data));
+      const payloadData = {
+        userEmail: formData.email,
+        user_id: userData._id,
+        userType: "User",
+      };
+      const res = await axios.post("/api/register", payloadData);
+      setUserLogin(res.data);
+      localStorage.setItem("userLogin", JSON.stringify(res.data));
       onNext(data);
     } catch (err) {
       console.error("Error saving user properties:", err);

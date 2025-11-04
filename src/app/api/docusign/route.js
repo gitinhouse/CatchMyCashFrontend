@@ -130,22 +130,44 @@ export async function POST(req) {
     signer.name = `${firstName} ${lastName}`;
     signer.recipientId = "1";
     signer.routingOrder = "1";
-    signer.clientUserId = "1234"; 
+    signer.clientUserId = "1234";
 
-   
     const signHere = new docusign.SignHere();
     signHere.documentId = "1";
-    signHere.pageNumber = numberOfPages.toString();
-    signHere.xPosition = "100"; 
-    signHere.yPosition = "740"; 
+    signHere.pageNumber = "1"; //numberOfPages.toString();
+    signHere.xPosition = "180";
+    signHere.yPosition = "593";
+
+    const initialHere1 = new docusign.InitialHere();
+    initialHere1.documentId = "1";
+    initialHere1.pageNumber = "1";
+    initialHere1.xPosition = "80";
+    initialHere1.yPosition = "270";
+
+    const initialHere2 = new docusign.InitialHere();
+    initialHere2.documentId = "1";
+    initialHere2.pageNumber = "1";
+    initialHere2.xPosition = "330";
+    initialHere2.yPosition = "370";
+
+    const dynamicInitialTabs = [];
+    allProperty?.forEach((property, index) => {
+      const initialHere = new docusign.InitialHere();
+      initialHere.documentId = "1";
+      initialHere.pageNumber = "2"; 
+      initialHere.xPosition = "80"; 
+      initialHere.yPosition = String(180 + index * 170); 
+      dynamicInitialTabs.push(initialHere);
+    });
 
     const tabs = new docusign.Tabs();
     tabs.signHereTabs = [signHere];
+    tabs.initialHereTabs = [initialHere1, initialHere2, ...dynamicInitialTabs];
     signer.tabs = tabs;
 
     envelopeDefinition.recipients = { signers: [signer] };
     envelopeDefinition.status = "sent";
-
+    
     // Create envelope
     const envelopeResponse = await envelopesApi.createEnvelope(accountId, {
       envelopeDefinition,
