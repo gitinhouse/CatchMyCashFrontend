@@ -20,7 +20,7 @@ app.prepare().then(() => {
   });
 
   const wss = new WebSocketServer({ port: WS_PORT });
-  console.log(`WebSocket server running at ws://${process.env.NEXT_PUBLIC_WS_URL}:${WS_PORT}`);
+  console.log(`WebSocket server running at ws://${process.env.NEXT_PUBLIC_WS_URL}`);
 
   wss.on("connection", (ws) => {
     console.log("New WebSocket client connected");
