@@ -9,48 +9,40 @@ export function useWebSocket(wsUrl, shouldConnect = true) {
 
   useEffect(() => {
     if (!shouldConnect) return;
+
+    // ✅ Auto-pick WS URL from env or fallback
     const url =
       wsUrl ||
-      (process.env.NEXT_PUBLIC_WS_URL
-        ? process.env.NEXT_PUBLIC_WS_URL
-        : "ws://localhost:7071");
+      process.env.NEXT_PUBLIC_WS_URL ||
+      (process.env.NODE_ENV === "production"
+        ? "wss://stack.brstdev.com:6045"
+        : "ws://localhost:6045");
+
+    console.log("🔌 Connecting to WebSocket:", url);
 
     const ws = new WebSocket(url);
     socketRef.current = ws;
     setSocket(ws);
 
-    ws.onopen = () => {
-      setIsConnected(true);
-    };
-
+    ws.onopen = () => setIsConnected(true);
     ws.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
-        setMessage(data);
-      } catch (err) {
-        console.error(" Failed to parse message:", err);
+        setMessage(JSON.parse(event.data));
+      } catch {
+        console.warn("Non-JSON message received");
       }
     };
+    ws.onclose = () => setIsConnected(false);
+    ws.onerror = (err) => console.error("WebSocket error:", err);
 
-    ws.onclose = () => {
-      console.log(" WebSocket closed");
-      setIsConnected(false);
-    };
-
-    ws.onerror = (err) => {
-      console.error(" WebSocket error:", err);
-    };
-
-    return () => {
-      ws.close(1000, "component unmounted");
-    };
+    return () => ws.close(1000, "component unmounted");
   }, [wsUrl, shouldConnect]);
 
   const sendMessage = (data) => {
-    if (socketRef.current && socketRef.current.readyState === 1) {
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify(data));
     } else {
-      console.warn(" Cannot send message — socket not open");
+      console.warn("Cannot send — socket not open");
     }
   };
 
