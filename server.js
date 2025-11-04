@@ -9,27 +9,23 @@ const app = next({ dev });
 const handle = app.getRequestHandler();
 
 const PORT = process.env.PORT || 6045;
-const WS_PORT = process.env.WS_PORT || 7071;
 
 app.prepare().then(() => {
   const httpServer = createServer((req, res) => {
     handle(req, res);
   });
 
-  httpServer.listen(PORT, () => {
-    console.log(` Next.js app running at http://stack.brstdev.com:${PORT}`);
-  });
-  startCronJobs();
-  const wss = new WebSocketServer({ port: WS_PORT });
-  console.log(`WebSocket server running at ws://stack.brstdev.com:${WS_PORT}`);
+  // ✅ Attach WebSocket server to same HTTP server
+  const wss = new WebSocketServer({ server: httpServer });
+  console.log(`✅ WebSocket attached to same port as HTTP (${PORT})`);
 
   wss.on("connection", (ws) => {
-    console.log("New WebSocket client connected");
+    console.log("🔗 New WebSocket client connected");
     ws.send(JSON.stringify({ type: "welcome", message: "Connected to WebSocket" }));
 
     ws.on("message", (message) => {
-      console.log(" Received from client:", message.toString());
-      // broadcast message to all connected clients
+      console.log("📨 Received from client:", message.toString());
+      // Broadcast to all clients
       wss.clients.forEach((client) => {
         if (client.readyState === ws.OPEN) {
           client.send(message.toString());
@@ -37,6 +33,14 @@ app.prepare().then(() => {
       });
     });
 
-    ws.on("close", () => console.log("Client disconnected"));
+    ws.on("close", () => console.log("❌ Client disconnected"));
   });
+
+  // ✅ Start server
+  httpServer.listen(PORT, () => {
+    console.log(`🚀 Next.js + WebSocket server running at http://stack.brstdev.com:${PORT}`);
+  });
+
+  // ✅ Start cron jobs
+  startCronJobs();
 });
