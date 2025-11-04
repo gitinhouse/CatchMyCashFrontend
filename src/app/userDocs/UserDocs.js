@@ -61,25 +61,23 @@ const UserDocs = () => {
     },
   ];
 
-
 const handleUploadClick = (docId) => {
-  setSelectedDocId(docId);
-  requestAnimationFrame(() => {
-    if (fileInputRef.current) {
-      fileInputRef.current.setAttribute("data-docid", docId);
-      if (docId === "claim") {
-        fileInputRef.current.setAttribute("multiple", "true");
-      } else {
-        fileInputRef.current.removeAttribute("multiple");
-      }
-      fileInputRef.current.click();
-    }
-  });
+  if (!fileInputRef.current) return;
+
+  fileInputRef.current.dataset.docid = docId;
+
+  if (docId === "claim") {
+    fileInputRef.current.setAttribute("multiple", "true");
+  } else {
+    fileInputRef.current.removeAttribute("multiple");
+  }
+
+  fileInputRef.current.click();
 };
 
- const handleFileChange = async (event) => {
-   const files = Array.from(event.target.files);
-  const currentDocId = selectedDocId || event.target.getAttribute("data-docid");
+const handleFileChange = async (event) => {
+  const files = Array.from(event.target.files);
+  const currentDocId = event.target.dataset.docid; // ✅ stable ID
   if (files.length === 0 || !currentDocId) return;
 
   try {
@@ -91,11 +89,23 @@ const handleUploadClick = (docId) => {
       const pageHeight = pdf.internal.pageSize.getHeight();
 
       for (let i = 0; i < files.length; i++) {
-        const imageData = await readFileAsDataURL(files[i]);
-        const img = new Image();
-        img.src = imageData;
-        await new Promise((resolve) => (img.onload = resolve));
+        const file = files[i];
+        // Skip unsupported files
+        if (!file.type.startsWith("image/")) {
+          console.warn(`Skipping non-image file: ${file.name}`);
+          continue;
+        }
 
+        // Read and load image
+        const imageData = await readFileAsDataURL(file);
+        const img = await new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = (err) => reject(new Error(`Failed to load ${file.name}`));
+          image.src = imageData;
+        });
+
+        // Fit image to page
         const ratio = Math.min(pageWidth / img.width, pageHeight / img.height);
         const imgWidth = img.width * ratio;
         const imgHeight = img.height * ratio;
@@ -106,29 +116,30 @@ const handleUploadClick = (docId) => {
         pdf.addImage(img, "JPEG", x, y, imgWidth, imgHeight);
       }
 
+      // Finalize PDF
       const pdfBlob = pdf.output("blob");
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const pdfFileName = `claim_${timestamp}.pdf`;
       finalFile = new File([pdfBlob], pdfFileName, { type: "application/pdf" });
     } else {
+     
       finalFile = files[0];
     }
-
     setUploadedFiles((prev) => ({ ...prev, [currentDocId]: finalFile }));
-
     setUploadedDocs((prev) => {
       const updated = new Set(prev);
       updated.add(currentDocId);
       return Array.from(updated);
     });
-
   } catch (err) {
-    console.error("Error processing file:", err);
-    setError("Failed to process file. Please try again.");
+    setError(err.message || "An unexpected error occurred while processing the file.");
   } finally {
-    event.target.value = "";
+    event.target.value = ""; // Reset file input
   }
 };
+
+
+
 
 
   // helper function to read file as base64
@@ -141,40 +152,51 @@ const handleUploadClick = (docId) => {
     });
   };
 
- const handleScanDocument = (docId) => {
-  setScanTargetDocId(docId);
-  requestAnimationFrame(() => {
-    if (scanInputRef.current) {
-      scanInputRef.current.setAttribute("data-docid", docId);
-    
-      if (docId === "claim") {
-        scanInputRef.current.setAttribute("multiple", "true");
-      } else {
-        scanInputRef.current.removeAttribute("multiple");
-      }
-      scanInputRef.current.click();
-    }
-  });
+const handleScanDocument = (docId) => {
+   if (!fileInputRef.current) return;
+
+  fileInputRef.current.dataset.docid = docId;
+
+  if (docId === "claim") {
+    fileInputRef.current.setAttribute("multiple", "true");
+  } else {
+    fileInputRef.current.removeAttribute("multiple");
+  }
+
+  fileInputRef.current.click();
 };
 
 const handleScanChange = async (event) => {
   const files = Array.from(event.target.files);
-  const currentDocId = scanTargetDocId || event.target.getAttribute("data-docid");
+  const currentDocId = scanTargetDocId || event.target.dataset.docid;
   if (files.length === 0 || !currentDocId) return;
 
   try {
     let finalFile;
 
+    // 🧾 Combine multiple scanned images into one Claim PDF
     if (currentDocId === "claim" && files.length > 1) {
+      console.log("📸 Combining multiple scanned claim images into one PDF...");
       const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
 
       for (let i = 0; i < files.length; i++) {
-        const imageData = await readFileAsDataURL(files[i]);
-        const img = new Image();
-        img.src = imageData;
-        await new Promise((resolve) => (img.onload = resolve));
+        const file = files[i];
+        console.log(`🖼️ Processing scanned claim image ${i + 1}/${files.length}:`, file.name);
+
+        if (!file.type.startsWith("image/")) {
+          console.warn(`⚠️ Skipping unsupported scanned file: ${file.name}`);
+          continue;
+        }
+
+        const imageData = await readFileAsDataURL(file);
+        const img = await new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = (err) => reject(new Error(`Failed to load scanned file: ${file.name}`));
+          image.src = imageData;
+        });
 
         const ratio = Math.min(pageWidth / img.width, pageHeight / img.height);
         const imgWidth = img.width * ratio;
@@ -190,25 +212,29 @@ const handleScanChange = async (event) => {
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const pdfFileName = `claim_${timestamp}.pdf`;
       finalFile = new File([pdfBlob], pdfFileName, { type: "application/pdf" });
+
+      console.log("✅ Claim PDF from scan created successfully:", pdfFileName);
     } else {
+      // Single scan or non-claim document
       finalFile = files[0];
     }
 
-    
+    // ✅ Update uploaded files and highlight section
     setUploadedFiles((prev) => ({ ...prev, [currentDocId]: finalFile }));
-
     setUploadedDocs((prev) => {
       const updated = new Set(prev);
       updated.add(currentDocId);
+      console.log("✅ Updated uploadedDocs after scan:", Array.from(updated));
       return Array.from(updated);
     });
   } catch (err) {
-    console.error("Error processing scanned file:", err);
-    setError("Failed to process scanned file. Please try again.");
+    console.error("❌ Error processing scanned file:", err);
+    setError(err.message || "Failed to process scanned document.");
   } finally {
-    event.target.value = "";
+    event.target.value = ""; // reset input
   }
 };
+
 
 
   const requiredDocsUploaded = requiredDocuments

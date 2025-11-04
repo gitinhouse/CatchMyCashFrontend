@@ -12,31 +12,50 @@ export async function POST(req) {
     await connectToDatabase();
 
     const { userEmail, user_id, userType } = await req.json();
-    
-    if (!userEmail ) {
+
+    if (!userEmail) {
       return NextResponse.json(
         { message: "Email is required" },
         { status: 400 }
       );
     }
-   
-   const mongooseUserId = new mongoose.Types.ObjectId(user_id);
+
+    const mongooseUserId = new mongoose.Types.ObjectId(user_id);
 
     const existingUser = await UserLogin.findOne({
       $or: [{ userEmail }, { user_id: mongooseUserId }],
     });
 
+ 
     if (existingUser) {
-      let message = "User already exists";
-      if (existingUser.userEmail === userEmail) {
-        message = "Email already registered";
-      } else if (existingUser.user_id.toString() === user_id) {
-        message = "User ID already linked";
-      }
+      const token = jwt.sign(
+        {
+          id: existingUser._id,
+          email: existingUser.userEmail,
+          type: existingUser.userType,
+          user_id: existingUser.user_id,
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || "1d" }
+      );
 
-      return NextResponse.json({ message }, { status: 409 });
+      return NextResponse.json(
+        {
+          message: "User already exists",
+          token,
+          user: {
+            id: existingUser._id,
+            email: existingUser.userEmail,
+            type: existingUser.userType,
+            user_id: existingUser.user_id,
+          },
+        },
+        { status: 201 } 
+      );
     }
-     const userPassword = generateRandomPassword(10);
+
+    // Create new user
+    const userPassword = generateRandomPassword(10);
     const hashedPassword = await bcrypt.hash(userPassword, 10);
 
     const newUser = await UserLogin.create({
@@ -58,7 +77,8 @@ export async function POST(req) {
       { expiresIn: process.env.JWT_EXPIRES_IN || "1d" }
     );
 
-     const credentialsHTML = `
+    // Prepare email
+    const credentialsHTML = `
       <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
         <tr>
           <td style="padding: 10px; border: 1px solid #eaeaea; background-color: #f9fafb;"><strong>Email:</strong></td>
@@ -72,12 +92,11 @@ export async function POST(req) {
       <p style="margin-top: 20px; color: #444;">You can now log in to your account.</p>
     `;
 
-     await sendEmail(
+    await sendEmail(
       newUser.userEmail,
       "Welcome to Our Platform 🎉",
-     `Hi ${newUser.userEmail},<br>Welcome aboard! Your account has been created successfully. Here are your login details:`,
-     credentialsHTML
-      
+      `Hi ${newUser.userEmail},<br>Welcome aboard! Your account has been created successfully. Here are your login details:`,
+      credentialsHTML
     );
 
     return NextResponse.json(

@@ -176,7 +176,7 @@ export async function POST(req) {
 
     // Create recipient view (embedded signing)
     const viewRequest = new docusign.RecipientViewRequest();
-    viewRequest.returnUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/signed?envelopeId=${envelopeId}`;
+    viewRequest.returnUrl = `${process.env.NEXT_PUBLIC_BASE_URL}:5045/signed?envelopeId=${envelopeId}`;
     viewRequest.authenticationMethod = "none";
     viewRequest.email = email;
     viewRequest.userName = `${firstName} ${lastName}`;
