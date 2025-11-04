@@ -16,11 +16,11 @@ app.prepare().then(() => {
   });
 
   httpServer.listen(PORT, () => {
-    console.log(` Next.js app running at http://localhost:${PORT}`);
+    console.log(` Next.js app running at http://stack.brstdev.com:${PORT}`);
   });
 
   const wss = new WebSocketServer({ port: WS_PORT });
-  console.log(`WebSocket server running at ws://${process.env.NEXT_PUBLIC_WS_URL}`);
+  console.log(`WebSocket server running at ws://stack.brstdev.com:${WS_PORT}`);
 
   wss.on("connection", (ws) => {
     console.log("New WebSocket client connected");
