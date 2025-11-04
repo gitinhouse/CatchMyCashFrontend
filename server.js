@@ -15,7 +15,7 @@ const handle = app.getRequestHandler();
 
 app.prepare().then(() => {
   const httpServer = createServer((req, res) => {
-    handle(req, res, req.url);
+    handle(req, res);
   });
 
   // ✅ Attach WebSocket to same server
