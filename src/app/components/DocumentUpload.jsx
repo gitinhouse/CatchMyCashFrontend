@@ -239,7 +239,7 @@ const DocumentUpload = ({ onNext }) => {
   const handleSubmitCase = async () => {
     if (!userData?._id) return console.error("User ID missing");
     try {
-      if (message.type !== "documents_submitted") {
+      if (message?.type !== "documents_submitted") {
         const formData = new FormData();
         formData.append("case_id", userCase?._id);
         const docKeyMap = {
