@@ -3,10 +3,10 @@ import dotenv from "dotenv";
 import fs from "fs";
 import csvParser from "csv-parser";
 import mongoose from "mongoose";
-import AllProperty from "../models/allProperty.js"; // ✅ adjust path if needed
+import AllProperty from "../models/allProperty.js"; 
 
-dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
-
+//dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 const MONGO_URI = process.env.MONGO_URI;
 if (!MONGO_URI) throw new Error("Please define MONGO_URI in .env.local");
 
@@ -27,7 +27,7 @@ export async function importSCOData() {
   if (!csvFile) throw new Error("No CSV file found in " + csvDir);
 
   const csvPath = path.join(csvDir, csvFile);
-  console.log(`📄 Found CSV file: ${csvFile}`);
+  console.log(`Found CSV file: ${csvFile}`);
 
   const stream = fs.createReadStream(csvPath).pipe(csvParser());
 
