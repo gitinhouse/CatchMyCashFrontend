@@ -280,7 +280,8 @@ const handleScanChange = async (event) => {
   const sendWebSocketUpdate = (uploadedFiles, attempt = 1) => {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_WS_URL || window.location.origin;
-      const wsUrl = baseUrl.replace(/^http/, "ws");
+     // const wsUrl = baseUrl.replace(/^https/, "ws");
+     const wsUrl = baseUrl.replace(/^http/, "ws") + "/api/ws";
       const socket = new WebSocket(wsUrl);
 
       socket.onopen = () => {

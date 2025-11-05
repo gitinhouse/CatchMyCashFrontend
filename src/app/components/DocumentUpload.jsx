@@ -62,11 +62,12 @@ const DocumentUpload = ({ onNext }) => {
 
   // Dynamically build the WS URL (works locally + production)
   const baseUrl = process.env.NEXT_PUBLIC_WS_URL || window.location.origin;
-  const wsUrl = baseUrl.replace(/^https/, "ws");
-
-  const { socket, isConnected, message } = useWebSocket(wsUrl, connectSocket);
-
+ // const wsUrl = baseUrl.replace(/^http/, "ws");
+ const wsUrl = baseUrl.replace(/^http/, "ws") + "/api/ws";
+  //const { socket, isConnected, message } = useWebSocket(wsUrl, connectSocket);
+const { socket, isConnected, message } = useWebSocket(undefined, connectSocket);
   useEffect(() => {
+    console.log('messgae--', message)
     if (message && message.type === "documents_submitted") {
       console.log("Message received:", message);
       setSocketMessage(message);
