@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from './uicomponents/Button';
-import { Card } from './uicomponents/Card';
-import { Progress } from './uicomponents/Progress';
-import { Badge } from './uicomponents/Badge';
-import { Globe, CheckCircle, FileText, Zap, Shield } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Button } from "./uicomponents/Button";
+import { Card } from "./uicomponents/Card";
+import { Progress } from "./uicomponents/Progress";
+import { Badge } from "./uicomponents/Badge";
+import { Globe, CheckCircle, FileText, Zap, Shield, Key } from "lucide-react";
 
 const FormAutomation = ({ userData, onNext }) => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -12,30 +12,30 @@ const FormAutomation = ({ userData, onNext }) => {
 
   const automationSteps = [
     {
-      title: 'Generating Investigator Agreement',
-      description: 'Creating legal documentation with your information',
-      duration: 2000
+      title: "Generating Investigator Agreement",
+      description: "Creating legal documentation with your information",
+      duration: 2000,
     },
     {
-      title: 'Preparing SCO Claim Forms',
-      description: 'Auto-filling State Controller Office forms',
-      duration: 3000
+      title: "Preparing SCO Claim Forms",
+      description: "Auto-filling State Controller Office forms",
+      duration: 3000,
     },
     {
-      title: 'Validating Documentation',
-      description: 'Ensuring all forms meet state requirements',
-      duration: 2500
+      title: "Validating Documentation",
+      description: "Ensuring all forms meet state requirements",
+      duration: 2500,
     },
     {
-      title: 'Preparing DocuSign Package',
-      description: 'Setting up electronic signature workflow',
-      duration: 1500
-    }
+      title: "Preparing DocuSign Package",
+      description: "Setting up electronic signature workflow",
+      duration: 1500,
+    },
   ];
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setProgress(prev => {
+      setProgress((prev) => {
         if (prev >= 100) {
           clearInterval(timer);
           setIsComplete(true);
@@ -51,7 +51,7 @@ const FormAutomation = ({ userData, onNext }) => {
   useEffect(() => {
     const stepTimer = setTimeout(() => {
       if (currentStep < automationSteps.length - 1) {
-        setCurrentStep(prev => prev + 1);
+        setCurrentStep((prev) => prev + 1);
       }
     }, automationSteps[currentStep]?.duration || 2000);
 
@@ -78,7 +78,7 @@ const FormAutomation = ({ userData, onNext }) => {
           <p className="text-gray-600 mb-6">
             Our AI system is preparing all required forms and documentation
           </p>
-          
+
           <div className="max-w-md mx-auto">
             <Progress value={progress} className="mb-2" />
             <p className="text-sm text-gray-500">{progress}% Complete</p>
@@ -94,38 +94,46 @@ const FormAutomation = ({ userData, onNext }) => {
               Active
             </Badge>
           </div>
-          
+
           <div className="bg-gray-900 text-green-400 font-mono text-sm p-4 rounded mb-4 overflow-hidden">
             <div className="animate-pulse">
               {currentStep >= 0 && (
                 <div>
-                  <span className="text-yellow-400">[SYSTEM]</span> Initializing form automation...
+                  <span className="text-yellow-400">[SYSTEM]</span> Initializing
+                  form automation...
                   <br />
-                  <span className="text-blue-400">[INFO]</span> Loading user data: {userData.fullName}
+                  <span className="text-blue-400">[INFO]</span> Loading user
+                  data: {userData.fullName}
                   <br />
                 </div>
               )}
               {currentStep >= 1 && (
                 <div>
-                  <span className="text-green-400">[SUCCESS]</span> Investigator agreement generated
+                  <span className="text-green-400">[SUCCESS]</span> Investigator
+                  agreement generated
                   <br />
-                  <span className="text-yellow-400">[PROCESS]</span> Connecting to SCO database...
+                  <span className="text-yellow-400">[PROCESS]</span> Connecting
+                  to SCO database...
                   <br />
                 </div>
               )}
               {currentStep >= 2 && (
                 <div>
-                  <span className="text-blue-400">[AUTO-FILL]</span> Populating UCP-1 form fields
+                  <span className="text-blue-400">[AUTO-FILL]</span> Populating
+                  UCP-1 form fields
                   <br />
-                  <span className="text-blue-400">[AUTO-FILL]</span> Populating UCP-2 supplemental forms
+                  <span className="text-blue-400">[AUTO-FILL]</span> Populating
+                  UCP-2 supplemental forms
                   <br />
                 </div>
               )}
               {currentStep >= 3 && (
                 <div>
-                  <span className="text-green-400">[VALIDATION]</span> All forms validated successfully
+                  <span className="text-green-400">[VALIDATION]</span> All forms
+                  validated successfully
                   <br />
-                  <span className="text-yellow-400">[DOCUSIGN]</span> Preparing signature workflow...
+                  <span className="text-yellow-400">[DOCUSIGN]</span> Preparing
+                  signature workflow...
                   <br />
                 </div>
               )}
@@ -135,12 +143,19 @@ const FormAutomation = ({ userData, onNext }) => {
 
           <div className="space-y-3">
             {automationSteps.map((step, index) => (
-              <div key={index} className={`flex items-center p-3 rounded ${
-                index <= currentStep ? 'bg-green-50 border border-green-200' : 'bg-gray-50'
-              }`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
-                  index <= currentStep ? 'bg-green-500' : 'bg-gray-300'
-                }`}>
+              <div
+                key={index}
+                className={`flex items-center p-3 rounded ${
+                  index <= currentStep
+                    ? "bg-green-50 border border-green-200"
+                    : "bg-gray-50"
+                }`}
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
+                    index <= currentStep ? "bg-green-500" : "bg-gray-300"
+                  }`}
+                >
                   {index <= currentStep ? (
                     <CheckCircle className="h-5 w-5 text-white" />
                   ) : (
@@ -148,10 +163,18 @@ const FormAutomation = ({ userData, onNext }) => {
                   )}
                 </div>
                 <div className="flex-1">
-                  <h4 className={`font-medium ${index <= currentStep ? 'text-green-800' : 'text-gray-600'}`}>
+                  <h4
+                    className={`font-medium ${
+                      index <= currentStep ? "text-green-800" : "text-gray-600"
+                    }`}
+                  >
                     {step.title}
                   </h4>
-                  <p className={`text-sm ${index <= currentStep ? 'text-green-600' : 'text-gray-500'}`}>
+                  <p
+                    className={`text-sm ${
+                      index <= currentStep ? "text-green-600" : "text-gray-500"
+                    }`}
+                  >
                     {step.description}
                   </p>
                 </div>
@@ -165,21 +188,27 @@ const FormAutomation = ({ userData, onNext }) => {
 
         {/* What's Being Automated */}
         <Card className="p-6 mb-8">
-          <h3 className="text-lg font-bold text-white mb-4">What We're Automating For You</h3>
+          <h3 className="text-lg font-bold text-white mb-4">
+            What We're Automating For You
+          </h3>
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-3">
               <div className="flex items-start">
                 <FileText className="h-5 w-5 text-blue-600 mr-2 mt-1" />
                 <div>
                   <p className="font-medium">Investigator Agreement</p>
-                  <p className="text-sm text-gray-600">Legal authorization to act on your behalf</p>
+                  <p className="text-sm text-gray-600">
+                    Legal authorization to act on your behalf
+                  </p>
                 </div>
               </div>
               <div className="flex items-start">
                 <Globe className="h-5 w-5 text-blue-600 mr-2 mt-1" />
                 <div>
                   <p className="font-medium">SCO Claim Forms</p>
-                  <p className="text-sm text-gray-600">UCP-1, UCP-2, and supplemental documentation</p>
+                  <p className="text-sm text-gray-600">
+                    UCP-1, UCP-2, and supplemental documentation
+                  </p>
                 </div>
               </div>
             </div>
@@ -188,18 +217,82 @@ const FormAutomation = ({ userData, onNext }) => {
                 <Shield className="h-5 w-5 text-blue-600 mr-2 mt-1" />
                 <div>
                   <p className="font-medium">Identity Verification</p>
-                  <p className="text-sm text-gray-600">Notarization and identity proof forms</p>
+                  <p className="text-sm text-gray-600">
+                    Notarization and identity proof forms
+                  </p>
                 </div>
               </div>
               <div className="flex items-start">
                 <CheckCircle className="h-5 w-5 text-blue-600 mr-2 mt-1" />
                 <div>
                   <p className="font-medium">Compliance Check</p>
-                  <p className="text-sm text-gray-600">Ensuring all state requirements are met</p>
+                  <p className="text-sm text-gray-600">
+                    Ensuring all state requirements are met
+                  </p>
                 </div>
               </div>
             </div>
           </div>
+        </Card>
+
+        {/* Claim Instruction Process */}
+        <Card className="p-6 mb-8">
+          <h3 className="text-lg font-bold text-white mb-4">Further Steps</h3>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <div className="flex items-start">
+                <FileText className="h-5 w-5 text-blue-600 mr-2 mt-1" />
+                <div>
+                  <p className="font-medium">Claim Information</p>
+                  <p className="text-sm text-gray-600">
+                    Your claim has been successfully submitted.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start">
+                <FileText className="h-5 w-5 text-blue-600 mr-2 mt-1" />
+                <div>
+                  <p className="font-medium">Confirmation Email</p>
+                  <p className="text-sm text-gray-600">
+                    You will receive an Confirmation Email, need to upload in
+                    next step.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-start">
+                <Key className="h-5 w-5 text-blue-600 mr-2 mt-1" />
+                <div>
+                  <p className="font-medium">Catch My Cash Login Details</p>
+                  <p className="text-sm text-gray-600">
+                    You will receive an Email with your Login details.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start">
+                <CheckCircle className="h-5 w-5 text-blue-600 mr-2 mt-1" />
+                <div>
+                  <p className="font-medium">Personal Document</p>
+                  <p className="text-sm text-gray-600">
+                    Need to Upload personal document.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          {isComplete ? (
+            <div className="flex justify-center mt-6">
+              <Button
+                onClick={onNext}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xl px-4 py-4 w-1/2 rounded-lg"
+              >
+                Continue to DocuSign and Claim Process
+              </Button>
+            </div>
+          ) : (
+            <></>
+          )}
         </Card>
 
         {/* Comparison */}
@@ -209,7 +302,9 @@ const FormAutomation = ({ userData, onNext }) => {
           </h3>
           <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <h4 className="font-medium text-red-700 mb-2">Doing It Yourself:</h4>
+              <h4 className="font-medium text-red-700 mb-2">
+                Doing It Yourself:
+              </h4>
               <ul className="text-sm text-red-600 space-y-1">
                 <li>• Download and print 15+ different forms</li>
                 <li>• Fill out forms by hand (prone to errors)</li>
@@ -220,7 +315,9 @@ const FormAutomation = ({ userData, onNext }) => {
               </ul>
             </div>
             <div>
-              <h4 className="font-medium text-green-700 mb-2">With FindMyMoney:</h4>
+              <h4 className="font-medium text-green-700 mb-2">
+                With FindMyMoney:
+              </h4>
               <ul className="text-sm text-green-600 space-y-1">
                 <li>• Automated form preparation</li>
                 <li>• Error-free electronic submission</li>
@@ -242,10 +339,11 @@ const FormAutomation = ({ userData, onNext }) => {
                 Forms Ready for Signature!
               </h3>
               <p className="text-gray-600">
-                All documents have been prepared and are ready for your digital signature
+                All documents have been prepared and are ready for your digital
+                signature
               </p>
             </div>
-            <Button 
+            <Button
               onClick={onNext}
               className="bg-blue-600 hover:bg-blue-700 text-white px-12 py-4 text-xl rounded-lg"
             >
@@ -262,6 +360,6 @@ const FormAutomation = ({ userData, onNext }) => {
       </div>
     </div>
   );
-}
+};
 
-export default FormAutomation
+export default FormAutomation;

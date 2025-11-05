@@ -8,6 +8,7 @@ import { useSearchStore } from "../store/searchStore";
 import axios from "axios";
 
 const UserInformation = ({ onNext }) => {
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -32,8 +33,77 @@ const UserInformation = ({ onNext }) => {
     setErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
+  const handlePhoneChange = (value) => {
+    // Remove all non-digit characters
+    const digits = value.replace(/\D/g, "").slice(0, 10); // max 10 digits
+
+    // Format as (123) 456-7890
+    let formatted = digits;
+    if (digits.length > 6) {
+      formatted = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(
+        6
+      )}`;
+    } else if (digits.length > 3) {
+      formatted = `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    } else if (digits.length > 0) {
+      formatted = `(${digits}`;
+    }
+
+    handleInputChange("phone", formatted);
+  };
+  const handlePhoneBlur = () => {
+    const phoneDigits = formData.phone.replace(/\D/g, "");
+    if (phoneDigits.length !== 10) {
+      setErrors((prev) => ({
+        ...prev,
+        phone: "Phone number must be exactly 10 digits.",
+      }));
+    } else {
+      setErrors((prev) => ({ ...prev, phone: "" }));
+    }
+  };
+
+  const handleSSNChange = (value) => {
+    const digits = value.replace(/\D/g, "").slice(0, 9); // max 9 digits
+
+    let formatted = digits;
+    if (digits.length > 5) {
+      formatted = `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(
+        5
+      )}`;
+    } else if (digits.length > 3) {
+      formatted = `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    }
+
+    handleInputChange("ssn", formatted);
+  };
+
+  const handleSSNBlur = () => {
+    const ssnDigits = formData.ssn.replace(/\D/g, "");
+    if (ssnDigits.length !== 9) {
+      setErrors((prev) => ({
+        ...prev,
+        ssn: "SSN must be exactly 9 digits.",
+      }));
+    } else {
+      setErrors((prev) => ({ ...prev, ssn: "" }));
+    }
+  };
+  const handleZipBlur = () => {
+    const zip = formData.zipCode;
+    const zipRegex = /^[A-Za-z0-9]{5}$/;
+    if (!zipRegex.test(zip)) {
+      setErrors((prev) => ({
+        ...prev,
+        zipCode: "ZIP code must be exactly 5 letters or numbers.",
+      }));
+    } else {
+      setErrors((prev) => ({ ...prev, zipCode: "" }));
+    }
+  };
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
     // Validate required fields
     const requiredFields = [
       "fullName",
@@ -72,6 +142,7 @@ const UserInformation = ({ onNext }) => {
       return;
     }
     try {
+      setLoading(true);
       const payload = {
         user_id: userData._id,
         legal_name: formData.fullName,
@@ -101,6 +172,8 @@ const UserInformation = ({ onNext }) => {
       onNext(data);
     } catch (err) {
       console.error("Error saving user properties:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -202,11 +275,11 @@ const UserInformation = ({ onNext }) => {
                   Phone Number *
                 </label>
                 <InputField
-                  type="number"
+                  type="text"
                   value={formData.phone}
-                  onChange={(e) => handleInputChange("phone", e.target.value)}
+                  onChange={(e) => handlePhoneChange(e.target.value)}
                   placeholder="(555) 123-4567"
-                  maxLength={10}
+                  onBlur={handlePhoneBlur}
                   required
                 />
                 {errors.phone && (
@@ -219,11 +292,11 @@ const UserInformation = ({ onNext }) => {
                   Social Security Number *
                 </label>
                 <InputField
-                  type="number"
+                  type="text"
                   value={formData.ssn}
-                  onChange={(e) => handleInputChange("ssn", e.target.value)}
+                  onChange={(e) => handleSSNChange(e.target.value)}
+                  onBlur={handleSSNBlur}
                   placeholder="XXX-XX-XXXX"
-                  maxLength={9}
                   required
                 />
                 <p className="text-xs text-gray-500 mt-1">
@@ -286,12 +359,16 @@ const UserInformation = ({ onNext }) => {
                   ZIP Code *
                 </label>
                 <InputField
-                  type="number"
+                  type="text"
                   value={formData.zipCode}
                   onChange={(e) => handleInputChange("zipCode", e.target.value)}
+                  onBlur={handleZipBlur}
                   placeholder="90210"
                   required
                 />
+                {errors.zipCode && (
+                  <p className="text-red-500 text-xs mt-1">{errors.zipCode}</p>
+                )}
               </div>
 
               {/* Additional Information */}
@@ -352,8 +429,9 @@ const UserInformation = ({ onNext }) => {
               <Button
                 type="submit"
                 className="glass-button text-white px-8 py-3 hover:text-green-200"
+                 disabled={loading} 
               >
-                Continue to Form Automation
+                 {loading ? "Submitting..." : "Continue to Form Automation"}
               </Button>
             </div>
           </Card>
