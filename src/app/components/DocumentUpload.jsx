@@ -118,6 +118,11 @@ const DocumentUpload = ({ onNext }) => {
       const savedProperty = localStorage.getItem("propertyData");
       if (savedProperty) setSearchResults(JSON.parse(savedProperty));
     }
+     if (!userCase) {
+      const savedUserCaseData = localStorage.getItem("userCase");
+      if (savedUserCaseData) setUserCase(JSON.parse(savedUserCaseData));
+    }
+
   }, [userData, searchResults, userSignedAgreement, userAgreement]);
 
   useEffect(() => {
