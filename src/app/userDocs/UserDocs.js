@@ -139,7 +139,8 @@ const UserDocs = () => {
       const baseUrl = process.env.NEXT_PUBLIC_WS_URL || window.location.origin;
        const protocol = baseUrl.startsWith("https") ? "wss" : "ws";
     const host = baseUrl.replace(/^https?:\/\//, ""); // remove protocol
-    const wsUrl = `${protocol}://${host}/api/ws`;
+    const wsUrl = `${protocol}://${host}api/ws`;
+    console.log('---', wsUrl)
 const socket = new WebSocket(wsUrl);
       socket.onopen = () => {
         const documentStatus = {
