@@ -4,11 +4,23 @@ import { Card } from "./uicomponents/Card";
 import { Progress } from "./uicomponents/Progress";
 import { Badge } from "./uicomponents/Badge";
 import { Globe, CheckCircle, FileText, Zap, Shield, Key } from "lucide-react";
+import { useSearchStore } from "../store/searchStore";
+import axios from "axios";
 
 const FormAutomation = ({ userData, onNext }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { setUserData, userCase, setUserCase } = useSearchStore();
+
+  useEffect(() => {
+    if (!userData) {
+      const savedUserData = localStorage.getItem("userData");
+      if (savedUserData) setUserData(JSON.parse(savedUserData));
+    }
+  }, [userData]);
 
   const automationSteps = [
     {
@@ -57,6 +69,40 @@ const FormAutomation = ({ userData, onNext }) => {
 
     return () => clearTimeout(stepTimer);
   }, [currentStep]);
+
+  const handleContinue = async () => {
+    console.log('---', userData);
+    if (!userData?.user_id) {
+      console.error("User ID not found");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const userRecord = JSON.parse(localStorage.getItem("userData") || "{}");
+
+      const userId = userData?.user_id || userRecord?._id;
+      if (!userId) {
+        console.error("No user ID found in state or localStorage");
+        return;
+      }
+
+      const payload = { user_id: userId };
+      const response = await axios.post("/api/case", payload);
+
+      localStorage.setItem("userCase", JSON.stringify(response.data));
+      setUserCase(response.data);
+
+      onNext();
+    } catch (error) {
+      console.error("Error creating case:", error);
+      console.log(
+        "Something went wrong while creating your case. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -284,10 +330,13 @@ const FormAutomation = ({ userData, onNext }) => {
           {isComplete ? (
             <div className="flex justify-center mt-6">
               <Button
-                onClick={onNext}
+                onClick={handleContinue}
+                disabled={isSubmitting}
                 className="bg-blue-600 hover:bg-blue-700 text-white text-xl px-4 py-4 w-1/2 rounded-lg"
               >
-                Continue to DocuSign and Claim Process
+                {isSubmitting
+                  ? "Creating Case..."
+                  : "Continue to DocuSign and Claim Process"}
               </Button>
             </div>
           ) : (
@@ -344,10 +393,13 @@ const FormAutomation = ({ userData, onNext }) => {
               </p>
             </div>
             <Button
-              onClick={onNext}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-12 py-4 text-xl rounded-lg"
+              onClick={handleContinue}
+              disabled={isSubmitting}
+              className={`bg-blue-600 hover:bg-blue-700 text-white px-12 py-4 text-xl rounded-lg ${
+                isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+              }`}
             >
-              Continue to DocuSign
+              {isSubmitting ? "Creating Case..." : "Continue to DocuSign"}
             </Button>
           </div>
         ) : (
