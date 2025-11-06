@@ -64,8 +64,12 @@ const DocumentUpload = ({ onNext }) => {
 
   // Dynamically build the WS URL (works locally + production)
   const baseUrl = process.env.NEXT_PUBLIC_WS_URL || window.location.origin;
+  const protocol = baseUrl.startsWith("https") ? "wss" : "ws";
+  const host = baseUrl.replace(/^https?:\/\//, ""); // remove protocol
+  const wsUrl = `${protocol}://${host}/api/ws`;
+
   // const wsUrl = baseUrl.replace(/^http/, "ws");
-  const wsUrl = baseUrl.replace(/^https/, "ws") + "/api/ws";
+  //const wsUrl = baseUrl.replace(/^https/, "ws") + "/api/ws";
   //const { socket, isConnected, message } = useWebSocket(wsUrl, connectSocket);
   const { socket, isConnected, message } = useWebSocket(
     undefined,
@@ -118,11 +122,10 @@ const DocumentUpload = ({ onNext }) => {
       const savedProperty = localStorage.getItem("propertyData");
       if (savedProperty) setSearchResults(JSON.parse(savedProperty));
     }
-     if (!userCase) {
+    if (!userCase) {
       const savedUserCaseData = localStorage.getItem("userCase");
       if (savedUserCaseData) setUserCase(JSON.parse(savedUserCaseData));
     }
-
   }, [userData, searchResults, userSignedAgreement, userAgreement]);
 
   useEffect(() => {
@@ -353,9 +356,11 @@ const DocumentUpload = ({ onNext }) => {
               <Button
                 onClick={handleDocuSign}
                 className="bg-orange-600 hover:bg-orange-700 text-white cursor-pointer sm:px-4 px-2"
-                disabled={isDocuSignLoading? true: false}
+                disabled={isDocuSignLoading ? true : false}
               >
-               {isDocuSignLoading? " Processing for Docu Sign":  "Open DocuSign to Sign Documents"}
+                {isDocuSignLoading
+                  ? " Processing for Docu Sign"
+                  : "Open DocuSign to Sign Documents"}
               </Button>
             </div>
           ) : (
@@ -501,7 +506,7 @@ const DocumentUpload = ({ onNext }) => {
                 onClick={handleSubmitCase}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-12 py-4 text-xl rounded-lg"
               >
-              {isSubmitted ?  'Submitting... ': ' Submit My Case' } 
+                {isSubmitted ? "Submitting... " : " Submit My Case"}
               </Button>
             </div>
           ) : (

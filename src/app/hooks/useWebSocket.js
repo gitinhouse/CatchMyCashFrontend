@@ -28,7 +28,7 @@ export function useWebSocket(wsUrl, shouldConnect = true) {
     return (
       process.env.NEXT_PUBLIC_WS_URL ||
       (process.env.NODE_ENV === "production"
-        ? "wss://stack.brstdev.com:6045/api/ws"
+        ? "wss://fetchmydollars.com/api/ws"
         : "ws://localhost:6045/api/ws")
     );
   }, [wsUrl]);

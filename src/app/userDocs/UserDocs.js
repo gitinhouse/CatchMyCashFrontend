@@ -137,8 +137,9 @@ const UserDocs = () => {
   const sendWebSocketUpdate = (uploadedFiles, attempt = 1) => {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_WS_URL || window.location.origin;
-      const wsUrl = baseUrl.replace(/^https/, "ws") + "/api/ws";
-      const socket = new WebSocket(wsUrl);
+       const protocol = baseUrl.startsWith("https") ? "wss" : "ws";
+    const host = baseUrl.replace(/^https?:\/\//, ""); // remove protocol
+    const wsUrl = `${protocol}://${host}/api/ws`;
 
       socket.onopen = () => {
         const documentStatus = {
