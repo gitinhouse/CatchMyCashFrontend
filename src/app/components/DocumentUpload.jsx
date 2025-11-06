@@ -23,11 +23,13 @@ const DocumentUpload = ({ onNext }) => {
   const [selectedDocId, setSelectedDocId] = useState(null);
   const [scanTargetDocId, setScanTargetDocId] = useState(null);
   const [socketMessage, setSocketMessage] = useState(null);
-
+  const [qrPopupDoc, setQrPopupDoc] = useState(null);
   const fileInputRef = useRef(null);
   const scanInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isDocuSignLoading, setIsDocuSignLoading] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const hasRun = useRef(false);
   const {
     userData,
@@ -39,7 +41,7 @@ const DocumentUpload = ({ onNext }) => {
     userCase,
     setUserCase,
     searchResults,
-    setSearchResults
+    setSearchResults,
   } = useSearchStore();
   const requiredDocuments = [
     { id: "id", name: "Government-issued Photo ID", required: true },
@@ -62,12 +64,14 @@ const DocumentUpload = ({ onNext }) => {
 
   // Dynamically build the WS URL (works locally + production)
   const baseUrl = process.env.NEXT_PUBLIC_WS_URL || window.location.origin;
- // const wsUrl = baseUrl.replace(/^http/, "ws");
- const wsUrl = baseUrl.replace(/^https/, "ws") + "/api/ws";
+  // const wsUrl = baseUrl.replace(/^http/, "ws");
+  const wsUrl = baseUrl.replace(/^https/, "ws") + "/api/ws";
   //const { socket, isConnected, message } = useWebSocket(wsUrl, connectSocket);
-const { socket, isConnected, message } = useWebSocket(undefined, connectSocket);
+  const { socket, isConnected, message } = useWebSocket(
+    undefined,
+    connectSocket
+  );
   useEffect(() => {
-    console.log('messgae--', message)
     if (message && message.type === "documents_submitted") {
       console.log("Message received:", message);
       setSocketMessage(message);
@@ -80,7 +84,7 @@ const { socket, isConnected, message } = useWebSocket(undefined, connectSocket);
         adress_proof: "address",
         brith_proof: "birth",
         employee_proof: "employment",
-        claim_doc: "claim"
+        claim_doc: "claim",
       };
 
       const uploadedIds = Object.entries(docs)
@@ -110,11 +114,11 @@ const { socket, isConnected, message } = useWebSocket(undefined, connectSocket);
       const savedSigned = localStorage.getItem("signedDoc");
       if (savedSigned) setuserSignedAgreement(JSON.parse(savedSigned));
     }
-    if(!searchResults){
-       const savedProperty = localStorage.getItem("propertyData");
+    if (!searchResults) {
+      const savedProperty = localStorage.getItem("propertyData");
       if (savedProperty) setSearchResults(JSON.parse(savedProperty));
     }
-  }, [userData,searchResults,userSignedAgreement,userAgreement]);
+  }, [userData, searchResults, userSignedAgreement, userAgreement]);
 
   useEffect(() => {
     if (docusignComplete && !connectSocket) {
@@ -169,6 +173,7 @@ const { socket, isConnected, message } = useWebSocket(undefined, connectSocket);
   }, [userSignedAgreement]);
 
   const handleDocuSign = async () => {
+    setIsDocuSignLoading(true);
     const firstName = userData?.first_name;
     const lastName = userData?.last_name;
     const email = userAgreement?.email_id;
@@ -176,12 +181,19 @@ const { socket, isConnected, message } = useWebSocket(undefined, connectSocket);
       const res = await fetch("/api/docusign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, lastName, email, searchResults,  userAgreement }),
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email,
+          searchResults,
+          userAgreement,
+        }),
       });
       const data = await res.json();
 
       if (data.signingUrl) {
         window.location.href = data.signingUrl;
+        setIsDocuSignLoading(false);
       } else {
         setError(data.error || "Something went wrong.");
       }
@@ -209,9 +221,18 @@ const { socket, isConnected, message } = useWebSocket(undefined, connectSocket);
     event.target.value = "";
   };
 
+  const getQrUrl = (docId) => {
+    if (!userId || !caseId || !docId) return "";
+    return `${window.location.origin}/userDocs?userId=${userId}&caseId=${caseId}&docId=${docId}`;
+  };
+
   const handleScanDocument = (docId) => {
-    setScanTargetDocId(docId);
-    if (scanInputRef.current) scanInputRef.current.click();
+    const doc = requiredDocuments.find((d) => d.id === docId);
+    if (!doc) return;
+    setQrPopupDoc({
+      docId: doc.id,
+      docName: doc.name,
+    });
   };
 
   const handleScanChange = (event) => {
@@ -240,6 +261,7 @@ const { socket, isConnected, message } = useWebSocket(undefined, connectSocket);
   const handleSubmitCase = async () => {
     if (!userData?._id) return console.error("User ID missing");
     try {
+      setIsSubmitted(true);
       if (message?.type !== "documents_submitted") {
         const formData = new FormData();
         formData.append("case_id", userCase?._id);
@@ -249,7 +271,7 @@ const { socket, isConnected, message } = useWebSocket(undefined, connectSocket);
           address: "adress_proof",
           birth: "brith_proof",
           employment: "employee_proof",
-          claim: "claim_doc"
+          claim: "claim_doc",
         };
         Object.entries(docKeyMap).forEach(([frontendKey, backendKey]) => {
           const file = uploadedFiles[frontendKey];
@@ -263,6 +285,7 @@ const { socket, isConnected, message } = useWebSocket(undefined, connectSocket);
         const data = await res.json();
         localStorage.setItem("userAllDocs", JSON.stringify(data));
       }
+      setIsSubmitted(false);
       onNext();
     } catch (err) {
       console.error("Upload failed:", err);
@@ -325,8 +348,9 @@ const { socket, isConnected, message } = useWebSocket(undefined, connectSocket);
               <Button
                 onClick={handleDocuSign}
                 className="bg-orange-600 hover:bg-orange-700 text-white cursor-pointer sm:px-4 px-2"
+                disabled={isDocuSignLoading? true: false}
               >
-                Open DocuSign to Sign Documents
+               {isDocuSignLoading? " Processing for Docu Sign":  "Open DocuSign to Sign Documents"}
               </Button>
             </div>
           ) : (
@@ -341,23 +365,7 @@ const { socket, isConnected, message } = useWebSocket(undefined, connectSocket);
 
         {/* Step 2: QR Code & Upload Documents */}
         <Card className="p-6 mb-8">
-          {userId && docusignComplete && (
-            <Card className="p-4 mb-4 text-center bg-white">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">
-                Access Your Case on Mobile
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Scan this QR code with your mobile device to upload your
-                document
-              </p>
-              <div className="inline-block p-4 rounded-lg bg-gray-100">
-                <QRCodeSVG value={qrUrl} size={180} fgColor="#1D4ED8" />
-              </div>
-              <p className="text-gray-500 mt-2 text-sm break-words">{qrUrl}</p>
-            </Card>
-          )}
-
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-bold text-white">
               Step 2: Upload Supporting Documents
             </h3>
@@ -370,7 +378,7 @@ const { socket, isConnected, message } = useWebSocket(undefined, connectSocket);
             </Badge>
           </div>
 
-          <p className="text-gray-600 mb-6">
+          <p className="text-gray-600 mb-3">
             Upload or scan your identity documents. We automatically transfer
             these to your case file.
           </p>
@@ -423,11 +431,7 @@ const { socket, isConnected, message } = useWebSocket(undefined, connectSocket);
                         onClick={() => handleScanDocument(doc.id)}
                         disabled={isScanning}
                       >
-                        {isScanning ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-1"></div>
-                        ) : (
-                          <Camera className="h-4 w-4 mr-1" />
-                        )}
+                        <Camera className="h-4 w-4 mr-1" />
                         Scan
                       </Button>
                     </div>
@@ -492,7 +496,7 @@ const { socket, isConnected, message } = useWebSocket(undefined, connectSocket);
                 onClick={handleSubmitCase}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-12 py-4 text-xl rounded-lg"
               >
-                Submit My Case
+              {isSubmitted ?  'Submitting... ': ' Submit My Case' } 
               </Button>
             </div>
           ) : (
@@ -527,6 +531,39 @@ const { socket, isConnected, message } = useWebSocket(undefined, connectSocket);
         onChange={handleScanChange}
         className="hidden"
       />
+
+      {qrPopupDoc && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-[90%] max-w-md relative">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
+              onClick={() => setQrPopupDoc(null)}
+            >
+              ✕
+            </button>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">
+              Scan to Upload: {qrPopupDoc.docName}
+            </h3>
+            <p className="text-gray-600 mb-4 text-sm">
+              Use your mobile device to scan the QR code below to upload this
+              document.
+            </p>
+            <div className="flex justify-center mb-4">
+              <QRCodeSVG
+                value={getQrUrl(qrPopupDoc.docId)}
+                size={200}
+                fgColor="#1D4ED8"
+              />
+            </div>
+            <p className="text-gray-500 text-xs break-words text-center">
+              {getQrUrl(qrPopupDoc.docId)}
+            </p>
+            <div className="text-center mt-4">
+              <Button onClick={() => setQrPopupDoc(null)}>Close</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

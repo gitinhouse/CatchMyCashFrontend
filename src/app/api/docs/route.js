@@ -82,17 +82,6 @@ export async function PUT(req) {
       }
     }
 
-    // ✅ Required fields check
-    const requiredFields = ["proof_id", "ssn_id", "adress_proof"];
-    for (const field of requiredFields) {
-      if (!documentPaths[field]) {
-        return new Response(
-          JSON.stringify({ error: `${field} file is required` }),
-          { status: 400 }
-        );
-      }
-    }
-
     // Update DB record with new file paths
     const updatedDocs = await UserDocs.findOneAndUpdate(
       { case_id },
