@@ -93,6 +93,15 @@ const FormAutomation = ({ userData, onNext }) => {
       localStorage.setItem("userCase", JSON.stringify(response.data));
       setUserCase(response.data);
 
+       const docsPayload = {
+            user_id: userId,
+            case_id: response.data._id,
+            signed_doc: "test.pdf",
+          };
+          const docsResponse = await axios.post("/api/docs", docsPayload);
+
+          console.log("Docs response:", docsResponse.data);
+
       onNext();
     } catch (error) {
       console.error("Error creating case:", error);
