@@ -10,7 +10,7 @@ const app = next({ dev });
 const handle = app.getRequestHandler();
 
 const PORT = process.env.PORT;
-const HOSTNAME = process.env.HOSTNAME || (dev ? "localhost" : "stack.brstdev.com");
+const HOSTNAME = process.env.HOSTNAME || (dev ? "localhost" : "fetchmydollars.com");
 
 app.prepare().then(() => {
   const httpServer = createServer((req, res) => {
