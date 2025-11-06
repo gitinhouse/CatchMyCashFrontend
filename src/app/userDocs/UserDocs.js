@@ -140,7 +140,7 @@ const UserDocs = () => {
        const protocol = baseUrl.startsWith("https") ? "wss" : "ws";
     const host = baseUrl.replace(/^https?:\/\//, ""); // remove protocol
     const wsUrl = `${protocol}://${host}/api/ws`;
-
+const socket = new WebSocket(wsUrl);
       socket.onopen = () => {
         const documentStatus = {
           proof_id: !!uploadedFiles.id,
