@@ -1,22 +1,50 @@
 {
-  "name": "catchmycashfrontend",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "mongoose": "^8.19.1",
-    "next": "15.5.5",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
-  },
-  "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "eslint": "^9",
-    "eslint-config-next": "15.5.5"
-  }
+    "type": "module",
+    "name": "catchmycashfrontend",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+         "dev": "NODE_ENV=development node server.js",
+        "build": "next build",
+        "start": "NODE_ENV=production node server.js",
+        "lint": "eslint"
+    },
+    "dependencies": {
+        "@aws-sdk/client-s3": "^3.911.0",
+        "@radix-ui/react-progress": "^1.1.7",
+        "@radix-ui/react-slot": "^1.2.3",
+        "@tailwindcss/postcss": "^4.1.14",
+        "axios": "^1.12.2",
+        "bcryptjs": "^3.0.2",
+        "class-variance-authority": "^0.7.1",
+        "csv-parser": "^3.2.0",
+        "docusign-esign": "^7.0.0",
+        "dotenv": "^17.2.3",
+        "framer-motion": "^12.23.24",
+        "jsonwebtoken": "^9.0.2",
+        "jspdf": "^3.0.3",
+        "lucide-react": "^0.545.0",
+        "mongoose": "^8.19.2",
+        "multiparty": "^4.2.3",
+        "next": "15.5.5",
+        "node-cron": "^4.2.1",
+        "nodemailer": "^7.0.10",
+        "pdf-lib": "^1.17.1",
+        "postcss": "^8.5.6",
+        "qrcode.react": "^4.2.0",
+        "react": "19.1.0",
+        "react-dom": "19.1.0",
+        "tailwind-merge": "^3.3.1",
+        "tailwindcss": "^4.1.14",
+        "unzipper": "^0.12.3",
+        "uuid": "^13.0.0",
+        "ws": "^8.18.3",
+        "zustand": "^5.0.8"
+    },
+    "devDependencies": {
+        "@eslint/eslintrc": "^3",
+        "eslint": "^9",
+        "eslint-config-next": "15.5.5",
+        "patch-package": "^8.0.1"
+    }
 }

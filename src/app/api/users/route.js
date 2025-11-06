@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "../../lib/mongodb";
 import User from "../../models/UserInformation";
 
-
 export async function POST(req) {
   const { first_name, last_name,address, city,zip_code,state } = await req.json();
 

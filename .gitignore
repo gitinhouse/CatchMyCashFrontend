@@ -39,3 +39,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.bash_history
+.cache/
+.config/
+.npm/
+.pm2/
+.ssh/
+.viminfo
+.lesshst
+package.json
+/public/SCORecords
+tmp_All_Records.zip
+/uploads
+/documents
+/lib/middleware
