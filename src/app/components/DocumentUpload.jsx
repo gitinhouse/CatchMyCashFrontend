@@ -60,7 +60,7 @@ const DocumentUpload = ({ onNext }) => {
     },
   ];
 
-  const [connectSocket, setConnectSocket] = useState(false);
+  const [connectSocket, setConnectSocket] = useState(true);
 
   // Dynamically build the WS URL (works locally + production)
   const baseUrl = process.env.NEXT_PUBLIC_WS_URL || window.location.origin;
@@ -72,7 +72,7 @@ const DocumentUpload = ({ onNext }) => {
   //const wsUrl = baseUrl.replace(/^https/, "ws") + "/api/ws";
   //const { socket, isConnected, message } = useWebSocket(wsUrl, connectSocket);
   const { socket, isConnected, message } = useWebSocket(
-    undefined,
+    null,
     connectSocket
   );
   useEffect(() => {
