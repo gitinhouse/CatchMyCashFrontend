@@ -88,7 +88,7 @@ app.prepare().then(() => {
     `);
   });
 
-  startCronJobs();
+  //startCronJobs();
 
   // Graceful shutdown
   const shutdown = () => {

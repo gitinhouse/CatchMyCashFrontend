@@ -10,8 +10,8 @@ export function useWebSocket(wsUrl, shouldConnect = true) {
   const reconnectTimeoutRef = useRef(null);
   const reconnectAttemptsRef = useRef(0);
 
-  const MAX_RECONNECT_ATTEMPTS = 5;
-  const RECONNECT_DELAY = 3000;
+  const MAX_RECONNECT_ATTEMPTS = 10;
+  const RECONNECT_DELAY = 8000;
 
   const getWebSocketUrl = useCallback(() => {
     // If custom URL is provided, use it
