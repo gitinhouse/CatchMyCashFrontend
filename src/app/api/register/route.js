@@ -6,6 +6,7 @@ import UserLogin from "../../models/userLogin";
 import mongoose from "mongoose";
 import { sendEmail } from "../../lib/mailer";
 import { generateRandomPassword } from "../../lib/utils";
+import { createNotification } from "../../lib/createNotification.js";
 
 export async function POST(req) {
   try {
@@ -26,31 +27,10 @@ export async function POST(req) {
       $or: [{ userEmail }, { user_id: mongooseUserId }],
     });
 
- 
     if (existingUser) {
-      const token = jwt.sign(
-        {
-          id: existingUser._id,
-          email: existingUser.userEmail,
-          type: existingUser.userType,
-          user_id: existingUser.user_id,
-        },
-        process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN || "1d" }
-      );
-
       return NextResponse.json(
-        {
-          message: "User already exists",
-          token,
-          user: {
-            id: existingUser._id,
-            email: existingUser.userEmail,
-            type: existingUser.userType,
-            user_id: existingUser.user_id,
-          },
-        },
-        { status: 201 } 
+        { message: "Email already exists. Please use a different email." },
+        { status: 409 }
       );
     }
 
@@ -97,6 +77,12 @@ export async function POST(req) {
       "Welcome to Our Platform 🎉",
       `Hi ${newUser.userEmail},<br>Welcome aboard! Your account has been created successfully. Here are your login details:`,
       credentialsHTML
+    );
+
+    await createNotification(
+      user_id,
+      "Login details",
+      "An Email has been sent to your registered Email-Id with Login Details."
     );
 
     return NextResponse.json(

@@ -60,7 +60,7 @@ const DocumentUpload = ({ onNext }) => {
     },
   ];
 
-  const [connectSocket, setConnectSocket] = useState(true);
+  const [connectSocket, setConnectSocket] = useState(false);
 
   // Dynamically build the WS URL (works locally + production)
   const baseUrl = process.env.NEXT_PUBLIC_WS_URL || window.location.origin;
@@ -262,9 +262,6 @@ const DocumentUpload = ({ onNext }) => {
   const canProceed = docusignComplete && requiredDocsUploaded;
   const userId = userData?._id;
   const caseId = userCase?._id;
-  const qrUrl = userId
-    ? `${window.location.origin}/userDocs?Id=${userId}&caseId=${caseId}`
-    : null;
 
   const handleSubmitCase = async () => {
     if (!userData?._id) return console.error("User ID missing");

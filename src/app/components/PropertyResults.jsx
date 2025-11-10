@@ -367,6 +367,7 @@ const PropertyResults = ({ propertyData, onNext }) => {
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Button
               onClick={handleClaim}
+               disabled={parseFloat(propertyData.totalAmount.replace("$", "")) === 0.00}
               className="glass-button text-white sm:px-16 px-6 py-6 text-xl rounded-xl hover:text-teal-200 pulse-glow relative overflow-hidden"
             >
               <span className="relative z-10 flex items-center gap-3">
