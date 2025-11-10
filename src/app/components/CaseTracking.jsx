@@ -13,12 +13,14 @@ import {
   Bell,
 } from "lucide-react";
 import { useSearchStore } from "../store/searchStore";
+import axios from "axios";
 
 const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
-  const [notifications, setNotifications] = useState(true);
+  const [notifications, setNotifications] = useState(false);
+  const [allNotifications, setAllNotifications] = useState([]);
   const [shareAmount, setShareAmount] = useState("");
   const [hasShared, setHasShared] = useState(false);
-
+  const dropdownRef = useRef(null);
   const [estimatedPayout, setEstimatedPayout] = useState(0);
   const [estimatedFee, setEstimatedFee] = useState(0.1);
   const [estimatedNet, setEstimatedNet] = useState(0);
@@ -44,7 +46,6 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
 
   useEffect(() => {
     if (searchResults && Array.isArray(searchResults)) {
-      
       const total = searchResults.reduce((sum, item) => {
         const value = parseFloat(item.current_cash_balance || 0);
         return sum + (isNaN(value) ? 0 : value);
@@ -56,59 +57,97 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
     }
   }, [searchResults]);
 
-  // const milestones = [
-  //   { name: "Case Submitted", completed: true, date: "2024-01-15" },
-  //   { name: "Initial Review", completed: true, date: "2024-01-22" },
-  //   { name: "Documentation Verified", completed: true, date: "2024-01-28" },
-  //   {
-  //     name: "State Processing",
-  //     completed: false,
-  //     current: true,
-  //     estimated: "2024-02-15",
-  //   },
-  //   {
-  //     name: "Payment Authorization",
-  //     completed: false,
-  //     estimated: "2024-02-22",
-  //   },
-  //   { name: "Funds Distributed", completed: false, estimated: "2024-03-01" },
-  // ];
-const formatDate = (date) => date.toISOString().split("T")[0];
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        if (!userData?._id) return;
+
+        const res = await axios.get(`/api/notification?userId=${userData._id}`);
+
+        if (res.data.success) {
+          console.log("User notifications:", res.data.data);
+          setAllNotifications(res.data.data);
+          setNotifications(res.data.data.length > 0);
+        } else {
+          console.error("Failed to fetch notifications:", res.data.error);
+        }
+      } catch (error) {
+        console.error("Error fetching notifications:", error);
+      }
+    };
+
+    fetchNotifications();
+  }, [userData]);
+
+  const formatDate = (date) => date.toISOString().split("T")[0];
   const addDays = (date, days) => {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
-};
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+  };
 
   const baseMilestones = [
-  "Case Submitted",
-  "Initial Review",
-  "Documentation Verified",
-  "State Processing",
-  "Payment Authorization",
-  "Funds Distributed",
-];
+    "Case Submitted",
+    "Initial Review",
+    "Documentation Verified",
+    "State Processing",
+    "Payment Authorization",
+    "Funds Distributed",
+  ];
 
   useEffect(() => {
-  const today = new Date();
-  const generated = baseMilestones.map((name, index) => {
-    const milestoneDate = addDays(today, index * 7);
-    return {
-      name,
-      date: formatDate(milestoneDate),
-      completed: index < 3,
-      current: index === 3,
-      estimated: index >= 3 ? formatDate(milestoneDate) : undefined,
-    };
-  });
-  setMilestones(generated);
-}, []);
+    const today = new Date();
+    const generated = baseMilestones.map((name, index) => {
+      const milestoneDate = addDays(today, index * 7);
+      return {
+        name,
+        date: formatDate(milestoneDate),
+        completed: index < 3,
+        current: index === 3,
+        estimated: index >= 3 ? formatDate(milestoneDate) : undefined,
+      };
+    });
+    setMilestones(generated);
+  }, []);
 
   const handleShareSuccess = () => {
     if (shareAmount && parseFloat(shareAmount) > 0) {
       setHasShared(true);
     }
   };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setNotifications(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleNotificationClick = async (notificationId) => {
+  try {
+    // Call PUT API to mark notification as read
+    const res = await axios.put(`/api/notification?id=${notificationId}`, {
+      status: true,
+    });
+
+    if (res.data.success) {
+      // Re-fetch notifications to refresh UI
+      const updated = await axios.get(`/api/notification?userId=${userData._id}`);
+      if (updated.data.success) {
+        setAllNotifications(updated.data.data);
+        setNotifications(updated.data.data.length > 0);
+      }
+    } else {
+      console.error("Failed to update notification:", res.data.error);
+    }
+  } catch (error) {
+    console.error("Error updating notification:", error);
+  }
+};
 
   const shareToSocial = (platform) => {
     let url = "";
@@ -144,14 +183,62 @@ const formatDate = (date) => date.toISOString().split("T")[0];
                 <Trophy className="h-4 w-4 sm:mr-2" />
                 <span className="sm:inline-block hidden">Leaderboard</span>
               </Button>
-              <Button
+              {/* <Button
                 variant="outline"
                 onClick={() => setNotifications(!notifications)}
                 className={`${notifications ? "bg-primary/90" : ""}`}
               >
                 <Bell className="h-4 w-4 sm:mr-2" />
                 <span className="sm:inline-block hidden">Notifications</span>
-              </Button>
+              </Button> */}
+
+              <div className="relative" ref={dropdownRef}>
+                <Button
+                  variant="outline"
+                  onClick={() => setNotifications(!notifications)}
+                  className={`flex items-center ${
+                    notifications ? "bg-primary/90 text-white" : ""
+                  }`}
+                >
+                  <Bell className="h-4 w-4 sm:mr-2" />
+                  <span className="sm:inline-block hidden">Notifications</span>
+                  {allNotifications.length > 0 && (
+                    <span className="ml-2 bg-red-500 text-white text-xs px-2 py-[1px] rounded-full">
+                      {allNotifications.length}
+                    </span>
+                  )}
+                </Button>
+
+                {/* Dropdown */}
+                {notifications && (
+                  <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-gray-900 border border-green-600/30 rounded-lg shadow-2xl z-50 max-h-96 overflow-y-auto backdrop-blur-md bg-opacity-95">
+                    <div className="p-3 border-b border-green-600/20 text-green-400 font-semibold">
+                      Notifications
+                    </div>
+
+                    {allNotifications.length > 0 ? (
+                      <ul className="divide-y divide-green-600/10">
+                        {allNotifications.map((n, i) => (
+                          <li
+                            key={i}
+                            className="p-3 hover:bg-green-700/10 transition duration-200 cursor-pointer"
+                             onClick={() => handleNotificationClick(n._id)}
+                          >
+                            <p className="text-sm text-white font-medium">
+                              {n.title}
+                            </p>
+                            <p className="text-xs text-gray-400">{n.message}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="p-4 text-center text-gray-400 text-sm">
+                        No new notifications
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

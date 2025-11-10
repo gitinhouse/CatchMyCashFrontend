@@ -71,46 +71,46 @@ const FormAutomation = ({ userData, onNext }) => {
   }, [currentStep]);
 
   const handleContinue = async () => {
-    console.log('---', userData);
-    if (!userData?.user_id) {
-      console.error("User ID not found");
-      return;
-    }
+  onNext();
+    // if (!userData?.user_id) {
+    //   console.error("User ID not found");
+    //   return;
+    // }
 
-    try {
-      setIsSubmitting(true);
-      const userRecord = JSON.parse(localStorage.getItem("userData") || "{}");
+    // try {
+    //   setIsSubmitting(true);
+    //   const userRecord = JSON.parse(localStorage.getItem("userData") || "{}");
 
-      const userId = userData?.user_id || userRecord?._id;
-      if (!userId) {
-        console.error("No user ID found in state or localStorage");
-        return;
-      }
+    //   const userId = userData?.user_id || userRecord?._id;
+    //   if (!userId) {
+    //     console.error("No user ID found in state or localStorage");
+    //     return;
+    //   }
 
-      const payload = { user_id: userId };
-      const response = await axios.post("/api/case", payload);
+    //   const payload = { user_id: userId };
+    //   const response = await axios.post("/api/case", payload);
 
-      localStorage.setItem("userCase", JSON.stringify(response.data));
-      setUserCase(response.data);
+    //   localStorage.setItem("userCase", JSON.stringify(response.data));
+    //   setUserCase(response.data);
 
-       const docsPayload = {
-            user_id: userId,
-            case_id: response.data._id,
-            signed_doc: "test.pdf",
-          };
-          const docsResponse = await axios.post("/api/docs", docsPayload);
+    //    const docsPayload = {
+    //         user_id: userId,
+    //         case_id: response.data._id,
+    //         signed_doc: "test.pdf",
+    //       };
+    //       const docsResponse = await axios.post("/api/docs", docsPayload);
 
-          console.log("Docs response:", docsResponse.data);
+    //       console.log("Docs response:", docsResponse.data);
 
-      onNext();
-    } catch (error) {
-      console.error("Error creating case:", error);
-      console.log(
-        "Something went wrong while creating your case. Please try again."
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+    //   onNext();
+    // } catch (error) {
+    //   console.error("Error creating case:", error);
+    //   console.log(
+    //     "Something went wrong while creating your case. Please try again."
+    //   );
+    // } finally {
+    //   setIsSubmitting(false);
+    // }
   };
 
   return (

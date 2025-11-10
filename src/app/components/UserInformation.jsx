@@ -28,6 +28,8 @@ const UserInformation = ({ onNext }) => {
     phone: "",
     ssn: "",
   });
+  const [apiError, setApiError] = useState("");
+
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => ({ ...prev, [field]: "" }));
@@ -158,20 +160,31 @@ const UserInformation = ({ onNext }) => {
         formal_employer: formData.formerEmployers,
         previous_address: formData.previousAddresses,
       };
-      const { data } = await axios.post("/api/legalDetails", payload);
-      setUserAgreement(data);
-      localStorage.setItem("userAgreement", JSON.stringify(data));
       const payloadData = {
         userEmail: formData.email,
         user_id: userData._id,
         userType: "User",
       };
+      //first send the email if the ID is unique else send the error message
       const res = await axios.post("/api/register", payloadData);
       setUserLogin(res.data);
       localStorage.setItem("userLogin", JSON.stringify(res.data));
+
+      /// if its unique then send the details and proceed
+      const { data } = await axios.post("/api/legalDetails", payload);
+      setUserAgreement(data);
+      localStorage.setItem("userAgreement", JSON.stringify(data));
+
       onNext(data);
     } catch (err) {
       console.error("Error saving user properties:", err);
+
+      if (err.response && err.response.data?.message) {
+        // Show backend error (like "Email already exists")
+        setApiError(err.response.data.message);
+      } else {
+        setApiError("An unexpected error occurred. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -429,11 +442,17 @@ const UserInformation = ({ onNext }) => {
               <Button
                 type="submit"
                 className="glass-button text-white px-8 py-3 hover:text-green-200"
-                 disabled={loading} 
+                disabled={loading}
               >
-                 {loading ? "Submitting..." : "Continue to Form Automation"}
+                {loading ? "Submitting..." : "Continue to Form Automation"}
               </Button>
             </div>
+
+            {apiError && (
+              <p className="text-red-500 text-sm mt-3 text-center w-full">
+                {apiError}
+              </p>
+            )}
           </Card>
         </form>
       </div>
