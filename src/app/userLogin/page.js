@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSearchStore } from "../store/searchStore";
 import axios from "axios";
+import { useRouter } from "next/navigation";
 import {
   Search,
   Globe,
@@ -12,8 +13,6 @@ import {
   Lock,
   ArrowRight,
   AlertTriangle,
-  MapPin,
-  Home,
 } from "lucide-react";
 import { Button } from "../components/uicomponents/Button";
 import { InputField } from "../components/uicomponents/InputField";
@@ -57,11 +56,10 @@ const UserLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const [showBrowser, setShowBrowser] = useState(false);
-  const [searchProgress, setSearchProgress] = useState(0);
   const [validationError, setValidationError] = useState("");
   const { setUserLogin } = useSearchStore();
   const [popupMessage, setPopupMessage] = useState("");
+  const router = useRouter();
   useEffect(() => {
     if (validationError && (email.trim() || password.trim())) {
       setValidationError("");
@@ -101,7 +99,12 @@ const UserLogin = () => {
       const { data } = await axios.post("/api/login", payload);
       setUserLogin(data);
       localStorage.setItem("userLogin", JSON.stringify(data));
-      console.log("user Logged In ");
+      console.log(data?.user?.type);
+      if (data?.user?.type === "User") {
+        router.push("/?step=documents");
+      } else {
+        router.push("/allCases");
+      }
     } catch (error) {
       console.error(error);
       let msg = "Invalid credentials. Please check your email or password.";
@@ -317,7 +320,7 @@ const UserLogin = () => {
                     <span className="relative z-10 flex items-center justify-center gap-3">
                       {isFormValid ? (
                         <>
-                         Sign-In
+                          Sign-In
                           <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                         </>
                       ) : (

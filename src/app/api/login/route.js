@@ -57,7 +57,8 @@ export async function POST(req) {
           id: user._id,
           email: user.userEmail,
           type: user.userType,
-          user_id:user.user_id
+          user_id:user.user_id,
+          user_type:"Old"
         },
       },
       { status: 200 }

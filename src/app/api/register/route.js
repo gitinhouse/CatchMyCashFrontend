@@ -7,6 +7,9 @@ import mongoose from "mongoose";
 import { sendEmail } from "../../lib/mailer";
 import { generateRandomPassword } from "../../lib/utils";
 import { createNotification } from "../../lib/createNotification.js";
+import UserCases from "../../models/userCases";
+import { verifyToken } from "../../lib/verifyToken";
+import { Types } from "mongoose";
 
 export async function POST(req) {
   try {
@@ -94,6 +97,7 @@ export async function POST(req) {
           email: newUser.userEmail,
           type: newUser.userType,
           user_id: newUser.user_id,
+          user_type:"New"
         },
       },
       { status: 201 }
@@ -101,5 +105,34 @@ export async function POST(req) {
   } catch (error) {
     console.error("Registration error:", error);
     return NextResponse.json({ message: "Server error" }, { status: 500 });
+  }
+}
+
+export async function GET(req) {
+  try {
+    // 🔹 Verify JWT
+    let user;
+    try {
+      user = verifyToken(req);
+    } catch (err) {
+      return NextResponse.json({ error: err.message }, { status: 401 });
+    }
+
+    await connectToDatabase();
+
+    const { searchParams } = new URL(req.url);
+    const user_id = searchParams.get("user_id");
+
+    if (user_id && !Types.ObjectId.isValid(user_id)) {
+      return NextResponse.json(
+        { error: "Invalid user_id format" },
+        { status: 400 }
+      );
+    }
+    const caseData = await UserCases.findOne({user_id})
+    return NextResponse.json(caseData);
+  } catch (error) {
+    console.error("GET /api/case error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
