@@ -35,6 +35,8 @@ const DocumentUpload = ({ onNext }) => {
     userData,
     userAgreement,
     userSignedAgreement,
+    userLogin,
+    setUserLogin,
     setUserData,
     setUserAgreement,
     setuserSignedAgreement,
@@ -71,10 +73,7 @@ const DocumentUpload = ({ onNext }) => {
   // const wsUrl = baseUrl.replace(/^http/, "ws");
   //const wsUrl = baseUrl.replace(/^https/, "ws") + "/api/ws";
   //const { socket, isConnected, message } = useWebSocket(wsUrl, connectSocket);
-  const { socket, isConnected, message } = useWebSocket(
-    null,
-    connectSocket
-  );
+  const { socket, isConnected, message } = useWebSocket(null, connectSocket);
   useEffect(() => {
     if (message && message.type === "documents_submitted") {
       console.log("Message received:", message);
@@ -104,6 +103,10 @@ const DocumentUpload = ({ onNext }) => {
   }, [message]);
 
   useEffect(() => {
+    if (!userLogin) {
+      const savedUserLoginData = localStorage.getItem("userLogin");
+      if (savedUserLoginData) setUserLogin(JSON.parse(savedUserLoginData));
+    }
     if (!userData) {
       const savedUserData = localStorage.getItem("userData");
       if (savedUserData) setUserData(JSON.parse(savedUserData));
@@ -126,7 +129,80 @@ const DocumentUpload = ({ onNext }) => {
       const savedUserCaseData = localStorage.getItem("userCase");
       if (savedUserCaseData) setUserCase(JSON.parse(savedUserCaseData));
     }
-  }, [userData, searchResults, userSignedAgreement, userAgreement]);
+  }, [userData, searchResults, userSignedAgreement, userAgreement, userLogin]);
+
+  useEffect(() => {
+    if (userLogin?.user.user_type === "Old") {
+      fetchUserData(userLogin?.token, userLogin?.user?.user_id);
+    }
+  }, [userLogin]);
+
+  const fetchUserData = async (token, userId) => {
+    try {
+      const response = await axios.get(`/api/register?user_id=${userId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      console.log("API Response:", response?.data?._id);
+      const { data } = await axios.get(
+        `/api/case?case_id=${response?.data?._id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setSearchResults(data?.data?.[0]?.user_properties);
+      localStorage.setItem(
+        "propertyData",
+        JSON.stringify(data?.data?.[0]?.user_properties)
+      );
+      setUserData(data?.data?.[0]?.user_info);
+      localStorage.setItem(
+        "userData",
+        JSON.stringify(data?.data?.[0]?.user_info)
+      );
+      setUserAgreement(data?.data?.[0]?.user_details?.[0]);
+      localStorage.setItem(
+        "userAgreement",
+        JSON.stringify(data?.data?.[0]?.user_details?.[0])
+      );
+      localStorage.setItem(
+        "signedDoc",
+        JSON.stringify(data?.data?.[0].user_docs?.[0].signed_doc)
+      );
+      setuserSignedAgreement(data?.data?.[0].user_docs?.[0].signed_doc);
+      setDocusignComplete(true);
+      const caseData = data?.data?.[0];
+      const filteredCase = {
+        _id: caseData?._id,
+        case_id: caseData?.case_id,
+        status: caseData?.status,
+        createdAt: caseData?.createdAt,
+      };
+      // Save only those fields
+      localStorage.setItem("userCase", JSON.stringify(filteredCase));
+      setUserCase(filteredCase);
+      localStorage.setItem(
+        "userAllDocs",
+        JSON.stringify(data?.data?.[0]?.user_docs?.[0])
+      );
+
+      const userDocs = data?.data?.[0]?.user_docs?.[0] || [];
+      const uploadedIds = [];
+
+      if (userDocs.proof_id) uploadedIds.push("id");
+      if (userDocs.ssn_id) uploadedIds.push("ssn");
+      if (userDocs.adress_proof) uploadedIds.push("address");
+      if (userDocs.brith_proof) uploadedIds.push("birth");
+      if (userDocs.employee_proof) uploadedIds.push("employment");
+      if (userDocs.claim_doc) uploadedIds.push("claim");
+
+      setUploadedDocs(uploadedIds);
+      console.log("Preloaded uploaded documents:", uploadedIds);
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  };
 
   useEffect(() => {
     if (docusignComplete && !connectSocket) {

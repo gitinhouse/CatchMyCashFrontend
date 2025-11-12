@@ -132,9 +132,6 @@ const PropertySearch = ({ onNext }) => {
         });
       }, 200);
 
-      const { data } = await axios.post("/api/users", payload);
-      setUserData(data);
-      localStorage.setItem("userData", JSON.stringify(data));
       const propertypPayload = {
         first_name: firstName.trim().toUpperCase(),
         last_name: lastName.trim().toUpperCase(),
@@ -149,9 +146,13 @@ const PropertySearch = ({ onNext }) => {
           .then((res) => res.data);
 
       setSearchResults(matchedProperties);
-        localStorage.setItem("propertyData", JSON.stringify(matchedProperties));
+      localStorage.setItem("propertyData", JSON.stringify(matchedProperties));
       setSearchProgress(100);
-      
+      if (matchedProperties.length > 0) {
+        const { data } = await axios.post("/api/users", payload);
+        setUserData(data);
+        localStorage.setItem("userData", JSON.stringify(data));
+      }
       setTimeout(() => {
         // Transform matchedProperties into your frontend format
         const transformedProperties = matchedProperties.map((prop, index) => ({
@@ -176,8 +177,8 @@ const PropertySearch = ({ onNext }) => {
           totalAmount: transformedProperties
             .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
             .toLocaleString("en-US", { style: "currency", currency: "USD" }),
-          searchTime: "4.2 seconds", // optionally calculate real time
-          databasesSearched: 52, // if you track this
+          searchTime: "4.2 seconds",
+          databasesSearched: 52,
           addressMatches: totalMatched,
         };
 

@@ -18,4 +18,15 @@ export const useSearchStore = create((set) => ({
   setUserAllDocs: (data) => set({userAllDocs: data}),
   setUserCase: (data) => set({userCase: data}),
   resetSearch: () => set({ userData: null, searchResults: null,userAgreement:null }),
+   resetAll: () =>
+    set({
+      userData: null,
+      searchResults: null,
+      userAgreement: null,
+      userDocument: null,
+      userSignedAgreement: null,
+      userAllDocs: null,
+      userCase: null,
+      userLogin: null,
+    }),
 }));

@@ -71,46 +71,7 @@ const FormAutomation = ({ userData, onNext }) => {
   }, [currentStep]);
 
   const handleContinue = async () => {
-  onNext();
-    // if (!userData?.user_id) {
-    //   console.error("User ID not found");
-    //   return;
-    // }
-
-    // try {
-    //   setIsSubmitting(true);
-    //   const userRecord = JSON.parse(localStorage.getItem("userData") || "{}");
-
-    //   const userId = userData?.user_id || userRecord?._id;
-    //   if (!userId) {
-    //     console.error("No user ID found in state or localStorage");
-    //     return;
-    //   }
-
-    //   const payload = { user_id: userId };
-    //   const response = await axios.post("/api/case", payload);
-
-    //   localStorage.setItem("userCase", JSON.stringify(response.data));
-    //   setUserCase(response.data);
-
-    //    const docsPayload = {
-    //         user_id: userId,
-    //         case_id: response.data._id,
-    //         signed_doc: "test.pdf",
-    //       };
-    //       const docsResponse = await axios.post("/api/docs", docsPayload);
-
-    //       console.log("Docs response:", docsResponse.data);
-
-    //   onNext();
-    // } catch (error) {
-    //   console.error("Error creating case:", error);
-    //   console.log(
-    //     "Something went wrong while creating your case. Please try again."
-    //   );
-    // } finally {
-    //   setIsSubmitting(false);
-    // }
+    onNext();
   };
 
   return (
@@ -341,7 +302,7 @@ const FormAutomation = ({ userData, onNext }) => {
               <Button
                 onClick={handleContinue}
                 disabled={isSubmitting}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xl px-4 py-4 w-1/2 rounded-lg"
+                className="bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold px-8 py-4 rounded-lg w-full sm:w-2/3 md:w-1/2 transition-all duration-300 shadow-lg hover:shadow-blue-500/30 disabled:opacity-50"
               >
                 {isSubmitting
                   ? "Creating Case..."
