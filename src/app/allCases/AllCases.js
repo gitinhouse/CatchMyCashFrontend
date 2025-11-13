@@ -1,23 +1,72 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSearchStore } from "../store/searchStore";
 import { Button } from "../components/uicomponents/Button";
-import { DollarSign, Eye, Search, X, Users } from "lucide-react";
+import { DollarSign, Eye, Search, X } from "lucide-react";
 
-const AllUsers = () => {
+const AllCases = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const caseIdFromUrl = searchParams.get("case_id");
+
   const { userLogin, resetAll } = useSearchStore();
-  const [users, setUsers] = useState([]);
+  const [cases, setCases] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCase, setSelectedCase] = useState(null);
   const [caseDocs, setCaseDocs] = useState();
+  const [popupLoading, setPopupLoading] = useState(false);
+
   const limit = 10;
+
+  const fetchCases = useCallback(
+    async (pageNum, query = "") => {
+      try {
+        setLoading(true);
+        const skip = (pageNum - 1) * limit;
+        const storedUser = JSON.parse(localStorage.getItem("userLogin"));
+        const token = storedUser?.token;
+
+        let url;
+
+        if (caseIdFromUrl) {
+          url = `/api/case?case_id=${caseIdFromUrl}`;
+        } else if (query) {
+          url = `/api/case?search=${encodeURIComponent(
+            query
+          )}&limit=${limit}&skip=${skip}`;
+        } else {
+          url = `/api/case?limit=${limit}&skip=${skip}`;
+        }
+
+        const { data } = await axios.get(url, {
+          headers: { Authorization: `Bearer ${token}` },
+          validateStatus: (status) => status < 500,
+        });
+        if (data.error && data.error.includes("No matching case found")) {
+          setCases([]);
+          setTotalCount(0);
+        } else if (data.data) {
+          setCases(data.data);
+          setTotalCount(data.total || 0);
+        } else {
+          setCases([]);
+          setTotalCount(0);
+        }
+      } catch (err) {
+        console.error(err);
+        setCases([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [caseIdFromUrl]
+  );
 
   useEffect(() => {
     if (!userLogin && !localStorage.getItem("userLogin")) {
@@ -25,33 +74,7 @@ const AllUsers = () => {
       return;
     }
     fetchCases(page, searchQuery);
-  }, [page]);
-
-  const fetchCases = async (pageNum, query = "") => {
-    try {
-      setLoading(true);
-      const skip = (pageNum - 1) * limit;
-      const storedUser = JSON.parse(localStorage.getItem("userLogin"));
-      const token = storedUser?.token;
-
-      const url = query
-        ? `/api/users?search=${encodeURIComponent(
-            query
-          )}&limit=${limit}&skip=${skip}`
-        : `/api/users?limit=${limit}&skip=${skip}`;
-
-      const { data } = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      setUsers(data.data || []);
-      setTotalCount(data.total || 0);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [page, fetchCases, router, searchQuery, userLogin]);
 
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
@@ -60,7 +83,7 @@ const AllUsers = () => {
     }, 500);
 
     return () => clearTimeout(delayDebounce);
-  }, [searchQuery]);
+  }, [searchQuery, fetchCases]);
 
   const handleLogout = async () => {
     try {
@@ -71,13 +94,25 @@ const AllUsers = () => {
       console.error("Logout failed:", error);
     }
   };
-  const handleViewDetails = async (userData) => {
+  const handleViewDetails = async (caseItem) => {
     try {
-      router.push(`/allCases?case_id=${userData?.cases?.[0]._id}`);
+      setLoading(true);
+      setSelectedCase(caseItem);
+      setPopupLoading(true);
+      setCaseDocs(null);
+      const storedUser = JSON.parse(localStorage.getItem("userLogin"));
+      const token = storedUser?.token;
+
+      // Fetch docs from API
+      const { data } = await axios.get(`/api/docs?case_id=${caseItem._id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setCaseDocs(data);
     } catch (error) {
       console.error("Failed to fetch case documents:", error);
     } finally {
       setLoading(false);
+      setPopupLoading(false);
     }
   };
 
@@ -104,7 +139,6 @@ const AllUsers = () => {
               </p>
             </div>
           </div>
-
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -125,9 +159,8 @@ const AllUsers = () => {
       {/* Main Content */}
       <div className="min-h-screen p-8 bg-gray-950 text-white">
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold mb-6 text-teal-400 flex items-center gap-2">
-            <Users className="w-8 h-8 text-teal-400" />
-            All Users
+          <h1 className="text-3xl font-bold mb-6 text-teal-400">
+            🗂️ All Cases
           </h1>
 
           {/* Search */}
@@ -135,7 +168,7 @@ const AllUsers = () => {
             <Search className="absolute left-4 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Search by User Name"
+              placeholder="Search by Case Number or user Name"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-3 rounded-lg bg-gray-800 text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500 placeholder-gray-400"
@@ -145,7 +178,7 @@ const AllUsers = () => {
           {/* Table */}
           {loading ? (
             <div className="text-center text-gray-400 py-12">Loading...</div>
-          ) : users.length === 0 ? (
+          ) : cases.length === 0 ? (
             <div className="text-center text-gray-400 py-12">
               No cases found.
             </div>
@@ -159,39 +192,51 @@ const AllUsers = () => {
               <table className="w-full text-sm text-gray-300">
                 <thead className="bg-gray-800 text-gray-100 uppercase text-xs">
                   <tr>
-                    <th className="py-3 px-4 text-left">User Id</th>
+                    <th className="py-3 px-4 text-left">Case Number</th>
                     <th className="py-3 px-4 text-left">Name</th>
                     <th className="py-3 px-4 text-left">Email</th>
                     <th className="py-3 px-4 text-left">Contact No</th>
-                    <th className="py-3 px-4 text-left">Address</th>
-                    <th className="py-3 px-4 text-left">Zip Code</th>
+                    <th className="py-3 px-4 text-left">Status</th>
+                    <th className="py-3 px-4 text-left">Created At</th>
                     <th className="py-3 px-4 text-left">Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((item, idx) => (
+                  {cases.map((item, idx) => (
                     <tr
                       key={idx}
                       className="border-t border-gray-800 hover:bg-gray-800/50 transition-colors"
                     >
                       <td className="py-3 px-4 font-mono text-teal-300">
-                        {item._id}
+                        {item.case_id}
                       </td>
                       <td className="py-3 px-4">
-                        {item.first_name
-                          ? `${item.first_name || ""} ${
-                              item.last_name || ""
+                        {item.user_info
+                          ? `${item.user_info.first_name || ""} ${
+                              item.user_info.last_name || ""
                             }`.trim() || "N/A"
                           : "N/A"}
                       </td>
-                      <td className="py-3 px-4">{item.email_id || "N/A"}</td>
-                      <td className="py-3 px-4">{item.contact_no || "N/A"}</td>
                       <td className="py-3 px-4">
-                        <span className="px-3 py-1 rounded-full text-xs">
-                          {item.address} {item.city}
+                        {item.user_details?.[0]?.email_id || "N/A"}
+                      </td>
+                      <td className="py-3 px-4">
+                        {item.user_details?.[0]?.contact_no || "N/A"}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs ${
+                            item.status === false
+                              ? "bg-green-600 text-green-300"
+                              : "bg-yellow-600 text-yellow-50"
+                          }`}
+                        >
+                          {item.status}
                         </span>
                       </td>
-                      <td className="py-3 px-4">{item.zip_code}</td>
+                      <td className="py-3 px-4">
+                        {new Date(item.createdAt).toLocaleString()}
+                      </td>
                       <td className="py-3 px-4">
                         <button
                           onClick={() => handleViewDetails(item)}
@@ -251,7 +296,7 @@ const AllUsers = () => {
               className="bg-gray-900 rounded-2xl shadow-xl w-full max-w-2xl p-6 relative overflow-y-auto max-h-[90vh]"
             >
               <button
-                className="absolute top-3 right-3 text-gray-400 hover:text-teal-400"
+                className="absolute top-3 right-3 text-gray-400 hover:text-teal-400 cursor-pointer hover:scale-110 transition-transform"
                 onClick={() => setSelectedCase(null)}
               >
                 <X className="w-6 h-6" />
@@ -329,7 +374,14 @@ const AllUsers = () => {
                 <h3 className="text-lg font-semibold text-teal-300 mb-2">
                   Documents
                 </h3>
-                {caseDocs && Object.keys(caseDocs).length > 0 ? (
+                {popupLoading ? (
+                  <div className="flex justify-center items-center py-6">
+                    <div className="w-8 h-8 border-4 border-teal-400 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="ml-3 text-gray-400">
+                      Loading documents...
+                    </span>
+                  </div>
+                ) : caseDocs && Object.keys(caseDocs).length > 0 ? (
                   <ul className="list-disc list-inside text-gray-400 space-y-2">
                     {caseDocs.signed_doc && (
                       <li>
@@ -392,4 +444,4 @@ const AllUsers = () => {
   );
 };
 
-export default AllUsers;
+export default AllCases;
