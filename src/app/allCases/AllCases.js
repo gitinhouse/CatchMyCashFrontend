@@ -122,39 +122,48 @@ const AllCases = () => {
     <div className="min-h-screen relative">
       {/* Header Section */}
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="glass-card border-b border-teal-500/20"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-teal-400 to-mint-green rounded-lg flex items-center justify-center">
-              <DollarSign className="h-6 w-6 text-navy-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-teal-400">CatchMyCash</h1>
-              <p className="text-gray-300 mt-1">
-                {"California's Premier Unclaimed Property Recovery Service"}
-              </p>
-            </div>
-          </div>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 1 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Button
-              onClick={handleLogout}
-              className="glass-button text-white px-12 py-6 sm:text-[20px] text-[16px] rounded-xl hover:text-teal-200 pulse-glow"
-            >
-              <span className="flex items-center gap-3">Logout</span>
-            </Button>
-          </motion.div>
-        </div>
-      </motion.div>
+             initial={{ opacity: 0, y: -20 }}
+             animate={{ opacity: 1, y: 0 }}
+             transition={{ duration: 0.6 }}
+             className="glass-card border-b border-teal-500/20"
+           >
+             <div
+               className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 
+          flex flex-col sm:flex-row sm:justify-between sm:items-center 
+          items-center gap-4 sm:gap-0"
+             >
+               {/* Logo + Text */}
+               <div className="flex items-center gap-3">
+                 <div className="w-10 h-10 bg-gradient-to-br from-teal-400 to-mint-green rounded-lg flex items-center justify-center">
+                   <DollarSign className="h-6 w-6 text-navy-primary" />
+                 </div>
+     
+                 <div>
+                   <h1 className="text-3xl font-bold text-teal-400">CatchMyCash</h1>
+                   <p className="text-gray-300 mt-1">
+                     {"California's Premier Unclaimed Property Recovery Service"}
+                   </p>
+                 </div>
+               </div>
+     
+               {/* Logout Button */}
+               <motion.div
+                 initial={{ opacity: 0, y: 20 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 transition={{ duration: 0.6, delay: 1 }}
+                 whileHover={{ scale: 1.05 }}
+                 whileTap={{ scale: 0.95 }}
+                 className="self-end sm:self-auto"
+               >
+                 <Button
+                   onClick={handleLogout}
+                   className="glass-button text-white px-12 py-6 sm:text-[20px] text-[16px] rounded-xl hover:text-teal-200 pulse-glow"
+                 >
+                   <span className="flex items-center gap-3">Logout</span>
+                 </Button>
+               </motion.div>
+             </div>
+           </motion.div>
 
       {/* Main Content */}
       <div className="min-h-screen p-8 bg-gray-950 text-white">
