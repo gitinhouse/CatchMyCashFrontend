@@ -15,8 +15,6 @@ const AllUsers = () => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCase, setSelectedCase] = useState(null);
-  const [caseDocs, setCaseDocs] = useState();
   const limit = 10;
 
   useEffect(() => {
@@ -92,11 +90,17 @@ const AllUsers = () => {
         transition={{ duration: 0.6 }}
         className="glass-card border-b border-teal-500/20"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+        <div
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 
+     flex flex-col sm:flex-row sm:justify-between sm:items-center 
+     items-center gap-4 sm:gap-0"
+        >
+          {/* Logo + Text */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-teal-400 to-mint-green rounded-lg flex items-center justify-center">
               <DollarSign className="h-6 w-6 text-navy-primary" />
             </div>
+
             <div>
               <h1 className="text-3xl font-bold text-teal-400">CatchMyCash</h1>
               <p className="text-gray-300 mt-1">
@@ -105,12 +109,14 @@ const AllUsers = () => {
             </div>
           </div>
 
+          {/* Logout Button */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 1 }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            className="self-end sm:self-auto"
           >
             <Button
               onClick={handleLogout}
@@ -121,7 +127,6 @@ const AllUsers = () => {
           </motion.div>
         </div>
       </motion.div>
-
       {/* Main Content */}
       <div className="min-h-screen p-8 bg-gray-950 text-white">
         <div className="max-w-6xl mx-auto">
@@ -233,161 +238,6 @@ const AllUsers = () => {
           )}
         </div>
       </div>
-
-      <AnimatePresence>
-        {selectedCase && (
-          <motion.div
-            className="fixed inset-0 bg-black/70 flex justify-center items-center z-50 p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setSelectedCase(null)}
-          >
-            <motion.div
-              onClick={(e) => e.stopPropagation()}
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-gray-900 rounded-2xl shadow-xl w-full max-w-2xl p-6 relative overflow-y-auto max-h-[90vh]"
-            >
-              <button
-                className="absolute top-3 right-3 text-gray-400 hover:text-teal-400"
-                onClick={() => setSelectedCase(null)}
-              >
-                <X className="w-6 h-6" />
-              </button>
-
-              <h2 className="text-2xl font-bold mb-4 text-teal-400">
-                Case Details - {selectedCase.case_id}
-              </h2>
-
-              <div className="space-y-2 text-gray-300">
-                <p>
-                  <strong>Name:</strong> {selectedCase.user_info?.first_name}{" "}
-                  {selectedCase.user_info?.last_name}
-                </p>
-                <p>
-                  <strong>Email:</strong>{" "}
-                  {selectedCase.user_details?.[0]?.email_id || "N/A"}
-                </p>
-                <p>
-                  <strong>Contact:</strong>{" "}
-                  {selectedCase.user_details?.[0]?.contact_no || "N/A"}
-                </p>
-                <p>
-                  <strong>Status:</strong>{" "}
-                  {!selectedCase.status ? "Approved" : "Pending"}
-                </p>
-                <p>
-                  <strong>Created At:</strong>{" "}
-                  {new Date(selectedCase.createdAt).toLocaleString()}
-                </p>
-              </div>
-              <div className="mt-4 overflow-x-auto bg-gray-900/80 backdrop-blur-md border border-gray-700 rounded-xl shadow-lg">
-                <table className="min-w-full text-sm text-gray-300">
-                  <thead className="bg-gray-800 text-gray-100 uppercase text-xs">
-                    <tr>
-                      <th className="py-3 px-4 text-left font-semibold border-b border-gray-700">
-                        Property ID
-                      </th>
-                      <th className="py-3 px-4 text-left font-semibold border-b border-gray-700">
-                        Property Type
-                      </th>
-                      <th className="py-3 px-4 text-right font-semibold border-b border-gray-700">
-                        Amount
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedCase.user_properties?.length > 0 ? (
-                      selectedCase.user_properties.map((item, idx) => (
-                        <tr
-                          key={idx}
-                          className="border-t border-gray-800 hover:bg-gray-800/60 transition-colors"
-                        >
-                          <td className="py-3 px-4">{item.property_id}</td>
-                          <td className="py-3 px-4">{item.property_type}</td>
-                          <td className="py-3 px-4 text-right">
-                            ${item.amount}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan="3"
-                          className="text-center py-4 text-gray-500"
-                        >
-                          No properties available.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-4">
-                <h3 className="text-lg font-semibold text-teal-300 mb-2">
-                  Documents
-                </h3>
-                {caseDocs && Object.keys(caseDocs).length > 0 ? (
-                  <ul className="list-disc list-inside text-gray-400 space-y-2">
-                    {caseDocs.signed_doc && (
-                      <li>
-                        <a
-                          href={caseDocs.signed_doc}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-400 hover:underline"
-                        >
-                          📄 Signed Agreement
-                        </a>
-                      </li>
-                    )}
-                    {caseDocs.proof_id && (
-                      <li>
-                        <a
-                          href={caseDocs.proof_id}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-400 hover:underline"
-                        >
-                          🧾 Proof ID
-                        </a>
-                      </li>
-                    )}
-                    {caseDocs.ssn_id && (
-                      <li>
-                        <a
-                          href={caseDocs.ssn_id}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-400 hover:underline"
-                        >
-                          🪪 SSN Document
-                        </a>
-                      </li>
-                    )}
-                    {caseDocs.adress_proof && (
-                      <li>
-                        <a
-                          href={caseDocs.adress_proof}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-400 hover:underline"
-                        >
-                          🏠 Address Proof
-                        </a>
-                      </li>
-                    )}
-                  </ul>
-                ) : (
-                  <p className="text-gray-500">No documents uploaded.</p>
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

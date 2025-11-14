@@ -13,6 +13,7 @@ import {
   Lock,
   ArrowRight,
   AlertTriangle,
+  DollarSign,
 } from "lucide-react";
 import { Button } from "../components/uicomponents/Button";
 import { InputField } from "../components/uicomponents/InputField";
@@ -103,7 +104,7 @@ const UserLogin = () => {
       if (data?.user?.type === "User") {
         router.push("/?step=documents");
       } else {
-        router.push("/allCases");
+        router.push("/allUsers");
       }
     } catch (error) {
       console.error(error);
@@ -120,6 +121,27 @@ const UserLogin = () => {
 
   return (
     <div className="min-h-screen relative">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="glass-card border-b border-teal-500/20"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-teal-400 to-mint-green rounded-lg flex items-center justify-center">
+              <DollarSign className="h-6 w-6 text-navy-primary" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-teal-400">CatchMyCash</h1>
+              <p className="text-gray-300 mt-1">
+                {"California's Premier Unclaimed Property Recovery Service"}
+              </p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <AnimatePresence mode="wait">
           <motion.div
