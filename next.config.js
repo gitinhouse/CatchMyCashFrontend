@@ -19,6 +19,7 @@ const nextConfig = {
     if (isServer) {
       config.externals = config.externals || [];
       config.externals.push("docusign-esign");
+       config.externals.push("twilio");
     }
     return config;
   },
