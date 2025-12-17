@@ -1,13 +1,17 @@
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
 
 export async function POST(request) {
   try {
     const { to, message } = await request.json();
 
-    // ✅ Dynamic import – webpack will NOT bundle twilio
-    const twilio = (await import("twilio")).default;
+    // ✅ Use Node require (NOT import)
+    const twilio = require("twilio");
 
     const client = twilio(
       process.env.TWILIO_ACCOUNT_SID,
