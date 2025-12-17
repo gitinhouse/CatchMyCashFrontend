@@ -1,3 +1,4 @@
+"use client";
 // src/hooks/useWebSocket.js
 import { useState, useEffect, useRef, useCallback } from "react";
 

@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "./uicomponents/Button";
 import { Card } from "./uicomponents/Card";
@@ -65,15 +66,33 @@ const DocumentUpload = ({ onNext }) => {
   const [connectSocket, setConnectSocket] = useState(false);
 
   // Dynamically build the WS URL (works locally + production)
-  const baseUrl = process.env.NEXT_PUBLIC_WS_URL || window.location.origin;
-  const protocol = baseUrl.startsWith("https") ? "wss" : "ws";
-  const host = baseUrl.replace(/^https?:\/\//, ""); // remove protocol
-  const wsUrl = `${protocol}://${host}/api/ws`;
+  // const baseUrl = process.env.NEXT_PUBLIC_WS_URL || window.location.origin;
+  // const protocol = baseUrl.startsWith("https") ? "wss" : "ws";
+  // const host = baseUrl.replace(/^https?:\/\//, ""); // remove protocol
+  // const wsUrl = `${protocol}://${host}/api/ws`;
 
   // const wsUrl = baseUrl.replace(/^http/, "ws");
   //const wsUrl = baseUrl.replace(/^https/, "ws") + "/api/ws";
   //const { socket, isConnected, message } = useWebSocket(wsUrl, connectSocket);
-  const { socket, isConnected, message } = useWebSocket(null, connectSocket);
+
+   const [wsUrl, setWsUrl] = useState(null);
+
+useEffect(() => {
+  if (typeof window !== "undefined") {
+    const baseUrl =
+      process.env.NEXT_PUBLIC_WS_URL || window.location.origin;
+
+    const protocol = baseUrl.startsWith("https") ? "wss" : "ws";
+    const host = baseUrl.replace(/^https?:\/\//, "");
+    setWsUrl(`${protocol}://${host}/api/ws`);
+  }
+}, []);
+
+  const { socket, isConnected, message } = useWebSocket(wsUrl, connectSocket);
+
+ 
+
+
   useEffect(() => {
     if (message && message.type === "documents_submitted") {
       console.log("Message received:", message);
@@ -305,10 +324,19 @@ const DocumentUpload = ({ onNext }) => {
     event.target.value = "";
   };
 
+  // const getQrUrl = (docId) => {
+  //   if (!userId || !caseId || !docId) return "";
+  //   return `${window.location.origin}/userDocs?userId=${userId}&caseId=${caseId}&docId=${docId}`;
+  // };
+
   const getQrUrl = (docId) => {
-    if (!userId || !caseId || !docId) return "";
-    return `${window.location.origin}/userDocs?userId=${userId}&caseId=${caseId}&docId=${docId}`;
-  };
+  if (typeof window === "undefined") return "";
+  if (!userId || !caseId || !docId) return "";
+
+  return `${window.location.origin}/userDocs?userId=${userId}&caseId=${caseId}&docId=${docId}`;
+};
+
+
 
   const handleScanDocument = (docId) => {
     const doc = requiredDocuments.find((d) => d.id === docId);
