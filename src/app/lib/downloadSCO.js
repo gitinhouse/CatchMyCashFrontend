@@ -7,7 +7,8 @@ import { importSCOData } from "./importSCOData.js";
 
 export async function downloadAndExtractSCO() {
   try {
-    const fileUrl = "https://dpupd.sco.ca.gov/00_All_Records.zip";
+    //const fileUrl = "https://dpupd.sco.ca.gov/00_All_Records.zip";
+    const fileUrl = "https://claimit.ca.gov/upd-property-records/00_All_Records.zip";
     const tmpZipPath = path.join(process.cwd(), "tmp_All_Records.zip");
     const extractDir = path.join(process.cwd(), "public", "SCORecords");
 

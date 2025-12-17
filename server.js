@@ -2,6 +2,7 @@
 import { WebSocketServer } from "ws";
 import { createServer } from "http";
 import startCronJobs from "./src/app/lib/cron.js";
+import startRenewWatchCron from "./src/app/lib/renewWatch.js";
 import next from "next";
 import { parse } from "url";
 
@@ -10,7 +11,8 @@ const app = next({ dev });
 const handle = app.getRequestHandler();
 
 const PORT = process.env.PORT;
-const HOSTNAME = process.env.HOSTNAME || (dev ? "localhost" : "fetchmydollars.com");
+const HOSTNAME =
+  process.env.HOSTNAME || (dev ? "localhost" : "fetchmydollars.com");
 
 app.prepare().then(() => {
   const httpServer = createServer((req, res) => {
@@ -89,7 +91,7 @@ app.prepare().then(() => {
   });
 
   //startCronJobs();
-
+  startRenewWatchCron();
   // Graceful shutdown
   const shutdown = () => {
     console.log("\n🛑 Shutting down gracefully...");
