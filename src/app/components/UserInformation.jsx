@@ -218,11 +218,11 @@ const UserInformation = ({ onNext }) => {
       setUserAgreement(data);
       localStorage.setItem("userAgreement", JSON.stringify(data));
       const { firstName, lastName } = getFirstAndLastName(formData.fullName);
-      const [dobMonth, dobDay, dobYear] = formData.dateOfBirth.split("/");
+      console.log('---', formData.dateOfBirth);
+      const [dobYear, dobMonth, dobDay ] = formData.dateOfBirth.split("-");
       const propertyIds = Array.isArray(searchResults)
         ? searchResults.map((item) => item?.property_id).filter(Boolean)
         : [];
-        console.log('--225--',propertyIds)
       const caPayloadData = {
         propertyId: propertyIds,
         formData: {
