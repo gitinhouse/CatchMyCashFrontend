@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "./uicomponents/Button";
 import { Card } from "./uicomponents/Card";
 import { Textarea } from "./uicomponents/Textarea";
@@ -23,17 +23,34 @@ const UserInformation = ({ onNext }) => {
     formerEmployers: "",
     previousAddresses: "",
   });
-  const { userData, setUserAgreement, setUserLogin } = useSearchStore();
+  const {
+    userData,
+    setUserAgreement,
+    setUserLogin,
+    searchResults,
+    setSearchResults,
+  } = useSearchStore();
   const [errors, setErrors] = useState({
     phone: "",
     ssn: "",
   });
   const [apiError, setApiError] = useState("");
-
+  const [agreeSMS, setAgreeSMS] = useState(false);
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => ({ ...prev, [field]: "" }));
   };
+  let propertyIds = [];
+  useEffect(() => {
+    const savedProperty = localStorage.getItem("propertyData");
+
+    if (savedProperty) {
+      setSearchResults(JSON.parse(savedProperty));
+    }
+    propertyIds = Array.isArray(searchResults)
+      ? searchResults.map((item) => item.property_id)
+      : [];
+  }, []);
 
   const handlePhoneChange = (value) => {
     // Remove all non-digit characters
@@ -103,6 +120,25 @@ const UserInformation = ({ onNext }) => {
       setErrors((prev) => ({ ...prev, zipCode: "" }));
     }
   };
+
+  const getFirstAndLastName = (fullName = "") => {
+    const trimmed = fullName.trim();
+
+    if (!trimmed.includes(" ")) {
+      return {
+        firstName: trimmed,
+        lastName: "",
+      };
+    }
+
+    const firstSpaceIndex = trimmed.indexOf(" ");
+
+    return {
+      firstName: trimmed.slice(0, firstSpaceIndex),
+      lastName: trimmed.slice(firstSpaceIndex + 1),
+    };
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (loading) return;
@@ -143,6 +179,13 @@ const UserInformation = ({ onNext }) => {
       setErrors(newErrors);
       return;
     }
+    if (!agreeSMS) {
+      setApiError("You must agree to receive SMS updates before continuing.");
+      return;
+    } else {
+      setApiError("");
+    }
+
     try {
       setLoading(true);
       const payload = {
@@ -174,8 +217,55 @@ const UserInformation = ({ onNext }) => {
       const { data } = await axios.post("/api/legalDetails", payload);
       setUserAgreement(data);
       localStorage.setItem("userAgreement", JSON.stringify(data));
+      const { firstName, lastName } = getFirstAndLastName(formData.fullName);
+      const [dobMonth, dobDay, dobYear] = formData.dateOfBirth.split("/");
+      const propertyIds = Array.isArray(searchResults)
+        ? searchResults.map((item) => item?.property_id).filter(Boolean)
+        : [];
+        console.log('--225--',propertyIds)
+      const caPayloadData = {
+        propertyId: propertyIds,
+        formData: {
+          firstName: firstName,
+          lastName: lastName,
+          email: formData.email,
+          emailConfirm: formData.email,
+          phone1: formData.phone,
+          taxID: formData.ssn,
+          dobMonth: dobMonth,
+          dobDay: dobDay,
+          dobYear: dobYear,
+          address1: formData.address,
+          address2: "",
+          city: formData.city,
+          state: "CA",
+          postalCode: formData.zipCode,
+          countryCode: "USA",
+          taxIdentifierType: "Individual",
+          sourceOfClaim: "Media",
+          assistedByFinder: "false",
+        },
+      };
 
-      onNext(data);
+      try {
+        const { data } = await axios.post(
+          "https://devapp.fetchmycash.com/api/claim-submission",
+          caPayloadData,
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        console.log("Claim submitted:", data);
+        onNext(data);
+      } catch (err) {
+        console.error(
+          "Claim submission failed:",
+          err.response?.data || err.message
+        );
+      }
     } catch (err) {
       console.error("Error saving user properties:", err);
 
@@ -431,7 +521,20 @@ const UserInformation = ({ onNext }) => {
                 <li>• All information provided is confidential and secure</li>
               </ul>
             </div>
-
+            <div className="mt-1">
+              <label className="flex items-center space-x-2 text-sm text-gray-200">
+                <input
+                  type="checkbox"
+                  checked={agreeSMS}
+                  onChange={(e) => setAgreeSMS(e.target.checked)}
+                  className="h-4 w-4 text-green-500"
+                />
+                <span>
+                  I agree to receive SMS updates from FetchMyDollars about my
+                  claim.
+                </span>
+              </label>
+            </div>
             <div className="flex items-center flex-wrap gap-1.5 justify-between mt-8">
               <div className="flex items-center  text-blue-600">
                 <Clock className="h-5 w-5 mr-2" />

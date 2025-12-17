@@ -25,6 +25,7 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   const [estimatedFee, setEstimatedFee] = useState(0.1);
   const [estimatedNet, setEstimatedNet] = useState(0);
   const [milestones, setMilestones] = useState([]);
+const [smsEnabled, setSmsEnabled] = useState(false);
 
   const caseProgress = 75;
 
@@ -128,27 +129,43 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   }, []);
 
   const handleNotificationClick = async (notificationId) => {
-  try {
-    // Call PUT API to mark notification as read
-    const res = await axios.put(`/api/notification?id=${notificationId}`, {
-      status: true,
-    });
+    try {
+      // Call PUT API to mark notification as read
+      const res = await axios.put(`/api/notification?id=${notificationId}`, {
+        status: true,
+      });
 
-    if (res.data.success) {
-      // Re-fetch notifications to refresh UI
-      const updated = await axios.get(`/api/notification?userId=${userData._id}`);
-      if (updated.data.success) {
-        setAllNotifications(updated.data.data);
-        setNotifications(updated.data.data.length > 0);
+      if (res.data.success) {
+        // Re-fetch notifications to refresh UI
+        const updated = await axios.get(
+          `/api/notification?userId=${userData._id}`
+        );
+        if (updated.data.success) {
+          setAllNotifications(updated.data.data);
+          setNotifications(updated.data.data.length > 0);
+        }
+      } else {
+        console.error("Failed to update notification:", res.data.error);
       }
-    } else {
-      console.error("Failed to update notification:", res.data.error);
+    } catch (error) {
+      console.error("Error updating notification:", error);
     }
+  };
+
+  const handleSmsToggle = async () => {
+  const newState = !smsEnabled;
+  setSmsEnabled(newState);
+  
+  // Add your API call here to save the preference
+  try {
+    // await updateSmsPreference(newState);
+    console.log('SMS notifications:', newState ? 'enabled' : 'disabled');
   } catch (error) {
-    console.error("Error updating notification:", error);
+    console.error('Failed to update SMS preference:', error);
+    // Revert on error
+    setSmsEnabled(!newState);
   }
 };
-
   const shareToSocial = (platform) => {
     let url = "";
 
@@ -177,20 +194,24 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
             <div className="flex items-center space-x-4">
               <Button
                 variant="outline"
+                onClick={handleSmsToggle}
+                className={`flex items-center ${
+                  smsEnabled ? "bg-green-600 text-white" : ""
+                }`}
+              >
+                <span className="h-4 w-4 sm:mr-2">📱</span>
+                <span className="sm:inline-block hidden">
+                  SMS {smsEnabled ? "On" : "Off"}
+                </span>
+              </Button>
+              <Button
+                variant="outline"
                 onClick={onViewLeaderboard}
                 className="flex items-center "
               >
                 <Trophy className="h-4 w-4 sm:mr-2" />
                 <span className="sm:inline-block hidden">Leaderboard</span>
               </Button>
-              {/* <Button
-                variant="outline"
-                onClick={() => setNotifications(!notifications)}
-                className={`${notifications ? "bg-primary/90" : ""}`}
-              >
-                <Bell className="h-4 w-4 sm:mr-2" />
-                <span className="sm:inline-block hidden">Notifications</span>
-              </Button> */}
 
               <div className="relative" ref={dropdownRef}>
                 <Button
@@ -222,7 +243,7 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                           <li
                             key={i}
                             className="p-3 hover:bg-green-700/10 transition duration-200 cursor-pointer"
-                             onClick={() => handleNotificationClick(n._id)}
+                            onClick={() => handleNotificationClick(n._id)}
                           >
                             <p className="text-sm text-white font-medium">
                               {n.title}
