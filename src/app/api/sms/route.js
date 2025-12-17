@@ -1,5 +1,7 @@
-import { NextResponse } from 'next/server';
-import twilio from 'twilio';
+export const runtime = "nodejs";
+
+import { NextResponse } from "next/server";
+import twilio from "twilio";
 
 export async function POST(request) {
   try {
@@ -13,12 +15,15 @@ export async function POST(request) {
     const result = await client.messages.create({
       body: message,
       from: process.env.TWILIO_PHONE_NUMBER,
-      to, 
+      to,
     });
 
     return NextResponse.json({ success: true, sid: result.sid });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error("Twilio SMS error:", error);
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
   }
 }
