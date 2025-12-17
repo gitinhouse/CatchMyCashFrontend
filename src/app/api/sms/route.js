@@ -1,11 +1,13 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import twilio from "twilio";
 
 export async function POST(request) {
   try {
     const { to, message } = await request.json();
+
+    // ✅ Dynamic import – webpack will NOT bundle twilio
+    const twilio = (await import("twilio")).default;
 
     const client = twilio(
       process.env.TWILIO_ACCOUNT_SID,
