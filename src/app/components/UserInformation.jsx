@@ -247,26 +247,26 @@ const UserInformation = ({ onNext }) => {
         },
       };
 
-      // try {
-      //   const { data } = await axios.post(
-      //     "https://devapp.fetchmycash.com/api/claim-submission",
-      //     caPayloadData,
-      //     {
-      //       headers: {
-      //         "Content-Type": "application/json",
-      //       },
-      //     }
-      //   );
+      try {
+        const { data } = await axios.post(
+          "https://devapp.fetchmycash.com/api/claim-submission",
+          caPayloadData,
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
-      //   console.log("Claim submitted:", data);
-     
-      // } catch (err) {
-      //   console.error(
-      //     "Claim submission failed:",
-      //     err.response?.data || err.message
-      //   );
-      // }
-      onNext(data);
+        console.log("Claim submitted:", data);
+     onNext(data);
+      } catch (err) {
+        console.error(
+          "Claim submission failed:",
+          err.response?.data || err.message
+        );
+      }
+     // onNext(data);
     } catch (err) {
       console.error("Error saving user properties:", err);
 
