@@ -1,0 +1,35 @@
+import sgMail from '@sendgrid/mail';
+
+if (!process.env.SENDGRID_API_KEY) {
+  throw new Error('SENDGRID_API_KEY is missing');
+}
+
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+export async function sendEmailTwilio({
+  to,
+  subject,
+  text,
+  html,
+}: {
+  to: string;
+  subject: string;
+  text?: string;
+  html?: string;
+}) {
+  const msg = {
+    to,
+    from: process.env.SENDGRID_FROM_EMAIL as string,
+    subject,
+    text,
+    html,
+  };
+
+  try {
+    await sgMail.send(msg);
+    return { success: true };
+  } catch (error: any) {
+    console.error('SendGrid Error:', error?.response?.body || error);
+    return { success: false, error };
+  }
+}

@@ -5,15 +5,18 @@ import { Progress } from "./uicomponents/Progress";
 import { Badge } from "./uicomponents/Badge";
 import { Globe, CheckCircle, FileText, Zap, Shield, Key } from "lucide-react";
 import { useSearchStore } from "../store/searchStore";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 
 const FormAutomation = ({ userData, onNext }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const router = useRouter();
   const { setUserData, userCase, setUserCase } = useSearchStore();
+  const [showPopup, setShowPopup] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!userData) {
@@ -71,9 +74,30 @@ const FormAutomation = ({ userData, onNext }) => {
   }, [currentStep]);
 
   const handleContinue = async () => {
-    onNext();
-  };
+    try {
+      setIsSubmitting(true);
 
+      const userRecord = JSON.parse(localStorage.getItem("userData") || "{}");
+      const userId = userData?.user_id || userRecord?._id;
+
+      if (!userId) {
+        console.error("No user ID found");
+        return;
+      }
+
+      const response = await axios.post("/api/case", { user_id: userId });
+
+      localStorage.setItem("userCase", JSON.stringify(response.data));
+      setUserCase(response.data);
+
+      setShowPopup(false);
+      router.push("/userLogin");
+    } catch (err) {
+      console.error("Network Error", err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Header */}
@@ -300,7 +324,7 @@ const FormAutomation = ({ userData, onNext }) => {
           {isComplete ? (
             <div className="flex justify-center mt-6">
               <Button
-                onClick={handleContinue}
+                onClick={() => setShowPopup(true)}
                 disabled={isSubmitting}
                 className="bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold px-8 py-4 rounded-lg w-full sm:w-2/3 md:w-1/2 transition-all duration-300 shadow-lg hover:shadow-blue-500/30 disabled:opacity-50"
               >
@@ -363,7 +387,7 @@ const FormAutomation = ({ userData, onNext }) => {
               </p>
             </div>
             <Button
-              onClick={handleContinue}
+              onClick={() => setShowPopup(true)}
               disabled={isSubmitting}
               className={`bg-blue-600 hover:bg-blue-700 text-white px-12 py-4 text-xl rounded-lg ${
                 isSubmitting ? "opacity-50 cursor-not-allowed" : ""
@@ -380,6 +404,45 @@ const FormAutomation = ({ userData, onNext }) => {
           </div>
         )}
       </div>
+
+      {showPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-gradient-to-br from-[#0b1f33] to-[#0e2a47] border border-teal-500/20 shadow-2xl p-6">
+            {/* Header */}
+            <h2 className="text-2xl font-bold text-white text-center mb-2">
+              Claim Information
+            </h2>
+            <p className="text-gray-300 text-center mb-6">
+             We are proessing your claim. After few minutes you will get Claim Form which you need to upload on Our website after login. 
+            </p>
+
+            {/* Info Box */}
+            <div className="bg-teal-500/10 border border-teal-400/30 rounded-lg p-4 mb-6">
+              <p className="text-sm text-teal-200">
+                🔒 Your information is encrypted and securely stored.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-4">
+              <Button
+                onClick={() => setShowPopup(false)}
+                className="w-1/2 bg-transparent border border-gray-500 text-gray-300 hover:bg-gray-800"
+              >
+                Cancel
+              </Button>
+
+              <Button
+                onClick={handleContinue}
+                disabled={isSubmitting}
+                className="w-1/2 bg-teal-500 hover:bg-teal-600 text-black font-semibold shadow-lg"
+              >
+                {isSubmitting ? "Processing..." : " Continue"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
