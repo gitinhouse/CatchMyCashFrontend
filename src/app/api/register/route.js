@@ -5,6 +5,7 @@ import connectToDatabase from "../../lib/mongodb";
 import UserLogin from "../../models/userLogin";
 import mongoose from "mongoose";
 import { sendEmail } from "../../lib/mailer";
+import { sendEmailTwilio } from "../../lib/sendgrid";
 import { generateRandomPassword } from "../../lib/utils";
 import { createNotification } from "../../lib/createNotification.js";
 import UserCases from "../../models/userCases";
@@ -75,12 +76,16 @@ export async function POST(req) {
       <p style="margin-top: 20px; color: #444;">You can now log in to your account.</p>
     `;
 
-    await sendEmail(
-      newUser.userEmail,
-      "Welcome to Our Platform 🎉",
-      `Hi ${newUser.userEmail},<br>Welcome aboard! Your account has been created successfully. Here are your login details:`,
-      credentialsHTML
-    );
+   await sendEmailTwilio({
+  to: newUser.userEmail,
+  subject: "Welcome to Our Platform 🎉",
+  text: `Hi ${newUser.userEmail}, Welcome aboard! Your account has been created successfully.`,
+  html: `
+    <p>Hi ${newUser.userEmail},</p>
+    <p>Welcome aboard! Your account has been created successfully.</p>
+    ${credentialsHTML}
+  `,
+});
 
     await createNotification(
       user_id,
