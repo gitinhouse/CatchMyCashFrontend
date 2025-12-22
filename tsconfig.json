@@ -28,7 +28,7 @@
     ".next/types/**/*.ts",
     "**/*.ts",
     "**/*.tsx"
-  ],
+, "src/app/lib/sendgrid.js"  ],
   "exclude": [
     "node_modules"
   ]

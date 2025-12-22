@@ -218,12 +218,13 @@ const UserInformation = ({ onNext }) => {
       setUserAgreement(data);
       localStorage.setItem("userAgreement", JSON.stringify(data));
       const { firstName, lastName } = getFirstAndLastName(formData.fullName);
-      console.log('---', formData.dateOfBirth);
-      const [dobYear, dobMonth, dobDay ] = formData.dateOfBirth.split("-");
+      console.log("---", formData.dateOfBirth);
+      const [dobYear, dobMonth, dobDay] = formData.dateOfBirth.split("-");
       const propertyIds = Array.isArray(searchResults)
         ? searchResults.map((item) => item?.property_id).filter(Boolean)
         : [];
-      const caPayloadData = {
+      const SQSPayloadData = {
+        userId: userData._id,
         propertyId: propertyIds,
         formData: {
           firstName: firstName,
@@ -247,25 +248,7 @@ const UserInformation = ({ onNext }) => {
         },
       };
 
-    //   try {
-    //     const { data } = await axios.post(
-    //       "https://devapp.fetchmycash.com/api/claim-submission",
-    //       caPayloadData,
-    //       {
-    //         headers: {
-    //           "Content-Type": "application/json",
-    //         },
-    //       }
-    //     );
-
-    //     console.log("Claim submitted:", data);
-    //  onNext(data);
-    //   } catch (err) {
-    //     console.error(
-    //       "Claim submission failed:",
-    //       err.response?.data || err.message
-    //     );
-    //   }
+      await axios.post("/api/sqs", SQSPayloadData);
       onNext(data);
     } catch (err) {
       console.error("Error saving user properties:", err);
