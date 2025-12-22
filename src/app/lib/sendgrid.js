@@ -6,20 +6,10 @@ if (!process.env.SENDGRID_API_KEY) {
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-export async function sendEmailTwilio({
-  to,
-  subject,
-  text,
-  html,
-}: {
-  to: string;
-  subject: string;
-  text?: string;
-  html?: string;
-}) {
+export async function sendEmailTwilio({ to, subject, text, html }) {
   const msg = {
     to,
-    from: process.env.SENDGRID_FROM_EMAIL as string,
+    from: process.env.SENDGRID_FROM_EMAIL,
     subject,
     text,
     html,
@@ -28,7 +18,7 @@ export async function sendEmailTwilio({
   try {
     await sgMail.send(msg);
     return { success: true };
-  } catch (error: any) {
+  } catch (error) {
     console.error('SendGrid Error:', error?.response?.body || error);
     return { success: false, error };
   }
