@@ -1,7 +1,7 @@
-"use client";
-import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
+'use client';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
   Clock,
@@ -10,27 +10,28 @@ import {
   TrendingUp,
   Users,
   Award,
-} from "lucide-react";
-import { ImageWithFallback } from "./uicomponents/ImageWithFallback";
-import { Button } from "./uicomponents/Button";
+  Pointer,
+} from 'lucide-react';
+import { ImageWithFallback } from './uicomponents/ImageWithFallback';
+import { Button } from './uicomponents/Button';
 
 const SolutionArray = [
   {
-    num: "1",
-    title: "We Search & Find",
-    desc: "Our advanced system scans all California databases",
+    num: '1',
+    title: 'We Search & Find',
+    desc: 'Our advanced system scans all California databases',
     delay: 2.8,
   },
   {
-    num: "2",
-    title: "We Handle Everything",
-    desc: "Professional case preparation and submission",
+    num: '2',
+    title: 'We Handle Everything',
+    desc: 'Professional case preparation and submission',
     delay: 3.0,
   },
   {
-    num: "3",
-    title: "You Get Paid",
-    desc: "94% success rate - money in your account",
+    num: '3',
+    title: 'You Get Paid',
+    desc: '94% success rate - money in your account',
     delay: 3.2,
   },
 ];
@@ -38,18 +39,18 @@ const SolutionArray = [
 const ResonsArray = [
   {
     icon: Clock,
-    title: "Extremely Time-Consuming",
-    desc: "Average claim takes 6-18 months to process",
+    title: 'Extremely Time-Consuming',
+    desc: 'Average claim takes 6-18 months to process',
   },
   {
     icon: FileText,
-    title: "Complex Legal Documentation",
-    desc: "Requires multiple forms, notarizations, and proof documents",
+    title: 'Complex Legal Documentation',
+    desc: 'Requires multiple forms, notarizations, and proof documents',
   },
   {
     icon: AlertTriangle,
-    title: "High Rejection Rate",
-    desc: "Over 70% of DIY claims are rejected due to errors",
+    title: 'High Rejection Rate',
+    desc: 'Over 70% of DIY claims are rejected due to errors',
   },
 ];
 
@@ -74,14 +75,17 @@ const LandingPage = ({ onNext }) => {
   }, []);
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
       maximumFractionDigits: 0,
     }).format(amount);
   };
   const handleLogin = async () => {
-    router.push("/userLogin");
+    router.push('/userLogin');
+  };
+  const handlePrivacy = async () => {
+    router.push('/privacyPolicy');
   };
   return (
     <div className="min-h-screen relative">
@@ -235,8 +239,8 @@ const LandingPage = ({ onNext }) => {
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-500">
             <motion.div
               className="h-full w-full bg-gradient-to-r from-transparent via-white/30 to-transparent"
-              animate={{ x: ["-100%", "100%"] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              animate={{ x: ['-100%', '100%'] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
             />
           </div>
 
@@ -308,8 +312,8 @@ const LandingPage = ({ onNext }) => {
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-500 to-mint-green">
             <motion.div
               className="h-full w-full bg-gradient-to-r from-transparent via-white/40 to-transparent"
-              animate={{ x: ["-100%", "100%"] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              animate={{ x: ['-100%', '100%'] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
             />
           </div>
 
@@ -383,7 +387,7 @@ const LandingPage = ({ onNext }) => {
           >
             <motion.div
               animate={{ rotate: [0, 360] }}
-              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+              transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
             >
               <DollarSign className="h-8 w-8 text-teal-400 mr-2" />
             </motion.div>
@@ -397,9 +401,9 @@ const LandingPage = ({ onNext }) => {
               className="text-6xl font-bold text-teal-400 mb-2 relative z-10"
               animate={{
                 textShadow: [
-                  "0 0 20px rgba(0, 200, 150, 0.5)",
-                  "0 0 40px rgba(0, 200, 150, 0.8)",
-                  "0 0 20px rgba(0, 200, 150, 0.5)",
+                  '0 0 20px rgba(0, 200, 150, 0.5)',
+                  '0 0 40px rgba(0, 200, 150, 0.8)',
+                  '0 0 20px rgba(0, 200, 150, 0.5)',
                 ],
               }}
               transition={{ duration: 2, repeat: Infinity }}
@@ -408,8 +412,8 @@ const LandingPage = ({ onNext }) => {
             </motion.div>
             <motion.div
               className="absolute inset-0 bg-gradient-to-r from-transparent via-teal-400/20 to-transparent"
-              animate={{ x: ["-100%", "100%"] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              animate={{ x: ['-100%', '100%'] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
             />
           </motion.div>
 
@@ -428,6 +432,9 @@ const LandingPage = ({ onNext }) => {
             <span>No hidden fees</span>
             <span className="w-2 h-2 bg-mint-green rounded-full"></span>
             <span>No risk to you</span>
+            <span onClick={handlePrivacy} className="cursor-pointer">
+              Privacy policy
+            </span>
           </motion.div>
         </motion.div>
 
@@ -464,10 +471,10 @@ const LandingPage = ({ onNext }) => {
             animate={{ opacity: 1 }}
             transition={{ delay: 4.4 }}
           >
-            Join{" "}
+            Join{' '}
             <span className="text-teal-400 font-semibold">
               {stats.happyClients.toLocaleString()}+
-            </span>{" "}
+            </span>{' '}
             people who have recovered their money
           </motion.div>
         </motion.div>
