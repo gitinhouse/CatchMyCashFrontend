@@ -124,6 +124,12 @@ const LandingPage = ({ onNext }) => {
                 <span className="flex items-center gap-3">Login</span>
               </Button>
             </motion.div>
+            <Button
+              onClick={() => (window.location.href = '/api/auth/google')}
+              className="glass-button text-white px-6 py-3 rounded-xl hover:text-teal-200"
+            >
+              Connect Gmail
+            </Button>
           </motion.div>
         </div>
       </motion.div>
