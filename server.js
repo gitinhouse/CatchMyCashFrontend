@@ -2,8 +2,8 @@
 import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
 import startCronJobs from './src/app/lib/cron.js';
-import startRenewWatchCron from './src/app/lib/renewWatch.js';
-import sqsCronJob from './src/app/lib/sqsCronJob.js';
+//import startRenewWatchCron from './src/app/lib/renewWatch.js';
+//import sqsCronJob from './src/app/lib/sqsCronJob.js';
 
 import next from 'next';
 import { parse } from 'url';
