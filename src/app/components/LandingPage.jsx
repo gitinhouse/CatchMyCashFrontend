@@ -439,7 +439,9 @@ const LandingPage = ({ onNext }) => {
             <span className="w-2 h-2 bg-mint-green rounded-full"></span>
             <span>No risk to you</span>
             <span onClick={handlePrivacy} className="cursor-pointer">
-              <a href="https://catchmycash.com/privacyPolicy">Privacy policy</a>
+              <a href="https://catchmycash.com/privacy-policy">
+                Privacy policy
+              </a>
             </span>
           </motion.div>
         </motion.div>
