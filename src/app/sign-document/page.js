@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Shield, FileText, ArrowRight } from "lucide-react";
 
 export default function SignDocumentPage() {
   const [firstName, setFirstName] = useState("");
@@ -32,7 +33,6 @@ export default function SignDocumentPage() {
       const data = await res.json();
 
       if (data.signingUrl) {
-        // redirect to DocuSign embedded signing
         window.location.href = data.signingUrl;
       } else {
         setError(data.error || "Something went wrong.");
@@ -45,48 +45,98 @@ export default function SignDocumentPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-      <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-md">
-        <h1 className="text-2xl font-semibold mb-6 text-center">
-          Sign the Agreement
+    <div className="min-h-screen bg-[#F7F5F2] flex items-center justify-center p-4" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <div className="bg-white border border-[#E8E6E3] rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-8 w-full max-w-md relative overflow-hidden">
+        {/* Red top accent bar */}
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
+        
+        {/* Icon */}
+        <div className="flex justify-center mb-4">
+          <div className="w-16 h-16 bg-[#FCE9E7] rounded-full flex items-center justify-center">
+            <FileText className="h-8 w-8 text-[#E1261C]" />
+          </div>
+        </div>
+
+        <h1 className="text-2xl font-bold text-[#0A0A0A] mb-2 text-center font-['Fraunces']">
+          Sign the <span className="text-[#E1261C] italic font-normal">Agreement</span>
         </h1>
+        <p className="text-[#4A4A4A] text-sm text-center mb-6">
+          Please provide your information to sign the investigator agreement
+        </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="text"
-            placeholder="First Name"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            required
-            className="w-full p-2 border rounded-md"
-          />
-          <input
-            type="text"
-            placeholder="Last Name"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            required
-            className="w-full p-2 border rounded-md"
-          />
-          <input
-            type="email"
-            placeholder="Email Address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full p-2 border rounded-md"
-          />
+          <div>
+            <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
+              First Name *
+            </label>
+            <input
+              type="text"
+              placeholder="Enter first name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              required
+              className="w-full px-4 py-2 border-2 border-[#E8E6E3] rounded-lg text-[#0A0A0A] placeholder-[#888888] focus:border-[#E1261C] focus:outline-none transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
+              Last Name *
+            </label>
+            <input
+              type="text"
+              placeholder="Enter last name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              required
+              className="w-full px-4 py-2 border-2 border-[#E8E6E3] rounded-lg text-[#0A0A0A] placeholder-[#888888] focus:border-[#E1261C] focus:outline-none transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
+              Email Address *
+            </label>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full px-4 py-2 border-2 border-[#E8E6E3] rounded-lg text-[#0A0A0A] placeholder-[#888888] focus:border-[#E1261C] focus:outline-none transition-all"
+            />
+          </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
+            className="w-full bg-[#E1261C] text-white py-3 rounded-lg font-semibold hover:bg-[#B11912] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            {loading ? "Generating Signing Link..." : "Sign Document"}
+            {loading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                Generating Signing Link...
+              </>
+            ) : (
+              <>
+                Sign Document
+                <ArrowRight className="h-4 w-4" />
+              </>
+            )}
           </button>
         </form>
 
-        {error && <p className="text-red-500 mt-4 text-center">{error}</p>}
+        {error && (
+          <div className="mt-4 p-3 bg-[#FCE9E7] border border-[#E1261C]/20 rounded-lg text-[#E1261C] text-sm text-center">
+            {error}
+          </div>
+        )}
+
+        {/* Security note */}
+        <div className="mt-6 pt-4 border-t border-[#E8E6E3] flex items-center font-['JetBrains_Mono'] justify-center gap-2 text-xs text-[#888888]">
+          <Shield className="h-3 w-3 text-[#E1261C]" />
+          <span>Secure • Encrypted • DocuSign</span>
+        </div>
       </div>
     </div>
   );

@@ -34,8 +34,8 @@ export default function SignedPage() {
   }, [envelopeId, router, setuserSignedAgreement]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 text-white relative">
-      <h1 className="text-2xl font-semibold text-teal-400 mb-2">
+    <div className="min-h-screen flex flex-col items-center justify-center  text-black relative">
+      <h1 className="text-2xl font-semibold text-[#E1261C] mb-2">
         Processing your signed document...
       </h1>
       <p className="text-gray-400">
@@ -53,7 +53,7 @@ export default function SignedPage() {
             animate={{ rotate: 360 }}
             transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }}
           >
-            <Loader2 className="w-12 h-12 text-teal-400" />
+            <Loader2 className="w-12 h-12 text-[#E1261C]" />
           </motion.div>
           <p className="mt-4 text-gray-300">Downloading your signed file...</p>
         </motion.div>

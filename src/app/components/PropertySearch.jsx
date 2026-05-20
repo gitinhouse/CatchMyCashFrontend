@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from "react";
+"use client";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSearchStore } from "../store/searchStore";
+import ReCAPTCHA from "react-google-recaptcha";
 import axios from "axios";
 import {
   Search,
@@ -17,12 +19,33 @@ import {
 import { Button } from "./uicomponents/Button";
 import { InputField } from "./uicomponents/InputField";
 
+// ============================================================
+// DESIGN TOKENS — matching the HTML mockup exactly
+// ============================================================
+const colors = {
+  black: "#0A0A0A",
+  white: "#FFFFFF",
+  offWhite: "#F7F5F2",
+  red: "#E1261C",
+  redDeep: "#B11912",
+  redTint: "#FCE9E7",
+  gray900: "#1A1A1A",
+  gray700: "#4A4A4A",
+  gray500: "#888888",
+  gray300: "#D4D4D4",
+  gray200: "#E8E6E3",
+  gray100: "#F0EEEB",
+};
+
 const PropertySearch = ({ onNext }) => {
+  const [captchaToken, setCaptchaToken] = useState(null);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("California");
+  const addressInputRef = useRef(null);
+  const autocompleteRef = useRef(null);
   const [zipCode, setZipCode] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [showBrowser, setShowBrowser] = useState(false);
@@ -30,6 +53,16 @@ const PropertySearch = ({ onNext }) => {
   const [currentSearchStep, setCurrentSearchStep] = useState("");
   const [validationError, setValidationError] = useState("");
   const { setUserData, setSearchResults } = useSearchStore();
+
+  const setAddressRef = useRef(setAddress);
+  const setCityRef = useRef(setCity);
+  const setZipRef = useRef(setZipCode);
+
+  useEffect(() => {
+    setAddressRef.current = setAddress;
+    setCityRef.current = setCity;
+    setZipRef.current = setZipCode;
+  });
 
   const searchSteps = [
     "Initializing secure connection...",
@@ -46,38 +79,104 @@ const PropertySearch = ({ onNext }) => {
   ];
 
   useEffect(() => {
-    if (isSearching) {
-      let step = 0;
-      const interval = setInterval(() => {
-        if (step < searchSteps.length) {
-          setCurrentSearchStep(searchSteps[step]);
-          setSearchProgress(((step + 1) / searchSteps.length) * 100);
-          step++;
-        } else {
-          clearInterval(interval);
-        }
-      }, 450);
-
-      return () => clearInterval(interval);
-    }
+    if (!isSearching) return;
+    let step = 0;
+    const interval = setInterval(() => {
+      if (step < searchSteps.length) {
+        setCurrentSearchStep(searchSteps[step]);
+        setSearchProgress(((step + 1) / searchSteps.length) * 100);
+        step++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 450);
+    return () => clearInterval(interval);
   }, [isSearching]);
 
+  // ─── Google Maps PlaceAutocompleteElement ─────────────────────────────────
   useEffect(() => {
-    if (
-      validationError &&
-      (firstName.trim() ||
-        lastName.trim() ||
-        address.trim() ||
-        city.trim() ||
-        zipCode.trim())
-    ) {
-      // setValidationError('');
+    function initAutocomplete() {
+      if (!addressInputRef.current) return;
+      if (autocompleteRef.current) return;
+      if (!window.google?.maps?.places?.Autocomplete) return;
+
+      const ac = new window.google.maps.places.Autocomplete(
+        addressInputRef.current,
+        {
+          types: ["address"],
+          componentRestrictions: { country: "us" },
+          fields: ["formatted_address", "address_components"],
+        },
+      );
+      autocompleteRef.current = ac;
+
+      ac.addListener("place_changed", () => {
+        const place = ac.getPlace();
+        if (!place.address_components) return;
+
+        let streetNum = "",
+          route = "",
+          cityName = "",
+          zip = "";
+
+        place.address_components.forEach((c) => {
+          const t = c.types ?? [];
+          if (t.includes("street_number")) streetNum = c.long_name ?? "";
+          if (t.includes("route")) route = c.long_name ?? "";
+          if (t.includes("locality")) cityName = c.long_name ?? "";
+          if (!cityName && t.includes("sublocality_level_1"))
+            cityName = c.long_name ?? "";
+          if (!cityName && t.includes("administrative_area_level_3"))
+            cityName = c.long_name ?? "";
+          if (!cityName && t.includes("administrative_area_level_2"))
+            cityName = c.long_name ?? "";
+          if (t.includes("postal_code")) zip = c.long_name ?? "";
+        });
+
+        const street =
+          [streetNum, route].filter(Boolean).join(" ") ||
+          place.formatted_address ||
+          "";
+
+        setAddressRef.current(street);
+        setCityRef.current(cityName);
+        setZipRef.current(zip);
+      });
     }
-  }, [firstName, lastName, address, city, zipCode, validationError]);
 
+    function onScriptReady() {
+      initAutocomplete();
+    }
+
+    function loadScript() {
+      if (document.getElementById("google-maps-script")) return;
+      const s = document.createElement("script");
+      s.id = "google-maps-script";
+      s.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&v=weekly`;
+      s.async = true;
+      s.defer = true;
+      s.onload = onScriptReady;
+      s.onerror = () => console.error("Google Maps failed to load");
+      document.head.appendChild(s);
+    }
+
+    const existing = document.getElementById("google-maps-script");
+    if (!existing) loadScript();
+    else if (window.google?.maps?.places) initAutocomplete();
+    else existing.addEventListener("load", onScriptReady);
+
+    return () => {
+      if (autocompleteRef.current) {
+        window.google?.maps?.event?.clearInstanceListeners(
+          autocompleteRef.current,
+        );
+        autocompleteRef.current = null;
+      }
+    };
+  }, []);
+
+  // ─── Form submit ──────────────────────────────────────────────────────────
   const handleSearch = async () => {
-    // setValidationError('');
-
     const missingFields = [];
     if (!firstName.trim()) missingFields.push("first name");
     if (!lastName.trim()) missingFields.push("last name");
@@ -86,29 +185,29 @@ const PropertySearch = ({ onNext }) => {
     if (!zipCode.trim()) missingFields.push("ZIP code");
 
     if (missingFields.length > 0) {
-      if (missingFields.length === 1) {
-        setValidationError(`Please enter your ${missingFields[0]}`);
-      } else if (missingFields.length === 2) {
-        setValidationError(
-          `Please enter your ${missingFields[0]} and ${missingFields[1]}`
-        );
-      } else {
-        setValidationError(
-          `Please fill in all required fields: ${missingFields.join(", ")}`
-        );
-      }
+      setValidationError(
+        missingFields.length === 1
+          ? `Please enter your ${missingFields[0]}`
+          : missingFields.length === 2
+            ? `Please enter your ${missingFields[0]} and ${missingFields[1]}`
+            : `Please fill in all required fields: ${missingFields.join(", ")}`,
+      );
       return;
     }
 
     const zipPattern = /^\d{5}(-\d{4})?$/;
     if (!zipPattern.test(zipCode.trim())) {
       setValidationError(
-        "Please enter a valid ZIP code (e.g., 90210 or 90210-1234)"
+        "Please enter a valid ZIP code (e.g., 90210 or 90210-1234)",
       );
       return;
     }
 
-    // here i need to implement the API to save the data into the database and
+    if (!captchaToken) {
+      setValidationError("Please confirm you are not a robot.");
+      return;
+    }
+
     const payload = {
       first_name: firstName.trim(),
       last_name: lastName.trim(),
@@ -132,7 +231,7 @@ const PropertySearch = ({ onNext }) => {
         });
       }, 200);
 
-      const propertypPayload = {
+      const propertyPayload = {
         first_name: firstName.trim().toUpperCase(),
         last_name: lastName.trim().toUpperCase(),
         address: address.trim().toUpperCase(),
@@ -140,37 +239,40 @@ const PropertySearch = ({ onNext }) => {
         state: "CA",
         zip_code: zipCode.trim(),
       };
-      const { totalMatched, currentPage, pageSize, matchedProperties } =
-        await axios
-          .post("/api/filterProperty", propertypPayload)
-          .then((res) => res.data);
+
+      const { totalMatched, matchedProperties } = await axios
+        .post("/api/filterProperty", propertyPayload, {
+          headers: { "x-captcha-token": captchaToken },
+        })
+        .then((res) => res.data);
 
       setSearchResults(matchedProperties);
       localStorage.setItem("propertyData", JSON.stringify(matchedProperties));
       setSearchProgress(100);
+
       if (matchedProperties.length > 0) {
         const { data } = await axios.post("/api/users", payload);
         setUserData(data);
         localStorage.setItem("userData", JSON.stringify(data));
       }
+
       setTimeout(() => {
-        // Transform matchedProperties into your frontend format
-        const transformedProperties = matchedProperties.map((prop, index) => ({
-          id: prop.property_id, // or use prop._id if you prefer
+        const transformedProperties = matchedProperties.map((prop) => ({
+          id: prop.property_id,
           type: prop.property_type,
           holder: prop.owner_name,
           amount: prop.current_cash_balance || prop.cash_reported,
-          reportDate: new Date().toISOString().split("T")[0], // If you have a date field, set it here
-          status: "Available", // Or derive from your data
+          reportDate: new Date().toISOString().split("T")[0],
+          status: "Available",
           lastKnownAddress: `${prop.owner_street_1}, ${prop.owner_city}, ${prop.owner_state} ${prop.owner_zip}`,
         }));
 
-        const results = {
+        onNext({
           name: `${firstName.trim()} ${lastName.trim()}`,
           address: {
             street: address.trim(),
             city: city.trim(),
-            state: state,
+            state,
             zipCode: zipCode.trim(),
           },
           properties: transformedProperties,
@@ -180,14 +282,12 @@ const PropertySearch = ({ onNext }) => {
           searchTime: "4.2 seconds",
           databasesSearched: 52,
           addressMatches: totalMatched,
-        };
-
-        onNext(results);
+        });
       }, 4800);
     } catch (error) {
       console.error(error);
       setValidationError(
-        "There was a problem submitting your search. Please try again."
+        "There was a problem submitting your search. Please try again.",
       );
       setIsSearching(false);
     }
@@ -200,22 +300,63 @@ const PropertySearch = ({ onNext }) => {
     city.trim().length > 0 &&
     zipCode.trim().length > 0;
 
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen relative">
-      {/* Animated background elements */}
+    <div
+      className="min-h-screen bg-[#F7F5F2]"
+       
+    >
+      <style>{`
+        /* Google Places Autocomplete Styling - Red Themed */
+        .pac-container {
+          z-index: 99999 !important;
+          background-color: ${colors.white} !important;
+          border: 1px solid ${colors.redTint} !important;
+          border-radius: 0.5rem !important;
+          margin-top: 4px !important;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.1) !important;
+          overflow: hidden !important;
+        }
+        .pac-item {
+          color: ${colors.gray700} !important;
+          padding: 0.6rem 1rem !important;
+          font-size: 0.875rem !important;
+          border-top: 1px solid ${colors.gray200} !important;
+          cursor: pointer !important;
+          background: transparent !important;
+          font-family: 'Inter', system-ui, sans-serif !important;
+        }
+        .pac-item:first-child { border-top: none !important; }
+        .pac-item:hover, .pac-item.pac-item-selected { background-color: ${colors.redTint} !important; }
+        .pac-item-query { color: ${colors.black} !important; font-size: 0.875rem !important; }
+        .pac-matched { color: ${colors.red} !important; font-weight: 600 !important; }
+        .pac-icon, .pac-icon-marker { display: none !important; }
+        .pac-logo::after { display: none !important; }
+        
+        /* Remove number input arrows */
+        input.remove-arrow::-webkit-inner-spin-button,
+        input.remove-arrow::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        input[type='number'] {
+          -moz-appearance: textfield;
+        }
+      `}</style>
+
+      {/* Animated background dots - red themed */}
       <div className="absolute inset-0 pointer-events-none">
         {Array.from({ length: 12 }).map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-2 h-2 bg-teal-400/20 rounded-full"
+            className="absolute w-2 h-2 bg-[#E1261C]/10 rounded-full"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
             }}
-            animate={{
-              scale: [0, 1, 0],
-              opacity: [0, 1, 0],
-            }}
+            animate={{ scale: [0, 1, 0], opacity: [0, 0.5, 0] }}
             transition={{
               duration: 3 + Math.random() * 2,
               repeat: Infinity,
@@ -234,21 +375,19 @@ const PropertySearch = ({ onNext }) => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
-              {/* Search Form */}
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.6 }}
-                className="glass-card p-8 mb-8 border border-teal-500/20 rounded-xl relative overflow-hidden"
+                className="bg-white p-8 mb-8 border border-[#E8E6E3] rounded-xl shadow-md hover:shadow-lg transition-all duration-300 relative overflow-hidden"
               >
-                {/* Animated border glow */}
                 <motion.div
-                  className="absolute inset-0 border-2 border-teal-500/0 rounded-xl"
+                  className="absolute inset-0 border-2 border-[#E1261C]/0 rounded-xl pointer-events-none"
                   animate={{
                     borderColor: [
-                      "rgba(0, 128, 128, 0)",
-                      "rgba(0, 128, 128, 0.3)",
-                      "rgba(0, 128, 128, 0)",
+                      "rgba(225,38,28,0)",
+                      "rgba(225,38,28,0.15)",
+                      "rgba(225,38,28,0)",
                     ],
                   }}
                   transition={{ duration: 3, repeat: Infinity }}
@@ -260,24 +399,29 @@ const PropertySearch = ({ onNext }) => {
                     transition={{ duration: 0.6 }}
                     className="inline-block"
                   >
-                    <Search className="h-12 w-12 text-teal-400 mx-auto mb-4" />
+                    <div className="w-16 h-16 bg-[#FCE9E7] rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Search className="h-8 w-8 text-[#E1261C]" />
+                    </div>
                   </motion.div>
                   <motion.h2
-                    className="text-3xl font-bold text-white mb-4"
+                    className="text-3xl font-bold text-[#0A0A0A] mb-4 font-['Fraunces']"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
                   >
-                    Advanced Property Search
+                    Advanced Property{" "}
+                    <span className="text-[#E1261C] italic font-normal">
+                      Search
+                    </span>
                   </motion.h2>
                   <motion.div
-                    className="text-gray-300"
+                    className="text-[#4A4A4A]"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.4 }}
                   >
                     Our proprietary AI searches across{" "}
-                    <span className="text-teal-400 font-semibold">
+                    <span className="text-[#E1261C] font-semibold">
                       52+ databases
                     </span>{" "}
                     using your personal and address history
@@ -290,14 +434,14 @@ const PropertySearch = ({ onNext }) => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.6 }}
                 >
-                  {/* Validation Error */}
+                  {/* Validation error */}
                   <AnimatePresence>
                     {validationError && (
                       <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: -10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                        className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-300 text-sm flex items-center gap-2"
+                        className="p-3 bg-[#FCE9E7] border border-[#E1261C]/20 rounded-lg text-[#E1261C] text-sm flex items-center gap-2"
                       >
                         <AlertTriangle className="h-4 w-4" />
                         {validationError}
@@ -305,27 +449,25 @@ const PropertySearch = ({ onNext }) => {
                     )}
                   </AnimatePresence>
 
-                  {/* Personal Information Section */}
+                  {/* Personal info divider */}
                   <motion.div
                     className="flex items-center gap-3 py-2"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.8 }}
                   >
-                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-teal-400/30 to-transparent"></div>
-                    <span className="text-sm text-teal-300 flex items-center gap-2">
-                      <Eye className="h-4 w-4" />
+                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#E1261C] to-transparent" />
+                    <span className="text-sm text-[#4A4A4A] flex items-center gap-2 font-['JetBrains_Mono']">
+                      <Eye className="h-4 w-4 text-[#E1261C]" />
                       Personal Information
                     </span>
-                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-teal-400/30 to-transparent"></div>
+                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#E1261C] to-transparent" />
                   </motion.div>
 
+                  {/* First / Last name */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <motion.div
-                      className="relative"
-                      whileFocus={{ scale: 1.02 }}
-                    >
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <motion.div className="relative">
+                      <label className="block text-sm font-medium text-[#0A0A0A] mb-2 font-['JetBrains_Mono']">
                         First Name *
                       </label>
                       <InputField
@@ -333,11 +475,7 @@ const PropertySearch = ({ onNext }) => {
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         placeholder="Enter first name"
-                        className={`w-full text-white placeholder-gray-400 border-2 transition-all duration-300 ${
-                          firstName.trim()
-                            ? "border-teal-400/50 focus:border-teal-400"
-                            : "border-transparent focus:border-teal-400"
-                        }`}
+                        className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${firstName.trim() ? "border-[#E1261C]/50 focus:border-[#E1261C]" : "border-[#E8E6E3] focus:border-[#E1261C]"}`}
                         onKeyPress={(e) =>
                           e.key === "Enter" && isFormValid && handleSearch()
                         }
@@ -347,18 +485,15 @@ const PropertySearch = ({ onNext }) => {
                         <motion.div
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="absolute right-3 top-9 text-teal-400"
+                          className="absolute right-3 top-9 text-[#E1261C]"
                         >
                           ✓
                         </motion.div>
                       )}
                     </motion.div>
 
-                    <motion.div
-                      className="relative"
-                      whileFocus={{ scale: 1.02 }}
-                    >
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <motion.div className="relative">
+                      <label className="block text-sm font-medium text-[#0A0A0A] mb-2 font-['JetBrains_Mono']">
                         Last Name *
                       </label>
                       <InputField
@@ -366,11 +501,7 @@ const PropertySearch = ({ onNext }) => {
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
                         placeholder="Enter last name"
-                        className={`w-full text-white placeholder-gray-400 border-2 transition-all duration-300 ${
-                          lastName.trim()
-                            ? "border-teal-400/50 focus:border-teal-400"
-                            : "border-transparent focus:border-teal-400"
-                        }`}
+                        className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${lastName.trim() ? "border-[#E1261C]/50 focus:border-[#E1261C]" : "border-[#E8E6E3] focus:border-[#E1261C]"}`}
                         onKeyPress={(e) =>
                           e.key === "Enter" && isFormValid && handleSearch()
                         }
@@ -380,7 +511,7 @@ const PropertySearch = ({ onNext }) => {
                         <motion.div
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="absolute right-3 top-9 text-teal-400"
+                          className="absolute right-3 top-9 text-[#E1261C]"
                         >
                           ✓
                         </motion.div>
@@ -388,70 +519,60 @@ const PropertySearch = ({ onNext }) => {
                     </motion.div>
                   </div>
 
-                  {/* Address Section Divider */}
+                  {/* Address divider */}
                   <motion.div
                     className="flex items-center gap-3 py-2"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 1.0 }}
                   >
-                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-teal-400/30 to-transparent"></div>
-                    <span className="text-sm text-teal-300 flex items-center gap-2">
-                      <MapPin className="h-4 w-4" />
+                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#E1261C] to-transparent" />
+                    <span className="text-sm text-[#4A4A4A] flex items-center gap-2 font-['JetBrains_Mono']">
+                      <MapPin className="h-4 w-4 text-[#E1261C]" />
                       Address Information
                     </span>
-                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-teal-400/30 to-transparent"></div>
+                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#E1261C] to-transparent" />
                   </motion.div>
 
-                  <motion.div className="relative" whileFocus={{ scale: 1.02 }}>
-                    <label className="text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-                      <Home className="h-4 w-4 text-teal-400" />
+                  {/* Street Address - Google Places Autocomplete */}
+                  <motion.div className="relative">
+                    <label className="text-sm font-medium text-[#0A0A0A] mb-2 flex items-center gap-2 font-['JetBrains_Mono']">
+                      <Home className="h-4 w-4 text-[#E1261C]" />
                       Street Address *
                     </label>
-                    <InputField
+                    <input
+                      ref={addressInputRef}
                       type="text"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      placeholder="123 Main Street, Apt 4B"
-                      className={`w-full text-white placeholder-gray-400 border-2 transition-all duration-300 ${
-                        address.trim()
-                          ? "border-teal-400/50 focus:border-teal-400"
-                          : "border-transparent focus:border-teal-400"
-                      }`}
-                      onKeyPress={(e) =>
-                        e.key === "Enter" && isFormValid && handleSearch()
-                      }
+                      placeholder="Enter address…"
                       disabled={isSearching}
+                      onChange={(e) => setAddressRef.current(e.target.value)}
+                      autoComplete="new-password"
+                      className={`w-full rounded-lg border-2 transition-all duration-300 text-[#0A0A0A] placeholder-[#888888] text-sm bg-white px-4 py-[0.65rem] leading-6 focus:outline-none focus:ring-0 ${address.trim() ? "border-[#E1261C]/50 focus:border-[#E1261C]" : "border-[#E8E6E3] focus:border-[#E1261C]"}`}
+                      style={{ caretColor: "#E1261C", fontFamily: "inherit" }}
                     />
                     {address.trim() && (
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="absolute right-3 top-9 text-teal-400"
+                        className="absolute right-3 top-9 text-[#E1261C] pointer-events-none"
                       >
                         ✓
                       </motion.div>
                     )}
                   </motion.div>
 
+                  {/* City / ZIP */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <motion.div
-                      className="relative"
-                      whileFocus={{ scale: 1.02 }}
-                    >
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <motion.div className="relative">
+                      <label className="block text-sm font-medium text-[#0A0A0A] mb-2 font-['JetBrains_Mono']">
                         City *
                       </label>
                       <InputField
                         type="text"
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
-                        placeholder="Los Angeles"
-                        className={`w-full text-white placeholder-gray-400 border-2 transition-all duration-300 ${
-                          city.trim()
-                            ? "border-teal-400/50 focus:border-teal-400"
-                            : "border-transparent focus:border-teal-400"
-                        }`}
+                        placeholder="Auto-filled from address"
+                        className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${city.trim() ? "border-[#E1261C]/50 focus:border-[#E1261C]" : "border-[#E8E6E3] focus:border-[#E1261C]"}`}
                         onKeyPress={(e) =>
                           e.key === "Enter" && isFormValid && handleSearch()
                         }
@@ -461,31 +582,24 @@ const PropertySearch = ({ onNext }) => {
                         <motion.div
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="absolute right-3 top-9 text-teal-400"
+                          className="absolute right-3 top-9 text-[#E1261C]"
                         >
                           ✓
                         </motion.div>
                       )}
                     </motion.div>
 
-                    <motion.div
-                      className="relative"
-                      whileFocus={{ scale: 1.02 }}
-                    >
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <motion.div className="relative">
+                      <label className="block text-sm font-medium text-[#0A0A0A] mb-2 font-['JetBrains_Mono']">
                         ZIP Code *
                       </label>
                       <InputField
-                        type="number"
+                        type="text"
                         value={zipCode}
                         onChange={(e) => setZipCode(e.target.value)}
-                        placeholder="90210"
+                        placeholder="Auto-filled from address"
                         maxLength={10}
-                        className={`w-full text-white placeholder-gray-400 border-2 transition-all duration-300 remove-arrow ${
-                          zipCode.trim()
-                            ? "border-teal-400/50 focus:border-teal-400"
-                            : "border-transparent focus:border-teal-400"
-                        }`}
+                        className={`remove-arrow w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${zipCode.trim() ? "border-[#E1261C]/50 focus:border-[#E1261C]" : "border-[#E8E6E3] focus:border-[#E1261C]"}`}
                         onKeyPress={(e) =>
                           e.key === "Enter" && isFormValid && handleSearch()
                         }
@@ -495,7 +609,7 @@ const PropertySearch = ({ onNext }) => {
                         <motion.div
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="absolute right-3 top-9 text-teal-400"
+                          className="absolute right-3 top-9 text-[#E1261C]"
                         >
                           ✓
                         </motion.div>
@@ -503,27 +617,27 @@ const PropertySearch = ({ onNext }) => {
                     </motion.div>
                   </div>
 
-                  {/* State field (readonly, California only) */}
+                  {/* State (read-only) */}
                   <motion.div
                     className="relative opacity-75"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 0.75 }}
                     transition={{ delay: 1.2 }}
                   >
-                    <label className="text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-                      <Globe className="h-4 w-4 text-teal-400" />
+                    <label className="text-sm font-medium text-[#0A0A0A] mb-2 flex items-center gap-2 font-['JetBrains_Mono']">
+                      <Globe className="h-4 w-4 text-[#E1261C]" />
                       State (California Only)
                     </label>
                     <InputField
                       type="text"
                       value={state}
                       readOnly
-                      className="w-full text-white bg-gray-600/30 border-2 border-teal-400/30 cursor-not-allowed"
+                      className="w-full text-[#0A0A0A] bg-[#F0EEEB] border-2 border-[#E8E6E3] rounded-lg cursor-not-allowed"
                       disabled
                     />
                   </motion.div>
 
-                  {/* Form Status */}
+                  {/* Form status */}
                   <motion.div
                     className="text-center text-sm"
                     initial={{ opacity: 0 }}
@@ -532,33 +646,51 @@ const PropertySearch = ({ onNext }) => {
                   >
                     {isFormValid ? (
                       <motion.span
-                        className="text-teal-400 flex items-center justify-center gap-2"
+                        className="text-[#E1261C] flex items-center justify-center gap-2"
                         initial={{ scale: 0.9 }}
                         animate={{ scale: 1 }}
                       >
-                        <span className="w-2 h-2 bg-teal-400 rounded-full"></span>
+                        <span className="w-2 h-2 bg-[#E1261C] rounded-full" />
                         Ready to search all databases
                       </motion.span>
                     ) : (
-                      <span className="text-gray-400">
+                      <span className="text-[#888888]">
                         Fill in all required fields to begin comprehensive
                         search
                       </span>
                     )}
                   </motion.div>
 
+                  {/* reCAPTCHA */}
+                  <div className="flex justify-center mt-6 relative z-50">
+                    <ReCAPTCHA
+                      sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+                      onChange={(token) => {
+                        setCaptchaToken(token);
+                        setValidationError("");
+                      }}
+                      onExpired={() => {
+                        setCaptchaToken(null);
+                        setValidationError(
+                          "Captcha expired. Please verify again.",
+                        );
+                      }}
+                    />
+                  </div>
+
+                  {/* Submit button - red themed */}
                   <motion.div
                     whileHover={isFormValid ? { scale: 1.02 } : {}}
                     whileTap={isFormValid ? { scale: 0.98 } : {}}
                   >
-                    <Button
+                    <button
                       onClick={handleSearch}
-                      className={`w-full py-4 text-lg relative overflow-hidden group transition-all duration-300 ${
-                        isFormValid && !isSearching
-                          ? "glass-button text-white hover:text-teal-200 pulse-glow"
-                          : "bg-gray-600/30 text-gray-400 cursor-not-allowed"
+                      className={`w-full py-4 text-lg font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3 ${
+                        isFormValid && !isSearching && captchaToken
+                          ? "bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg"
+                          : "bg-[#D4D4D4] text-[#888888] cursor-not-allowed"
                       }`}
-                      disabled={!isFormValid || isSearching}
+                      disabled={!isFormValid || !captchaToken || isSearching}
                     >
                       <span className="relative z-10 flex items-center justify-center gap-3">
                         {isSearching ? (
@@ -574,10 +706,10 @@ const PropertySearch = ({ onNext }) => {
                             />
                             Searching {searchProgress.toFixed(0)}%...
                           </>
-                        ) : isFormValid ? (
+                        ) : isFormValid && captchaToken ? (
                           <>
                             Search All Databases
-                            <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                            <ArrowRight className="h-5 w-5 transition-transform" />
                           </>
                         ) : (
                           <>
@@ -586,35 +718,12 @@ const PropertySearch = ({ onNext }) => {
                           </>
                         )}
                       </span>
-                    </Button>
-
-                    {/* <Button
-                      onClick={async () => {
-                        try {
-                          const res = await fetch("/api/downloadSCO");
-                          const data = await res.json();
-                          if (res.ok) {
-                            console.log(
-                              "Extracted files path:",
-                              data.extractedPath
-                            );
-                          } else {
-                            alert("Failed: " + data.error);
-                          }
-                        } catch (err) {
-                          console.error(err);
-                          alert("Something went wrong");
-                        }
-                      }}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-                    >
-                      Download & Extract SCO Records
-                    </Button> */}
+                    </button>
                   </motion.div>
                 </motion.div>
               </motion.div>
 
-              {/* Features */}
+              {/* Feature cards - red themed */}
               <div className="grid md:grid-cols-3 gap-6">
                 {[
                   {
@@ -642,18 +751,19 @@ const PropertySearch = ({ onNext }) => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: feature.delay }}
                     whileHover={{ scale: 1.05, y: -5 }}
-                    className="glass-card p-6 text-center border border-teal-500/10 rounded-xl group"
+                    className="bg-white p-6 text-center border border-[#E8E6E3] rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group"
                   >
                     <motion.div
                       whileHover={{ scale: 1.2, rotate: 360 }}
                       transition={{ duration: 0.6 }}
+                      className="w-12 h-12 bg-[#FCE9E7] rounded-full flex items-center justify-center mx-auto mb-3"
                     >
-                      <feature.icon className="h-8 w-8 text-teal-400 mx-auto mb-3" />
+                      <feature.icon className="h-6 w-6 text-[#E1261C]" />
                     </motion.div>
-                    <h3 className="font-semibold mb-2 text-white group-hover:text-teal-200 transition-colors">
+                    <h3 className="font-semibold mb-2 text-[#0A0A0A] group-hover:text-[#E1261C] transition-colors">
                       {feature.title}
                     </h3>
-                    <div className="text-gray-300 text-sm group-hover:text-gray-200 transition-colors">
+                    <div className="text-[#4A4A4A] text-sm group-hover:text-[#0A0A0A] transition-colors">
                       {feature.desc}
                     </div>
                   </motion.div>
@@ -661,7 +771,7 @@ const PropertySearch = ({ onNext }) => {
               </div>
             </motion.div>
           ) : (
-            /* Enhanced In-App Browser Simulation */
+            /* Browser simulation - red themed */
             <motion.div
               key="browser-simulation"
               initial={{ opacity: 0, y: 20 }}
@@ -669,79 +779,70 @@ const PropertySearch = ({ onNext }) => {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-6"
             >
-              {/* Browser Window */}
               <motion.div
-                className="glass-card p-6 border border-teal-500/20 rounded-xl overflow-hidden relative"
+                className="bg-white border border-[#E8E6E3] rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-6 overflow-hidden relative"
                 initial={{ scale: 0.95 }}
                 animate={{ scale: 1 }}
                 transition={{ duration: 0.4 }}
               >
-                {/* Browser Header */}
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
+
                 <div className="flex items-center justify-between mb-6">
                   <motion.h3
-                    className="text-lg font-semibold text-white flex items-center gap-2"
+                    className="text-lg font-bold text-[#0A0A0A] flex items-center gap-2 font-['Fraunces']"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
                   >
-                    <Globe className="h-5 w-5 text-teal-400" />
+                    <Globe className="h-5 w-5 text-[#E1261C]" />
                     AI-Powered Multi-Database Search
                   </motion.h3>
                   <div className="flex items-center space-x-2">
-                    <motion.div
-                      className="w-3 h-3 bg-red-500 rounded-full"
-                      animate={{ opacity: [1, 0.3, 1] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                    />
-                    <motion.div
-                      className="w-3 h-3 bg-yellow-500 rounded-full"
-                      animate={{ opacity: [1, 0.3, 1] }}
-                      transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
-                    />
-                    <motion.div
-                      className="w-3 h-3 bg-green-500 rounded-full"
-                      animate={{ opacity: [1, 0.3, 1] }}
-                      transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
-                    />
+                    {[
+                      { color: "bg-red-500", delay: 0 },
+                      { color: "bg-yellow-500", delay: 0.3 },
+                      { color: "bg-green-500", delay: 0.6 },
+                    ].map((dot, i) => (
+                      <motion.div
+                        key={i}
+                        className={`w-3 h-3 ${dot.color} rounded-full`}
+                        animate={{ opacity: [1, 0.3, 1] }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          delay: dot.delay,
+                        }}
+                      />
+                    ))}
                   </div>
                 </div>
 
-                {/* URL Bar */}
                 <motion.div
-                  className="bg-navy-light rounded-lg p-4 mb-6"
+                  className="bg-[#F0EEEB] rounded-lg p-4 mb-6"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
                 >
-                  <div className="flex items-center space-x-2 text-sm text-gray-300">
-                    <Shield className="h-4 w-4 text-green-400" />
-                    <motion.span
-                      initial={{ width: 0 }}
-                      animate={{ width: "auto" }}
-                      transition={{ delay: 0.6, duration: 1.5 }}
-                      className="overflow-hidden"
-                    >
-                      https://secure.catchmycash.ai/advanced-search
-                    </motion.span>
+                  <div className="flex items-center space-x-2 text-sm text-[#4A4A4A]">
+                    <Shield className="h-4 w-4 text-[#E1261C]" />
+                    <span>https://secure.catchmycash.ai/advanced-search</span>
                   </div>
                 </motion.div>
 
-                {/* Search Interface */}
-                <div className="glass-card-teal rounded-lg p-6">
+                <div className="bg-[#FCE9E7] rounded-lg p-6">
                   <motion.h4
-                    className="font-semibold mb-4 text-white flex items-center gap-2"
+                    className="font-bold mb-4 text-[#0A0A0A] flex items-center gap-2 font-['Fraunces']"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.8 }}
                   >
-                    <Search className="h-5 w-5 text-mint-green" />
+                    <Search className="h-5 w-5 text-[#E1261C]" />
                     Professional Search Engine Active
                   </motion.h4>
 
-                  {/* Progress Bar */}
                   <div className="mb-6">
                     <motion.div
-                      className="flex justify-between text-sm text-gray-300 mb-2"
+                      className="flex justify-between text-sm text-[#4A4A4A] mb-2"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 1 }}
@@ -751,9 +852,9 @@ const PropertySearch = ({ onNext }) => {
                       </span>
                       <span>{Math.round(searchProgress)}%</span>
                     </motion.div>
-                    <div className="w-full h-2 bg-navy-light rounded-full overflow-hidden">
+                    <div className="w-full h-2 bg-[#E8E6E3] rounded-full overflow-hidden">
                       <motion.div
-                        className="h-full progress-bar"
+                        className="h-full bg-gradient-to-r from-[#E1261C] to-[#B11912]"
                         initial={{ width: 0 }}
                         animate={{ width: `${searchProgress}%` }}
                         transition={{ duration: 0.3 }}
@@ -761,15 +862,14 @@ const PropertySearch = ({ onNext }) => {
                     </div>
                   </div>
 
-                  {/* Current Search Step */}
                   <motion.div
-                    className="p-4 bg-teal-500/10 border border-teal-500/20 rounded-lg mb-4"
+                    className="p-4 bg-white border border-[#E8E6E3] rounded-lg mb-4"
                     key={currentSearchStep}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <div className="text-teal-300 font-medium flex items-center gap-2">
+                    <div className="text-[#E1261C] font-medium flex items-center gap-2">
                       <motion.div
                         animate={{ rotate: 360 }}
                         transition={{
@@ -777,13 +877,12 @@ const PropertySearch = ({ onNext }) => {
                           repeat: Infinity,
                           ease: "linear",
                         }}
-                        className="w-4 h-4 border-2 border-teal-300/30 border-t-teal-300 rounded-full"
+                        className="w-4 h-4 border-2 border-[#E1261C]/30 border-t-[#E1261C] rounded-full"
                       />
                       {currentSearchStep}
                     </div>
                   </motion.div>
 
-                  {/* Database Status */}
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     {[
                       "California SCO",
@@ -797,24 +896,21 @@ const PropertySearch = ({ onNext }) => {
                         key={db}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{
-                          opacity: searchProgress > index * 15 ? 1 : 0.3,
+                          opacity: searchProgress > index * 15 ? 1 : 0.4,
                           x: 0,
                         }}
                         transition={{ delay: index * 0.1 }}
-                        className="flex items-center gap-2"
+                        className="flex items-center gap-2 font-['JetBrains_Mono']"
                       >
                         <motion.div
                           className={`w-2 h-2 rounded-full ${
                             searchProgress > index * 15
-                              ? "bg-mint-green"
-                              : "bg-gray-500"
+                              ? "bg-[#E1261C]"
+                              : "bg-[#D4D4D4]"
                           }`}
                           animate={
                             searchProgress > index * 15
-                              ? {
-                                  scale: [1, 1.3, 1],
-                                  opacity: [1, 0.7, 1],
-                                }
+                              ? { scale: [1, 1.3, 1], opacity: [1, 0.7, 1] }
                               : {}
                           }
                           transition={{ duration: 0.8, repeat: Infinity }}
@@ -822,8 +918,8 @@ const PropertySearch = ({ onNext }) => {
                         <span
                           className={
                             searchProgress > index * 15
-                              ? "text-mint-green"
-                              : "text-gray-400"
+                              ? "text-[#0A0A0A]"
+                              : "text-[#888888]"
                           }
                         >
                           {db}
@@ -834,14 +930,13 @@ const PropertySearch = ({ onNext }) => {
                 </div>
               </motion.div>
 
-              {/* Status Message */}
               <motion.div
                 className="text-center"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1.2 }}
               >
-                <div className="inline-flex items-center space-x-3 text-teal-400 mb-3">
+                <div className="inline-flex items-center space-x-3 text-[#E1261C] mb-3">
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{
@@ -849,28 +944,26 @@ const PropertySearch = ({ onNext }) => {
                       repeat: Infinity,
                       ease: "linear",
                     }}
-                    className="w-6 h-6 border-2 border-teal-400/30 border-t-teal-400 rounded-full"
+                    className="w-6 h-6 border-2 border-[#E1261C]/30 border-t-[#E1261C] rounded-full"
                   />
-                  <span className="text-lg font-semibold">
+                  <span className="text-lg font-bold font-['Fraunces']">
                     Enhanced AI search in progress...
                   </span>
                 </div>
                 <motion.div
-                  className="text-gray-400"
+                  className="text-[#4A4A4A]"
                   animate={{ opacity: [0.7, 1, 0.7] }}
                   transition={{ duration: 2, repeat: Infinity }}
                 >
                   Using address history to find all connected properties. This
                   typically takes lawyers 6-18 months.
                 </motion.div>
-
-                {/* Fun fact ticker */}
                 <motion.div
-                  className="mt-4 p-3 glass-card rounded-lg inline-block"
+                  className="mt-4 p-3 bg-white border border-[#E8E6E3] rounded-lg inline-block shadow-sm"
                   animate={{ scale: [1, 1.02, 1] }}
                   transition={{ duration: 3, repeat: Infinity }}
                 >
-                  <div className="text-sm text-mint-green">
+                  <div className="text-sm text-[#E1261C]">
                     💡 Address matching increases recovery success by 340%
                   </div>
                 </motion.div>

@@ -3,15 +3,14 @@ import { Button } from './uicomponents/Button';
 import { Card } from './uicomponents/Card';
 import { Badge } from './uicomponents/Badge';
 import { Progress } from './uicomponents/Progress';
-import { Share2, Copy, Facebook, Twitter, MessageCircle, Mail, DollarSign, Users, TrendingUp, ArrowLeft } from 'lucide-react';
-
+import { Share2, Copy, Facebook, Twitter, MessageCircle, Mail, DollarSign, Users, TrendingUp, ArrowLeft, CheckCircle } from 'lucide-react';
 
 const ReferralSystem = ({ onBack }) => {
   const [copiedLink, setCopiedLink] = useState(false);
-  const [shareMessage, setShareMessage] = useState("Just recovered $4,297 in unclaimed property with @FindMyMoney! The process was so easy - they handled everything while I just waited for my check. Check if you have money waiting:");
+  const [shareMessage, setShareMessage] = useState("Just recovered $4,297 in unclaimed property with @CatchMyCash! The process was so easy - they handled everything while I just waited for my check. Check if you have money waiting:");
 
-  const referralCode = "FM-JM-2024-7891";
-  const referralLink = `https://findmymoney.com/ref/${referralCode}`;
+  const referralCode = "CM-JM-2024-7891";
+  const referralLink = `https://catchmycash.com/ref/${referralCode}`;
   
   // Mock referral data
   const referralStats = {
@@ -59,23 +58,24 @@ const ReferralSystem = ({ onBack }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-[#F7F5F2] pt-4">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-white border-b border-[#E8E6E3] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center">
-              <Button
-                variant="outline"
+              <button
                 onClick={onBack}
-                className="mr-4"
+                className="flex items-center gap-2 mr-4 px-3 py-2 border border-[#E8E6E3] rounded-lg text-[#0A0A0A] hover:bg-[#FCE9E7] transition-all"
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Back</span>
+              </button>
               <div>
-                <h1 className="sm:text-3xl text-[24px] font-bold text-blue-900">Referral Dashboard</h1>
-                <p className="text-gray-600 mt-1">Earn 1% of every successful recovery</p>
+                <h1 className="sm:text-3xl text-2xl font-bold text-[#0A0A0A] font-['Fraunces']">
+                  Referral <span className="text-[#E1261C] italic font-normal">Dashboard</span>
+                </h1>
+                <p className="text-[#4A4A4A] mt-1">Earn 1% of every successful recovery</p>
               </div>
             </div>
           </div>
@@ -83,195 +83,216 @@ const ReferralSystem = ({ onBack }) => {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Stats Overview */}
+        {/* Stats Overview - Red Themed */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <Card className="p-6 text-center bg-gradient-to-r from-green-50 to-green-100 shadow-sm">
-            <DollarSign className="h-10 w-10 text-green-600 mx-auto mb-3" />
-            <h3 className="text-2xl font-bold text-green-800">${referralStats.totalEarnings}</h3>
-            <p className="text-green-700 text-sm">Total Earned</p>
-          </Card>
-          <Card className="p-6 text-center bg-gradient-to-r from-yellow-50 to-yellow-100 shadow-sm">
-            <TrendingUp className="h-10 w-10 text-yellow-600 mx-auto mb-3" />
-            <h3 className="text-2xl font-bold text-yellow-800">${referralStats.pendingEarnings}</h3>
-            <p className="text-yellow-700 text-sm">Pending</p>
-          </Card>
-          <Card className="p-6 text-center bg-gradient-to-r from-blue-50 to-blue-100 shadow-sm">
-            <Users className="h-10 w-10 text-blue-600 mx-auto mb-3" />
-            <h3 className="text-2xl font-bold text-blue-800">{referralStats.totalReferrals}</h3>
-            <p className="text-blue-700 text-sm">Total Referrals</p>
-          </Card>
-          <Card className="p-6 text-center bg-gradient-to-r from-purple-50 to-purple-100 shadow-sm">
-            <Share2 className="h-10 w-10 text-purple-600 mx-auto mb-3" />
-            <h3 className="text-2xl font-bold text-purple-800">{referralStats.clickThroughRate}%</h3>
-            <p className="text-purple-700 text-sm">Success Rate</p>
-          </Card>
+          <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 text-center shadow-md hover:shadow-lg transition-all">
+            <div className="w-12 h-12 bg-[#FCE9E7] rounded-full flex items-center justify-center mx-auto mb-3">
+              <DollarSign className="h-6 w-6 text-[#E1261C]" />
+            </div>
+            <h3 className="text-2xl font-bold text-[#0A0A0A] font-['Fraunces']">${referralStats.totalEarnings}</h3>
+            <p className="text-[#4A4A4A] text-sm">Total Earned</p>
+          </div>
+          <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 text-center shadow-md hover:shadow-lg transition-all">
+            <div className="w-12 h-12 bg-[#FCE9E7] rounded-full flex items-center justify-center mx-auto mb-3">
+              <TrendingUp className="h-6 w-6 text-[#E1261C]" />
+            </div>
+            <h3 className="text-2xl font-bold text-[#0A0A0A] font-['Fraunces']">${referralStats.pendingEarnings}</h3>
+            <p className="text-[#4A4A4A] text-sm">Pending</p>
+          </div>
+          <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 text-center shadow-md hover:shadow-lg transition-all">
+            <div className="w-12 h-12 bg-[#FCE9E7] rounded-full flex items-center justify-center mx-auto mb-3">
+              <Users className="h-6 w-6 text-[#E1261C]" />
+            </div>
+            <h3 className="text-2xl font-bold text-[#0A0A0A] font-['Fraunces']">{referralStats.totalReferrals}</h3>
+            <p className="text-[#4A4A4A] text-sm">Total Referrals</p>
+          </div>
+          <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 text-center shadow-md hover:shadow-lg transition-all">
+            <div className="w-12 h-12 bg-[#FCE9E7] rounded-full flex items-center justify-center mx-auto mb-3">
+              <Share2 className="h-6 w-6 text-[#E1261C]" />
+            </div>
+            <h3 className="text-2xl font-bold text-[#0A0A0A] font-['Fraunces']">{referralStats.clickThroughRate}%</h3>
+            <p className="text-[#4A4A4A] text-sm">Success Rate</p>
+          </div>
         </div>
 
-        {/* Share Your Link */}
-        <Card className="p-8 mb-8">
-          <h2 className="text-2xl font-bold text-white mb-6 text-center">
-            Share Your Success Story
+        {/* Share Your Link - Red Themed */}
+        <div className="bg-white border border-[#E8E6E3] rounded-xl p-8 mb-8 shadow-md relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
+          <h2 className="text-2xl font-bold text-[#0A0A0A] mb-6 text-center font-['Fraunces']">
+            Share Your <span className="text-[#E1261C] italic font-normal">Success Story</span>
           </h2>
           
           <div className="max-w-2xl mx-auto">
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#0A0A0A] mb-2 font-['JetBrains_Mono']">
                 Your Success Message
               </label>
               <textarea
                 value={shareMessage}
                 onChange={(e) => setShareMessage(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg resize-none "
+                className="w-full p-3 border-2 border-[#E8E6E3] rounded-lg resize-none text-[#0A0A0A] placeholder-[#888888] focus:border-[#E1261C] focus:outline-none transition-all"
                 rows={3}
               />
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#0A0A0A] mb-2 font-['JetBrains_Mono']">
                 Your Referral Link
               </label>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <input
                   type="text"
                   value={referralLink}
                   readOnly
-                  className="flex-1 p-3 border border-gray-300 rounded-lg text-gray-600 bg-gray-50 w-[90%]"
+                  className="flex-1 p-3 border-2 border-[#E8E6E3] rounded-lg text-[#0A0A0A] bg-[#F0EEEB]"
                 />
-                <Button
+                <button
                   onClick={copyReferralLink}
-                  className={`px-4 py-3 ${copiedLink ? 'bg-green-600' : 'bg-blue-600'}`}
+                  className={`px-4 py-3 rounded-lg transition-all flex items-center gap-2 ${
+                    copiedLink ? 'bg-[#003f2f] text-white' : 'bg-[#E1261C] text-white hover:bg-[#B11912]'
+                  }`}
                 >
-                  {copiedLink ? 'Copied!' : <Copy className="h-4 w-4" />}
-                </Button>
+                  {copiedLink ? <CheckCircle className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  {copiedLink ? 'Copied!' : ''}
+                </button>
               </div>
             </div>
 
             {/* Social Sharing Buttons */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Button
+              <button
                 onClick={() => shareToSocial('facebook')}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-[#1877F2] text-white rounded-lg hover:bg-[#1664D9] transition-all"
               >
-                <Facebook className="h-4 w-4 mr-2" />
+                <Facebook className="h-4 w-4" />
                 Facebook
-              </Button>
-              <Button
+              </button>
+              <button
                 onClick={() => shareToSocial('twitter')}
-                className="bg-sky-500 hover:bg-sky-600 text-white"
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-[#1DA1F2] text-white rounded-lg hover:bg-[#1A91DA] transition-all"
               >
-                <Twitter className="h-4 w-4 mr-2" />
+                <Twitter className="h-4 w-4" />
                 Twitter
-              </Button>
-              <Button
+              </button>
+              <button
                 onClick={() => shareToSocial('sms')}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-[#003f2f] text-white rounded-lg hover:bg-[#00B886] transition-all"
               >
-                <MessageCircle className="h-4 w-4 mr-2" />
+                <MessageCircle className="h-4 w-4" />
                 Text
-              </Button>
-              <Button
+              </button>
+              <button
                 onClick={() => shareToSocial('email')}
-                className="bg-gray-600 hover:bg-gray-700 text-white"
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-[#4A4A4A] text-white rounded-lg hover:bg-[#3A3A3A] transition-all"
               >
-                <Mail className="h-4 w-4 mr-2" />
+                <Mail className="h-4 w-4" />
                 Email
-              </Button>
+              </button>
             </div>
           </div>
-        </Card>
+        </div>
 
-        {/* Performance Insights */}
+        {/* Performance Insights - Red Themed */}
         <div className="grid md:grid-cols-2 gap-8 mb-8">
-          <Card className="p-6">
-            <h3 className="text-lg font-bold text-white mb-4">
-              Performance This Month
+          <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 shadow-md relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
+            <h3 className="text-lg font-bold text-[#0A0A0A] mb-4 font-['Fraunces']">
+              Performance <span className="text-[#E1261C] italic font-normal">This Month</span>
             </h3>
             <div className="space-y-4">
               <div>
                 <div className="flex justify-between text-sm mb-1">
-                  <span>Link Clicks</span>
-                  <span>47</span>
+                  <span className="text-[#4A4A4A]">Link Clicks</span>
+                  <span className="text-[#E1261C] font-semibold">47</span>
                 </div>
-                <Progress value={78} className="h-2" />
+                <div className="w-full h-2 bg-[#E8E6E3] rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-[#E1261C] to-[#B11912] rounded-full" style={{ width: '78%' }}></div>
+                </div>
               </div>
               <div>
                 <div className="flex justify-between text-sm mb-1">
-                  <span>Started Applications</span>
-                  <span>16</span>
+                  <span className="text-[#4A4A4A]">Started Applications</span>
+                  <span className="text-[#E1261C] font-semibold">16</span>
                 </div>
-                <Progress value={34} className="h-2" />
+                <div className="w-full h-2 bg-[#E8E6E3] rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-[#E1261C] to-[#B11912] rounded-full" style={{ width: '34%' }}></div>
+                </div>
               </div>
               <div>
                 <div className="flex justify-between text-sm mb-1">
-                  <span>Completed Cases</span>
-                  <span>8</span>
+                  <span className="text-[#4A4A4A]">Completed Cases</span>
+                  <span className="text-[#E1261C] font-semibold">8</span>
                 </div>
-                <Progress value={50} className="h-2" />
+                <div className="w-full h-2 bg-[#E8E6E3] rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-[#E1261C] to-[#B11912] rounded-full" style={{ width: '50%' }}></div>
+                </div>
               </div>
             </div>
-          </Card>
+          </div>
 
-          <Card className="p-6">
-            <h3 className="text-lg font-bold text-white mb-4">
-              Top Sharing Platforms
+          <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 shadow-md relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
+            <h3 className="text-lg font-bold text-[#0A0A0A] mb-4 font-['Fraunces']">
+              Top Sharing <span className="text-[#E1261C] italic font-normal">Platforms</span>
             </h3>
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Facebook className="h-5 w-5 text-blue-600 mr-2" />
-                  <span>Facebook</span>
+              <div className="flex items-center justify-between py-2 border-b border-[#E8E6E3]">
+                <div className="flex items-center gap-2">
+                  <Facebook className="h-5 w-5 text-[#1877F2]" />
+                  <span className="text-[#0A0A0A]">Facebook</span>
                 </div>
-                <span className="text-sm text-gray-600">42% of clicks</span>
+                <span className="text-sm text-[#E1261C] font-semibold">42% of clicks</span>
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <MessageCircle className="h-5 w-5 text-green-600 mr-2" />
-                  <span>Text Messages</span>
+              <div className="flex items-center justify-between py-2 border-b border-[#E8E6E3]">
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="h-5 w-5 text-[#003f2f]" />
+                  <span className="text-[#0A0A0A]">Text Messages</span>
                 </div>
-                <span className="text-sm text-gray-600">31% of clicks</span>
+                <span className="text-sm text-[#E1261C] font-semibold">31% of clicks</span>
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Mail className="h-5 w-5 text-gray-600 mr-2" />
-                  <span>Email</span>
+              <div className="flex items-center justify-between py-2 border-b border-[#E8E6E3]">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-[#4A4A4A]" />
+                  <span className="text-[#0A0A0A]">Email</span>
                 </div>
-                <span className="text-sm text-gray-600">18% of clicks</span>
+                <span className="text-sm text-[#E1261C] font-semibold">18% of clicks</span>
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Twitter className="h-5 w-5 text-sky-500 mr-2" />
-                  <span>Twitter</span>
+              <div className="flex items-center justify-between py-2">
+                <div className="flex items-center gap-2">
+                  <Twitter className="h-5 w-5 text-[#1DA1F2]" />
+                  <span className="text-[#0A0A0A]">Twitter</span>
                 </div>
-                <span className="text-sm text-gray-600">9% of clicks</span>
+                <span className="text-sm text-[#E1261C] font-semibold">9% of clicks</span>
               </div>
             </div>
-          </Card>
+          </div>
         </div>
 
-        {/* Recent Referral Activity */}
-        <Card className="p-6">
-          <h3 className="text-lg font-bold text-white mb-6">
-            Recent Referral Earnings
+        {/* Recent Referral Activity - Red Themed */}
+        <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 shadow-md relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
+          <h3 className="text-lg font-bold text-[#0A0A0A] mb-6 font-['Fraunces']">
+            Recent Referral <span className="text-[#E1261C] italic font-normal">Earnings</span>
           </h3>
           <div className="space-y-4">
             {recentReferrals.map((referral, index) => (
-              <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div key={index} className="flex items-center justify-between p-4 bg-[#F0EEEB] rounded-lg">
                 <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-blue-600 font-bold">
+                  <div className="w-10 h-10 bg-[#FCE9E7] rounded-full flex items-center justify-center">
+                    <span className="text-[#E1261C] font-bold">
                       {referral.name.split(' ')[0].charAt(0)}{referral.name.split(' ')[1].charAt(0)}
                     </span>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-600">{referral.name}</p>
-                    <p className="text-sm text-gray-600">{referral.date}</p>
+                    <p className="font-medium text-[#0A0A0A]">{referral.name}</p>
+                    <p className="text-sm text-[#4A4A4A]">{referral.date}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-green-600">${referral.amount}</p>
+                  <p className="font-bold text-[#E1261C] font-['Fraunces']">$ <span className="text-[#0A0A0A]">{referral.amount}</span></p>
                   <Badge 
                     variant={referral.status === 'Paid' ? 'default' : 'secondary'}
-                    className={referral.status === 'Paid' ? 'bg-green-500' : ''}
+                    className={referral.status === 'Paid' ? 'bg-[#003f2f] text-white border-none' : 'bg-[#D4D4D4] text-[#4A4A4A] border-none'}
                   >
                     {referral.status}
                   </Badge>
@@ -279,40 +300,65 @@ const ReferralSystem = ({ onBack }) => {
               </div>
             ))}
           </div>
-        </Card>
+        </div>
 
-        {/* Tips Section */}
-        <Card className="p-6 mt-8 bg-blue-50 border-blue-200">
-          <h3 className="text-lg font-bold text-blue-800 mb-4">
-            💡 Tips to Maximize Your Referral Earnings
+        {/* Tips Section - Red Themed */}
+        <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 mt-8 shadow-md relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
+          <h3 className="text-lg font-bold text-[#0A0A0A] mb-4 font-['Fraunces']">
+            💡 Tips to Maximize Your <span className="text-[#E1261C] italic font-normal">Referral Earnings</span>
           </h3>
           <div className="grid md:grid-cols-2 gap-4">
-            <ul className="space-y-2 text-blue-700">
-              <li>• Share your personal story - people trust real experiences</li>
-              <li>• Post on social media when you receive your check</li>
-              <li>• Target friends who have moved or changed jobs frequently</li>
-              <li>• Share in local community groups and nextdoor</li>
+            <ul className="space-y-2 text-[#4A4A4A]">
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-[#E1261C] rounded-full"></span>
+                Share your personal story - people trust real experiences
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-[#E1261C] rounded-full"></span>
+                Post on social media when you receive your check
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-[#E1261C] rounded-full"></span>
+                Target friends who have moved or changed jobs frequently
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-[#E1261C] rounded-full"></span>
+                Share in local community groups and nextdoor
+              </li>
             </ul>
-            <ul className="space-y-2 text-blue-700">
-              <li>• Include a photo of your check (blur sensitive info)</li>
-              <li>• Mention the 10% fee is only paid on success</li>
-              <li>• Emphasize how difficult the process is to do alone</li>
-              <li>• Follow up with people who clicked but didn't complete</li>
+            <ul className="space-y-2 text-[#4A4A4A]">
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-[#E1261C] rounded-full"></span>
+                Include a photo of your check (blur sensitive info)
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-[#E1261C] rounded-full"></span>
+                Mention the 10% fee is only paid on success
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-[#E1261C] rounded-full"></span>
+                Emphasize how difficult the process is to do alone
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-[#E1261C] rounded-full"></span>
+                Follow up with people who clicked but didn't complete
+              </li>
             </ul>
           </div>
-        </Card>
+        </div>
 
         <div className="text-center mt-8">
-          <Button 
+          <button 
             onClick={onBack}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3"
+            className="bg-[#E1261C] hover:bg-[#B11912] text-white px-8 py-3 font-semibold rounded-xl transition-all shadow-md hover:shadow-lg"
           >
             Return to Case Dashboard
-          </Button>
+          </button>
         </div>
       </div>
     </div>
   );
-}
+};
 
-export default ReferralSystem
+export default ReferralSystem;
