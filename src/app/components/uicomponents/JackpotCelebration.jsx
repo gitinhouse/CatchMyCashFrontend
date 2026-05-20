@@ -9,7 +9,7 @@ const JackpotCelebration = ({showCelebration}) => {
                {Array.from({ length: 20 }).map((_, i) => (
                  <motion.div
                    key={i}
-                   className="absolute w-3 h-3 bg-gradient-to-br from-teal-400 to-mint-green rounded-full"
+                   className="absolute w-3 h-3 bg-gradient-to-br from-[#E1261C]/20 to-[#B11912]/20 rounded-full"
                    style={{
                      left: `${Math.random() * 100}%`,
                      top: `-10px`,

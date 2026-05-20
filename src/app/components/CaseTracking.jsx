@@ -11,6 +11,7 @@ import {
   Trophy,
   Share2,
   Bell,
+  Shield,
 } from "lucide-react";
 import { useSearchStore } from "../store/searchStore";
 import axios from "axios";
@@ -25,7 +26,7 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   const [estimatedFee, setEstimatedFee] = useState(0.1);
   const [estimatedNet, setEstimatedNet] = useState(0);
   const [milestones, setMilestones] = useState([]);
-const [smsEnabled, setSmsEnabled] = useState(false);
+  const [smsEnabled, setSmsEnabled] = useState(false);
 
   const caseProgress = 75;
 
@@ -130,13 +131,11 @@ const [smsEnabled, setSmsEnabled] = useState(false);
 
   const handleNotificationClick = async (notificationId) => {
     try {
-      // Call PUT API to mark notification as read
       const res = await axios.put(`/api/notification?id=${notificationId}`, {
         status: true,
       });
 
       if (res.data.success) {
-        // Re-fetch notifications to refresh UI
         const updated = await axios.get(
           `/api/notification?userId=${userData._id}`
         );
@@ -153,107 +152,98 @@ const [smsEnabled, setSmsEnabled] = useState(false);
   };
 
   const handleSmsToggle = async () => {
-  const newState = !smsEnabled;
-  setSmsEnabled(newState);
-  
-  // Add your API call here to save the preference
-  try {
-    // await updateSmsPreference(newState);
-    console.log('SMS notifications:', newState ? 'enabled' : 'disabled');
-  } catch (error) {
-    console.error('Failed to update SMS preference:', error);
-    // Revert on error
-    setSmsEnabled(!newState);
-  }
-};
+    const newState = !smsEnabled;
+    setSmsEnabled(newState);
+    try {
+      console.log('SMS notifications:', newState ? 'enabled' : 'disabled');
+    } catch (error) {
+      console.error('Failed to update SMS preference:', error);
+      setSmsEnabled(!newState);
+    }
+  };
+
   const shareToSocial = (platform) => {
     let url = "";
-
     switch (platform) {
       case "email":
-        url = `mailto:test@gmai.com`;
+        url = `mailto:test@gmail.com`;
         break;
       case "call":
-        url = `telto:5551234567`;
+        url = `tel:5551234567`;
         break;
     }
-
     if (url) window.open(url, "_blank");
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black to-gray-900">
+    <div className="min-h-screen bg-[#F7F5F2] pt-4"  >
       {/* Header */}
-      <div className="glass-card border-b border-green-500/20">
+      <div className="bg-white border-b border-[#E8E6E3] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-green-400">CatchMyCash</h1>
-              <p className="text-gray-300 mt-1">Case #CM-2024-001234</p>
+              <h1 className="text-3xl font-bold text-[#0A0A0A] font-['Fraunces']">CatchMyCash</h1>
+              <p className="text-[#4A4A4A] mt-1 font-['JetBrains_Mono'] text-sm">Case #CM-2024-001234</p>
             </div>
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="outline"
+            <div className="flex items-center space-x-3 flex-wrap gap-2">
+              <button
                 onClick={handleSmsToggle}
-                className={`flex items-center ${
-                  smsEnabled ? "bg-green-600 text-white" : ""
+                className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
+                  smsEnabled
+                    ? 'bg-[#E1261C] text-white shadow-sm'
+                    : 'border border-[#E8E6E3] text-[#0A0A0A] hover:bg-[#FCE9E7]'
                 }`}
               >
-                <span className="h-4 w-4 sm:mr-2">📱</span>
-                <span className="sm:inline-block hidden">
-                  SMS {smsEnabled ? "On" : "Off"}
-                </span>
-              </Button>
-              <Button
-                variant="outline"
+                <span className="text-base">📱</span>
+                <span className="hidden sm:inline">SMS {smsEnabled ? "On" : "Off"}</span>
+              </button>
+              <button
                 onClick={onViewLeaderboard}
-                className="flex items-center "
+                className="flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg border border-[#E8E6E3] text-[#0A0A0A] hover:bg-[#FCE9E7] transition-all"
               >
-                <Trophy className="h-4 w-4 sm:mr-2" />
-                <span className="sm:inline-block hidden">Leaderboard</span>
-              </Button>
+                <Trophy className="h-4 w-4 text-[#E1261C]" />
+                <span className="hidden sm:inline">Leaderboard</span>
+              </button>
 
               <div className="relative" ref={dropdownRef}>
-                <Button
-                  variant="outline"
+                <button
                   onClick={() => setNotifications(!notifications)}
-                  className={`flex items-center ${
-                    notifications ? "bg-primary/90 text-white" : ""
+                  className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg transition-all border border-[#E8E6E3] hover:bg-[#FCE9E7] ${
+                    notifications ? 'bg-[#FCE9E7]' : ''
                   }`}
                 >
-                  <Bell className="h-4 w-4 sm:mr-2" />
-                  <span className="sm:inline-block hidden">Notifications</span>
+                  <Bell className="h-4 w-4 text-[#E1261C]" />
+                  <span className="hidden sm:inline">Notifications</span>
                   {allNotifications.length > 0 && (
-                    <span className="ml-2 bg-red-500 text-white text-xs px-2 py-[1px] rounded-full">
+                    <span className="ml-1 bg-[#E1261C] text-white text-xs px-2 py-0.5 rounded-full">
                       {allNotifications.length}
                     </span>
                   )}
-                </Button>
+                </button>
 
                 {/* Dropdown */}
                 {notifications && (
-                  <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-gray-900 border border-green-600/30 rounded-lg shadow-2xl z-50 max-h-96 overflow-y-auto backdrop-blur-md bg-opacity-95">
-                    <div className="p-3 border-b border-green-600/20 text-green-400 font-semibold">
+                  <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white border border-[#E8E6E3] rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
+                    <div className="p-3 border-b border-[#E8E6E3] text-[#E1261C] font-semibold font-['Fraunces']">
                       Notifications
                     </div>
-
                     {allNotifications.length > 0 ? (
-                      <ul className="divide-y divide-green-600/10">
+                      <ul className="divide-y divide-[#E8E6E3]">
                         {allNotifications.map((n, i) => (
                           <li
                             key={i}
-                            className="p-3 hover:bg-green-700/10 transition duration-200 cursor-pointer"
+                            className="p-3 hover:bg-[#FCE9E7] transition duration-200 cursor-pointer"
                             onClick={() => handleNotificationClick(n._id)}
                           >
-                            <p className="text-sm text-white font-medium">
+                            <p className="text-sm text-[#0A0A0A] font-medium">
                               {n.title}
                             </p>
-                            <p className="text-xs text-gray-400">{n.message}</p>
+                            <p className="text-xs text-[#4A4A4A]">{n.message}</p>
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <div className="p-4 text-center text-gray-400 text-sm">
+                      <div className="p-4 text-center text-[#888888] text-sm">
                         No new notifications
                       </div>
                     )}
@@ -266,68 +256,77 @@ const [smsEnabled, setSmsEnabled] = useState(false);
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Progress Overview */}
-        <Card className="p-6 mb-8">
+        {/* Progress Overview - Red Themed */}
+        <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 mb-8 shadow-md relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-white">
-              Your Case Progress
+            <h2 className="text-2xl font-bold text-[#0A0A0A] font-['Fraunces']">
+              Your Case <span className="text-[#E1261C] italic font-normal">Progress</span>
             </h2>
-            <Badge className="bg-blue-500 text-white">In Progress</Badge>
+            <Badge className="bg-[#E1261C] text-white border-none">In Progress</Badge>
           </div>
 
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-sm font-medium text-[#4A4A4A] font-['JetBrains_Mono']">
                 Overall Progress
               </span>
-              <span className="text-sm font-medium text-[#ffffff7a]">
+              <span className="text-sm font-medium text-[#E1261C]">
                 {caseProgress}%
               </span>
             </div>
-            <Progress value={caseProgress} className="mb-4" />
-            <p className="text-sm text-gray-600">
+            <div className="w-full h-2 bg-[#E8E6E3] rounded-full overflow-hidden mb-4">
+              <div 
+                className="h-full bg-gradient-to-r from-[#E1261C] to-[#B11912] transition-all duration-300 rounded-full"
+                style={{ width: `${caseProgress}%` }}
+              />
+            </div>
+            <p className="text-sm text-[#4A4A4A]">
               Your case is progressing well. Estimated completion in 3-4 weeks.
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-4">
-            <div className="bg-green-50 p-4 rounded-lg">
-              <DollarSign className="h-8 w-8 text-green-600 mb-2" />
-              <h3 className="font-bold text-green-800">Estimated Payout</h3>
-              <p className="text-2xl font-bold text-green-600">
+            <div className="bg-[#FCE9E7] p-4 rounded-lg">
+              <DollarSign className="h-8 w-8 text-[#E1261C] mb-2" />
+              <h3 className="font-bold text-[#0A0A0A]">Estimated Payout</h3>
+              <p className="text-2xl font-bold text-[#E1261C] font-['Fraunces']">
                 ${estimatedPayout.toFixed(2)}
               </p>
             </div>
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <FileText className="h-8 w-8 text-blue-600 mb-2" />
-              <h3 className="font-bold text-blue-800">Service Fee (10%)</h3>
-              <p className="text-2xl font-bold text-blue-600">
+            <div className="bg-[#F0EEEB] p-4 rounded-lg">
+              <FileText className="h-8 w-8 text-[#4A4A4A] mb-2" />
+              <h3 className="font-bold text-[#0A0A0A]">Service Fee (10%)</h3>
+              <p className="text-2xl font-bold text-[#4A4A4A] font-['Fraunces']">
                 ${estimatedFee.toFixed(2)}
               </p>
             </div>
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <CheckCircle className="h-8 w-8 text-purple-600 mb-2" />
-              <h3 className="font-bold text-purple-800">Your Net Amount</h3>
-              <p className="text-2xl font-bold text-purple-600">
+            <div className="bg-[#FCE9E7] p-4 rounded-lg border-2 border-[#E1261C]/30">
+              <CheckCircle className="h-8 w-8 text-[#E1261C] mb-2" />
+              <h3 className="font-bold text-[#0A0A0A]">Your Net Amount</h3>
+              <p className="text-2xl font-bold text-[#E1261C] font-['Fraunces']">
                 ${estimatedNet.toFixed(2)}
               </p>
             </div>
           </div>
-        </Card>
+        </div>
 
-        {/* Milestone Timeline */}
-        <Card className="p-6 mb-8">
-          <h3 className="text-lg font-bold text-white mb-6">Case Timeline</h3>
+        {/* Milestone Timeline - Red Themed */}
+        <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 mb-8 shadow-md relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
+          <h3 className="text-lg font-bold text-[#0A0A0A] mb-6 font-['Fraunces']">
+            Case <span className="text-[#E1261C] italic font-normal">Timeline</span>
+          </h3>
           <div className="space-y-4">
             {milestones.map((milestone, index) => (
               <div key={index} className="flex items-center">
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 ${
+                  className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 flex-shrink-0 ${
                     milestone.completed
-                      ? "bg-green-500"
+                      ? "bg-[#003f2f]"
                       : milestone.current
-                      ? "bg-blue-500 animate-pulse"
-                      : "bg-gray-300"
+                      ? "bg-[#E1261C] animate-pulse"
+                      : "bg-[#D4D4D4]"
                   }`}
                 >
                   {milestone.completed ? (
@@ -335,22 +334,22 @@ const [smsEnabled, setSmsEnabled] = useState(false);
                   ) : milestone.current ? (
                     <Clock className="h-5 w-5 text-white" />
                   ) : (
-                    <span className="text-white font-bold">{index + 1}</span>
+                    <span className="text-white font-bold font-['JetBrains_Mono'] text-sm">{index + 1}</span>
                   )}
                 </div>
                 <div className="flex-1">
                   <h4
                     className={`font-medium ${
                       milestone.completed
-                        ? "text-green-800"
+                        ? "text-[#0A0A0A]"
                         : milestone.current
-                        ? "text-blue-800"
-                        : "text-gray-600"
+                        ? "text-[#E1261C]"
+                        : "text-[#888888]"
                     }`}
                   >
                     {milestone.name}
                   </h4>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-[#4A4A4A]">
                     {milestone.completed
                       ? `Completed ${milestone.date}`
                       : milestone.current
@@ -359,133 +358,151 @@ const [smsEnabled, setSmsEnabled] = useState(false);
                   </p>
                 </div>
                 {milestone.current && (
-                  <Badge className="bg-blue-500">Current</Badge>
+                  <Badge className="bg-[#E1261C] text-white border-none ml-2">Current</Badge>
                 )}
               </div>
             ))}
           </div>
-        </Card>
+        </div>
 
-        {/* Share Success Story */}
-        <Card className="p-6 mb-8 bg-yellow-50 border-yellow-200">
+        {/* Share Success Story - Red/Yellow Themed */}
+        <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 mb-8 shadow-md relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
           <div className="flex items-center mb-4">
-            <Share2 className="h-6 w-6 text-yellow-600 mr-3" />
-            <h3 className="text-lg font-bold text-yellow-800">
-              Share Your Success & Earn More!
+            <div className="w-10 h-10 bg-[#FCE9E7] rounded-full flex items-center justify-center mr-3">
+              <Share2 className="h-5 w-5 text-[#E1261C]" />
+            </div>
+            <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
+              Share Your <span className="text-[#E1261C] italic font-normal">Success & Earn More!</span>
             </h3>
           </div>
 
           {!hasShared ? (
             <div>
-              <p className="text-yellow-700 mb-4">
+              <p className="text-[#4A4A4A] mb-4">
                 Once you receive your money, share your success story and earn
                 1% of any new customer recoveries from your referral link!
               </p>
 
-              <div className="bg-white p-4 rounded border">
-                <h4 className="font-medium text-gray-600 mb-2">
+              <div className="bg-[#FCE9E7] p-4 rounded-lg border border-[#E8E6E3]">
+                <h4 className="font-medium text-[#0A0A0A] mb-2 font-['JetBrains_Mono']">
                   Preview Your Success Post:
                 </h4>
-                <div className="text-sm text-gray-600 italic bg-gray-50 p-3 rounded">
+                <div className="text-sm text-[#4A4A4A] italic bg-white p-3 rounded-lg">
                   "Just recovered $[amount] in unclaimed property with
-                  @FindMyMoney! The process was so easy - they handled
+                  @CatchMyCash! The process was so easy - they handled
                   everything while I just waited for my check. Check if you have
                   money waiting: [your_referral_link]"
                 </div>
               </div>
 
-              <div className="mt-4 flex items-center flex-wrap space-x-4 gap-2">
+              <div className="mt-4 flex flex-col sm:flex-row items-center gap-3">
                 <input
                   type="number"
                   placeholder="Amount you received"
                   value={shareAmount}
                   onChange={(e) => setShareAmount(e.target.value)}
-                  className="px-3 py-2 mr-0 border text-gray-600 border-amber-300 rounded flex-1 "
+                  className="w-full sm:flex-1 px-4 py-2 border-2 border-[#E8E6E3] rounded-lg text-[#0A0A0A] placeholder-[#888888] focus:border-[#E1261C] focus:outline-none transition-all"
                 />
-                <Button
+                <button
                   onClick={handleShareSuccess}
                   disabled={!shareAmount}
-                  className="bg-yellow-600 hover:bg-yellow-700 w-[100%] sm:w-fit"
+                  className={`w-full sm:w-auto px-6 py-2 font-semibold rounded-lg transition-all ${
+                    shareAmount
+                      ? 'bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg'
+                      : 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
+                  }`}
                 >
                   Create My Referral Link
-                </Button>
+                </button>
               </div>
             </div>
           ) : (
             <div className="text-center">
-              <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-3" />
-              <h4 className="font-bold text-green-800 mb-2">
+              <div className="w-16 h-16 bg-[#FCE9E7] rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="h-8 w-8 text-[#E1261C]" />
+              </div>
+              <h4 className="font-bold text-[#0A0A0A] mb-2 font-['Fraunces']">
                 Success Story Shared!
               </h4>
-              <p className="text-green-700 mb-4">
+              <p className="text-[#4A4A4A] mb-4">
                 You'll earn 1% of any recoveries from people who use your
                 referral link.
               </p>
-              <Button
+              <button
                 onClick={onCreateReferral}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-[#E1261C] hover:bg-[#B11912] text-white px-6 py-3 font-semibold rounded-lg transition-all shadow-md hover:shadow-lg"
               >
                 View My Referral Dashboard
-              </Button>
+              </button>
             </div>
           )}
-        </Card>
+        </div>
 
-        {/* Recent Updates */}
-        <Card className="p-6">
-          <h3 className="text-lg font-bold text-white mb-4">Recent Updates</h3>
+        {/* Recent Updates - Red Themed */}
+        <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 shadow-md relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
+          <h3 className="text-lg font-bold text-[#0A0A0A] mb-4 font-['Fraunces']">
+            Recent <span className="text-[#E1261C] italic font-normal">Updates</span>
+          </h3>
           <div className="space-y-3">
             <div className="flex items-start">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3"></div>
+              <div className="w-2 h-2 bg-[#E1261C] rounded-full mt-2 mr-3"></div>
               <div className="w-[90%]">
-                <p className="font-medium">Documentation Verified</p>
-                <p className="text-sm text-gray-600">
-                  Jan 28, 2024 - All your documents have been validated by the
-                  state
+                <p className="font-medium text-[#0A0A0A]">Documentation Verified</p>
+                <p className="text-sm text-[#4A4A4A]">
+                  Jan 28, 2024 - All your documents have been validated by the state
                 </p>
               </div>
             </div>
             <div className="flex items-start">
-              <div className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3"></div>
+              <div className="w-2 h-2 bg-[#003f2f] rounded-full mt-2 mr-3"></div>
               <div className="w-[90%]">
-                <p className="font-medium">
+                <p className="font-medium text-[#0A0A0A]">
                   Case Entered State Processing Queue
                 </p>
-                <p className="text-sm text-gray-600">
-                  Jan 25, 2024 - Your case is now in the official state
-                  processing system
+                <p className="text-sm text-[#4A4A4A]">
+                  Jan 25, 2024 - Your case is now in the official state processing system
                 </p>
               </div>
             </div>
             <div className="flex items-start">
-              <div className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3"></div>
+              <div className="w-2 h-2 bg-[#003f2f] rounded-full mt-2 mr-3"></div>
               <div className="w-[90%]">
-                <p className="font-medium">Initial Review Completed</p>
-                <p className="text-sm text-gray-600">
-                  Jan 22, 2024 - State Controller's office has begun processing
-                  your claim
+                <p className="font-medium text-[#0A0A0A]">Initial Review Completed</p>
+                <p className="text-sm text-[#4A4A4A]">
+                  Jan 22, 2024 - State Controller's office has begun processing your claim
                 </p>
               </div>
             </div>
           </div>
-        </Card>
+        </div>
 
         {/* Contact Info */}
         <div className="text-center mt-8">
-          <p className="text-gray-600 mb-4">
+          <p className="text-[#4A4A4A] mb-4">
             Questions about your case? Our team is here to help.
           </p>
-          <div className="flex justify-center flex-wrap gap-2 space-x-4">
-            <Button variant="outline" onClick={() => shareToSocial("email")}>
+          <div className="flex justify-center flex-wrap gap-3">
+            <button
+              onClick={() => shareToSocial("email")}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-[#E8E6E3] rounded-lg text-[#0A0A0A] hover:bg-[#FCE9E7] transition-all"
+            >
               📧 Email Support
-            </Button>
-            <Button variant="outline" onClick={() => shareToSocial("call")}>
+            </button>
+            <button
+              onClick={() => shareToSocial("call")}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-[#E8E6E3] rounded-lg text-[#0A0A0A] hover:bg-[#FCE9E7] transition-all"
+            >
               📞 Call (555) 123-4567
-            </Button>
-            <Button variant="outline" onClick={onViewLeaderboard}>
-              <Trophy className="h-4 w-4 mr-2" />
+            </button>
+            <button
+              onClick={onViewLeaderboard}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[#E1261C] text-white rounded-lg hover:bg-[#B11912] transition-all shadow-sm"
+            >
+              <Trophy className="h-4 w-4" />
               View Success Stories
-            </Button>
+            </button>
           </div>
         </div>
       </div>

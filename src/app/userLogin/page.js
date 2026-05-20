@@ -33,19 +33,19 @@ const ErrorPopup = ({ message, onClose }) => {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.8, opacity: 0 }}
             transition={{ type: "spring", stiffness: 200, damping: 20 }}
-            className="bg-gray-900 border border-red-500/30 shadow-lg shadow-red-900/20 rounded-2xl p-6 max-w-sm w-full text-center"
+            className="bg-white border border-[#E8E6E3] shadow-xl rounded-2xl p-6 max-w-sm w-full text-center"
           >
-            <AlertTriangle className="h-10 w-10 text-red-400 mx-auto mb-3" />
-            <h3 className="text-xl font-semibold text-white mb-2">
+            <AlertTriangle className="h-10 w-10 text-[#E1261C] mx-auto mb-3" />
+            <h3 className="text-xl font-semibold text-[#0A0A0A] mb-2 font-['Fraunces']">
               Login Failed
             </h3>
-            <p className="text-gray-300 mb-4">{message}</p>
-            <Button
+            <p className="text-[#4A4A4A] mb-4">{message}</p>
+            <button
               onClick={onClose}
-              className="bg-red-600/80 hover:bg-red-600 text-white px-4 py-2 rounded-xl transition-colors"
+              className="bg-[#E1261C] hover:bg-[#B11912] text-white px-4 py-2 rounded-lg transition-colors font-semibold"
             >
               Close
-            </Button>
+            </button>
           </motion.div>
         </motion.div>
       )}
@@ -61,6 +61,7 @@ const UserLogin = () => {
   const { setUserLogin } = useSearchStore();
   const [popupMessage, setPopupMessage] = useState("");
   const router = useRouter();
+
   useEffect(() => {
     if (validationError && (email.trim() || password.trim())) {
       setValidationError("");
@@ -88,6 +89,7 @@ const UserLogin = () => {
       }
       return;
     }
+
     const payload = {
       userEmail: email.trim(),
       userPassword: password.trim(),
@@ -120,27 +122,28 @@ const UserLogin = () => {
   const isFormValid = email.trim().length > 0 && password.trim().length > 0;
 
   return (
-    <div className="min-h-screen relative">
-      <motion.div
+    <div className="min-h-screen bg-[#F7F5F2]" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+      {/* Header */}
+      {/* <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="glass-card border-b border-teal-500/20"
+        className="bg-white border-b border-[#E8E6E3] shadow-sm"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-teal-400 to-mint-green rounded-lg flex items-center justify-center">
-              <DollarSign className="h-6 w-6 text-navy-primary" />
+            <div className="w-10 h-10 bg-[#E1261C] rounded-lg flex items-center justify-center">
+              <DollarSign className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-teal-400">CatchMyCash</h1>
-              <p className="text-gray-300 mt-1">
-                {"California's Premier Unclaimed Property Recovery Service"}
+              <h1 className="text-3xl font-bold text-[#0A0A0A] font-['Fraunces']">CatchMyCash</h1>
+              <p className="text-[#4A4A4A] mt-1">
+                California's Premier Unclaimed Property Recovery Service
               </p>
             </div>
           </div>
         </div>
-      </motion.div>
+      </motion.div> */}
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <AnimatePresence mode="wait">
@@ -150,21 +153,21 @@ const UserLogin = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
           >
-            {/* Search Form */}
+            {/* Login Form Card */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6 }}
-              className="glass-card p-8 mb-8 border border-teal-500/20 rounded-xl relative overflow-hidden"
+              className="bg-white border border-[#E8E6E3] rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-8 mb-8 relative overflow-hidden"
             >
-              {/* Animated border glow */}
+              {/* Animated border glow - red themed */}
               <motion.div
-                className="absolute inset-0 border-2 border-teal-500/0 rounded-xl"
+                className="absolute inset-0 border-2 border-[#E1261C]/0 rounded-xl pointer-events-none"
                 animate={{
                   borderColor: [
-                    "rgba(0, 128, 128, 0)",
-                    "rgba(0, 128, 128, 0.3)",
-                    "rgba(0, 128, 128, 0)",
+                    "rgba(225, 38, 28, 0)",
+                    "rgba(225, 38, 28, 0.15)",
+                    "rgba(225, 38, 28, 0)",
                   ],
                 }}
                 transition={{ duration: 3, repeat: Infinity }}
@@ -176,28 +179,18 @@ const UserLogin = () => {
                   transition={{ duration: 0.6 }}
                   className="inline-block"
                 >
-                  <Search className="h-12 w-12 text-teal-400 mx-auto mb-4" />
+                  <div className="w-16 h-16 bg-[#FCE9E7] rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search className="h-8 w-8 text-[#E1261C]" />
+                  </div>
                 </motion.div>
                 <motion.h2
-                  className="text-3xl font-bold text-white mb-4"
+                  className="text-3xl font-bold text-[#0A0A0A] mb-4 font-['Fraunces']"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
                 >
-                  Sign In
+                  Sign <span className="text-[#E1261C] italic font-normal">In</span>
                 </motion.h2>
-                {/* <motion.div
-                    className="text-gray-300"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.4 }}
-                  >
-                    Our proprietary AI searches across{" "}
-                    <span className="text-teal-400 font-semibold">
-                      52+ databases
-                    </span>{" "}
-                    using your personal and address history
-                  </motion.div> */}
               </div>
 
               <motion.div
@@ -213,7 +206,7 @@ const UserLogin = () => {
                       initial={{ opacity: 0, scale: 0.95, y: -10 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                      className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-300 text-sm flex items-center gap-2"
+                      className="p-3 bg-[#FCE9E7] border border-[#E1261C]/20 rounded-lg text-[#E1261C] text-sm flex items-center gap-2"
                     >
                       <AlertTriangle className="h-4 w-4" />
                       {validationError}
@@ -221,27 +214,25 @@ const UserLogin = () => {
                   )}
                 </AnimatePresence>
 
-                {/* Personal Information Section */}
+                {/* Divider */}
                 <motion.div
                   className="flex items-center gap-3 py-2"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.8 }}
                 >
-                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-teal-400/30 to-transparent"></div>
-                  <span className="text-sm text-teal-300 flex items-center gap-2">
-                    <Eye className="h-4 w-4" />
+                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#E1261C] to-transparent" />
+                  <span className="text-sm text-[#4A4A4A] flex items-center gap-2 font-['JetBrains_Mono']">
+                    <Eye className="h-4 w-4 text-[#E1261C]" />
                     Enter Sign In details
                   </span>
-                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-teal-400/30 to-transparent"></div>
+                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#E1261C] to-transparent" />
                 </motion.div>
 
                 <div className="flex flex-col gap-4 mx-auto w-full">
-                  <motion.div
-                    className="relative w-full"
-                    whileFocus={{ scale: 1.02 }}
-                  >
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                  {/* Email Field */}
+                  <motion.div className="relative w-full">
+                    <label className="block text-sm font-medium text-[#0A0A0A] mb-2 font-['JetBrains_Mono']">
                       Email-Id *
                     </label>
                     <InputField
@@ -249,10 +240,10 @@ const UserLogin = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter Email-Id"
-                      className={`w-full text-white placeholder-gray-400 border-2 transition-all duration-300 ${
+                      className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${
                         email.trim()
-                          ? "border-teal-400/50 focus:border-teal-400"
-                          : "border-transparent focus:border-teal-400"
+                          ? "border-[#E1261C]/50 focus:border-[#E1261C]"
+                          : "border-[#E8E6E3] focus:border-[#E1261C]"
                       }`}
                       onKeyPress={(e) =>
                         e.key === "Enter" && isFormValid && handleSearch()
@@ -263,29 +254,27 @@ const UserLogin = () => {
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="absolute right-3 top-9 text-teal-400"
+                        className="absolute right-3 top-9 text-[#E1261C]"
                       >
                         ✓
                       </motion.div>
                     )}
                   </motion.div>
 
-                  <motion.div
-                    className="relative w-full"
-                    whileFocus={{ scale: 1.02 }}
-                  >
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                  {/* Password Field */}
+                  <motion.div className="relative w-full">
+                    <label className="block text-sm font-medium text-[#0A0A0A] mb-2 font-['JetBrains_Mono']">
                       Password *
                     </label>
                     <InputField
-                      type="Password"
+                      type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter Password"
-                      className={`w-full text-white placeholder-gray-400 border-2 transition-all duration-300 ${
+                      className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${
                         password.trim()
-                          ? "border-teal-400/50 focus:border-teal-400"
-                          : "border-transparent focus:border-teal-400"
+                          ? "border-[#E1261C]/50 focus:border-[#E1261C]"
+                          : "border-[#E8E6E3] focus:border-[#E1261C]"
                       }`}
                       onKeyPress={(e) =>
                         e.key === "Enter" && isFormValid && handleSearch()
@@ -296,13 +285,14 @@ const UserLogin = () => {
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="absolute right-3 top-9 text-teal-400"
+                        className="absolute right-3 top-9 text-[#E1261C]"
                       >
                         ✓
                       </motion.div>
                     )}
                   </motion.div>
                 </div>
+
                 {/* Form Status */}
                 <motion.div
                   className="text-center text-sm"
@@ -312,38 +302,52 @@ const UserLogin = () => {
                 >
                   {isFormValid ? (
                     <motion.span
-                      className="text-teal-400 flex items-center justify-center gap-2"
+                      className="text-[#E1261C] flex items-center justify-center gap-2"
                       initial={{ scale: 0.9 }}
                       animate={{ scale: 1 }}
                     >
-                      <span className="w-2 h-2 bg-teal-400 rounded-full"></span>
-                      Ready to search In databases
+                      <span className="w-2 h-2 bg-[#E1261C] rounded-full"></span>
+                      Ready to sign in
                     </motion.span>
                   ) : (
-                    <span className="text-gray-400">
+                    <span className="text-[#888888]">
                       Fill in all required fields to Login
                     </span>
                   )}
                 </motion.div>
 
+                {/* Submit Button */}
                 <motion.div
                   whileHover={isFormValid ? { scale: 1.02 } : {}}
                   whileTap={isFormValid ? { scale: 0.98 } : {}}
                 >
-                  <Button
+                  <button
                     onClick={handleSearch}
-                    className={`w-full py-4 text-lg relative overflow-hidden group transition-all duration-300 ${
+                    className={`w-full py-4 text-lg font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3 ${
                       isFormValid && !isSearching
-                        ? "glass-button text-white hover:text-teal-200 pulse-glow"
-                        : "bg-gray-600/30 text-gray-400 cursor-not-allowed"
+                        ? "bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg"
+                        : "bg-[#D4D4D4] text-[#888888] cursor-not-allowed"
                     }`}
                     disabled={!isFormValid || isSearching}
                   >
                     <span className="relative z-10 flex items-center justify-center gap-3">
-                      {isFormValid ? (
+                      {isSearching ? (
+                        <>
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{
+                              duration: 1,
+                              repeat: Infinity,
+                              ease: "linear",
+                            }}
+                            className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                          />
+                          Signing in...
+                        </>
+                      ) : isFormValid ? (
                         <>
                           Sign-In
-                          <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                          <ArrowRight className="h-5 w-5 transition-transform" />
                         </>
                       ) : (
                         <>
@@ -352,35 +356,12 @@ const UserLogin = () => {
                         </>
                       )}
                     </span>
-                  </Button>
-
-                  {/* <Button
-                      onClick={async () => {
-                        try {
-                          const res = await fetch("/api/downloadSCO");
-                          const data = await res.json();
-                          if (res.ok) {
-                            console.log(
-                              "Extracted files path:",
-                              data.extractedPath
-                            );
-                          } else {
-                            alert("Failed: " + data.error);
-                          }
-                        } catch (err) {
-                          console.error(err);
-                          alert("Something went wrong");
-                        }
-                      }}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-                    >
-                      Download & Extract SCO Records
-                    </Button> */}
+                  </button>
                 </motion.div>
               </motion.div>
             </motion.div>
 
-            {/* Features */}
+            {/* Features - Red Themed */}
             <div className="grid md:grid-cols-3 gap-6">
               {[
                 {
@@ -408,18 +389,19 @@ const UserLogin = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: feature.delay }}
                   whileHover={{ scale: 1.05, y: -5 }}
-                  className="glass-card p-6 text-center border border-teal-500/10 rounded-xl group"
+                  className="bg-white p-6 text-center border border-[#E8E6E3] rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group"
                 >
                   <motion.div
                     whileHover={{ scale: 1.2, rotate: 360 }}
                     transition={{ duration: 0.6 }}
+                    className="w-12 h-12 bg-[#FCE9E7] rounded-full flex items-center justify-center mx-auto mb-3"
                   >
-                    <feature.icon className="h-8 w-8 text-teal-400 mx-auto mb-3" />
+                    <feature.icon className="h-6 w-6 text-[#E1261C]" />
                   </motion.div>
-                  <h3 className="font-semibold mb-2 text-white group-hover:text-teal-200 transition-colors">
+                  <h3 className="font-semibold mb-2 text-[#0A0A0A] group-hover:text-[#E1261C] transition-colors">
                     {feature.title}
                   </h3>
-                  <div className="text-gray-300 text-sm group-hover:text-gray-200 transition-colors">
+                  <div className="text-[#4A4A4A] text-sm group-hover:text-[#0A0A0A] transition-colors">
                     {feature.desc}
                   </div>
                 </motion.div>

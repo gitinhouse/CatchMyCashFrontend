@@ -25,12 +25,12 @@ const infoArray = [
   "You receive your money (typically 30-60 days)",
 ];
 
-const PropertyResults = ({ propertyData, onNext }) => {
+const PropertyResults = ({ propertyData, onNext, onBack }) => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [animatedAmount, setAnimatedAmount] = useState(0);
 
   const totalAmount = parseFloat(
-    propertyData.totalAmount.replace("$", "").replace(",", "")
+    propertyData.totalAmount.replace("$", "").replace(",", ""),
   );
   const commission = (totalAmount * 0.1).toFixed(2);
   const netAmount = (totalAmount * 0.9).toFixed(2);
@@ -65,15 +65,19 @@ const PropertyResults = ({ propertyData, onNext }) => {
         user_id: userId,
         properties: propertyData.properties,
       });
-       onNext(response.data);  
-
+      onNext(response.data);
     } catch (err) {
       console.error("Error saving user properties:", err);
     }
   };
+  const propertyCount = propertyData?.properties?.length || 0;
+  const isJackpot = propertyCount > 0;
 
   return (
-    <div className="min-h-screen relative">
+    <div
+      className="min-h-screen bg-[#F7F5F2]"
+       
+    >
       <JackpotCelebration showCelebration={showCelebration} />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -105,44 +109,80 @@ const PropertyResults = ({ propertyData, onNext }) => {
                 repeat: Infinity,
                 ease: "easeInOut",
               }}
-              className="absolute inset-0 rounded-full bg-gradient-to-r from-teal-400/30 to-mint-green/30 blur-xl"
+              className="absolute inset-0 rounded-full bg-gradient-to-r from-[#E1261C]/30 to-[#B11912]/30 blur-xl"
             />
-            <CheckCircle className="h-20 w-20 text-teal-400 relative z-10" />
+            <CheckCircle className="h-20 w-20 text-[#E1261C] relative z-10" />
           </motion.div>
 
           <motion.h2
-            className="text-5xl font-bold text-white mb-4"
+            className="text-5xl font-bold text-[#0A0A0A] mb-4 font-['Fraunces']"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <span className="text-orange-300">🎉</span> Jackpot,{" "}
-            {propertyData.name.split(" ")[0]}!
+            {isJackpot ? (
+              <>
+                <span className="text-orange-500">🎉</span> Jackpot,{" "}
+                <span className="text-[#E1261C] italic">
+                  {propertyData.name.split(" ")[0]}
+                </span>
+                !
+              </>
+            ) : (
+              <>
+                <span className="text-orange-500">😔</span> Sorry,{" "}
+                <span className="text-[#E1261C] italic">
+                  {propertyData.name.split(" ")[0]}
+                </span>
+              </>
+            )}
           </motion.h2>
 
           <motion.div
-            className="text-xl text-gray-300 mb-8"
+            className="text-xl text-[#4A4A4A] mb-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6 }}
           >
-            We found{" "}
-            <span className="text-teal-400 font-semibold">
-              {propertyData.properties.length} unclaimed properties
-            </span>{" "}
-            in your name
+            {isJackpot ? (
+              <>
+                We found{" "}
+                <span className="text-[#E1261C] font-semibold">
+                  {propertyCount} unclaimed properties
+                </span>{" "}
+                in your name
+              </>
+            ) : (
+              <>We couldn't find any unclaimed properties in your name.</>
+            )}
           </motion.div>
 
-          {/* Animated Amount Display */}
+          {!isJackpot && (
+            <motion.div
+              className="text-center mt-8 mb-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1 }}
+            >
+              <button
+                onClick={onBack}
+                className="bg-[#E1261C] text-white px-10 py-5 text-lg font-semibold rounded-xl hover:bg-[#B11912] transition-all shadow-md hover:shadow-lg"
+              >
+                🔎 Search Again
+              </button>
+            </motion.div>
+          )}
+
+          {/* Animated Amount Display - Red Themed */}
           <motion.div
-            className="glass-card-teal border border-teal-500/30 rounded-xl p-8 mb-8 relative overflow-hidden"
+            className="bg-white border border-[#E8E6E3] rounded-xl p-8 mb-8 relative overflow-hidden shadow-md hover:shadow-lg transition-all duration-300"
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.8 }}
           >
-            {/* Animated background glow */}
+            {/* Animated background glow - Red themed */}
             <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-teal-500/20 to-mint-green/20"
+              className="absolute inset-0 bg-gradient-to-r from-[#E1261C]/5 to-[#B11912]/5"
               animate={{
                 opacity: [0.3, 0.6, 0.3],
                 scale: [1, 1.05, 1],
@@ -155,20 +195,21 @@ const PropertyResults = ({ propertyData, onNext }) => {
                 className="flex items-center justify-center mb-6"
                 whileHover={{ scale: 1.05 }}
               >
-                <motion.div>
-                  {/* <DollarSign className="h-10 w-10 text-teal-400 mr-3" /> */}
-                </motion.div>
                 <div className="text-center">
-                  <div className="text-lg text-teal-200 mb-1">Total Found</div>
+                  <div className="text-lg text-[#4A4A4A] mb-1 font-['JetBrains_Mono']">
+                    Total Found
+                  </div>
                   <motion.span
-                    className="text-4xl font-bold text-teal-300"
+                    className="text-5xl font-bold text-[#E1261C] font-['Fraunces']"
                     key={animatedAmount}
                   >
                     $
-                    {animatedAmount.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    <span className="text-black">
+                      {animatedAmount.toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
                   </motion.span>
                 </div>
               </motion.div>
@@ -179,28 +220,43 @@ const PropertyResults = ({ propertyData, onNext }) => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1.5 }}
               >
-                <div className="glass-card p-4 rounded-lg">
-                  <div className="text-sm text-gray-300 mb-1">
+                <div className="bg-[#FCE9E7] p-4 rounded-lg border border-[#E8E6E3]">
+                  <div className="text-sm text-[#4A4A4A] mb-1 font-['JetBrains_Mono']">
                     Our Fee (10%)
                   </div>
-                  <div className="text-xl font-semibold text-orange-300">
-                    ${commission}
+                  <div className="text-xl font-semibold text-[#E1261C]">
+                    ${" "}
+                    <span className="text-black">
+                      {" "}
+                      {parseFloat(commission).toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
                   </div>
                 </div>
-                <div className="glass-card p-4 rounded-lg border border-mint-green/20">
-                  <div className="text-sm text-gray-300 mb-1">You Receive</div>
+                <div className="bg-white p-4 rounded-lg border-2 border-[#E1261C]/30 shadow-md">
+                  <div className="text-sm text-[#4A4A4A] mb-1 font-['JetBrains_Mono']">
+                    You Receive
+                  </div>
                   <motion.div
-                    className="text-2xl font-bold text-mint-green"
+                    className="text-2xl font-bold text-[#E1261C] font-['Fraunces']"
                     animate={{
                       textShadow: [
-                        "0 0 10px rgba(0, 200, 150, 0.5)",
-                        "0 0 20px rgba(0, 200, 150, 0.8)",
-                        "0 0 10px rgba(0, 200, 150, 0.5)",
+                        "0 0 10px rgba(225, 38, 28, 0.3)",
+                        "0 0 20px rgba(225, 38, 28, 0.5)",
+                        "0 0 10px rgba(225, 38, 28, 0.3)",
                       ],
                     }}
                     transition={{ duration: 2, repeat: Infinity }}
                   >
-                    ${netAmount}
+                    ${" "}
+                    <span className="text-black">
+                      {parseFloat(netAmount).toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
                   </motion.div>
                 </div>
               </motion.div>
@@ -215,8 +271,8 @@ const PropertyResults = ({ propertyData, onNext }) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.8 }}
         >
-          <h3 className="text-xl font-bold text-white flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-teal-400" />
+          <h3 className="text-xl font-bold text-[#0A0A0A] flex items-center gap-2 font-['Fraunces']">
+            <Sparkles className="h-5 w-5 text-[#E1261C]" />
             Property Details
           </h3>
           {propertyData.properties.length > 0 ? (
@@ -228,18 +284,15 @@ const PropertyResults = ({ propertyData, onNext }) => {
                 transition={{ delay: 2 + index * 0.2 }}
                 whileHover={{ scale: 1.02, y: -2 }}
               >
-                <Card className="glass-card p-6 border border-teal-500/20 rounded-xl">
-                  <div className="flex items-start justify-between">
+                <div className="bg-white p-6 border border-[#E8E6E3] rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
+                  <div className="flex items-start justify-between flex-wrap gap-4">
                     <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <Badge
-                          variant="secondary"
-                          className="bg-teal-500/20 text-teal-300 border-teal-500/30"
-                        >
+                      <div className="flex items-center flex-wrap gap-3 mb-2">
+                        <span className="bg-[#FCE9E7] text-[#E1261C] text-xs font-semibold px-3 py-1 rounded-full border border-[#E8E6E3]">
                           {property.type}
-                        </Badge>
+                        </span>
                         <motion.span
-                          className="text-2xl font-bold text-teal-400"
+                          className="text-2xl font-bold text-[#E1261C] font-['Fraunces']"
                           animate={{ scale: [1, 1.05, 1] }}
                           transition={{
                             duration: 2,
@@ -247,52 +300,62 @@ const PropertyResults = ({ propertyData, onNext }) => {
                             delay: index * 0.5,
                           }}
                         >
-                          $ {property.amount}
+                          ${" "}
+                          <span className="text-black">
+                            {parseFloat(property.amount).toLocaleString(
+                              "en-US",
+                              {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              },
+                            )}
+                          </span>
                         </motion.span>
                       </div>
-                      <div className="flex items-center flex-wrap gap-1 space-x-4 text-gray-300">
+                      <div className="flex items-center flex-wrap gap-4 text-[#4A4A4A] text-sm">
                         <div className="flex items-center">
-                          <Building className="h-4 w-4 mr-1 text-teal-400" />
+                          <Building className="h-4 w-4 mr-1 text-[#E1261C]" />
                           <span>{property.holder}</span>
                         </div>
                         <div className="flex items-center">
-                          <Calendar className="h-4 w-4 mr-1 text-teal-400" />
+                          <Calendar className="h-4 w-4 mr-1 text-[#E1261C]" />
                           <span>Reported: {property.reportDate}</span>
                         </div>
                       </div>
                     </div>
                   </div>
-                </Card>
+                </div>
               </motion.div>
             ))
           ) : (
-            <Card className="glass-card p-6 border border-red-400/20 rounded-xl text-center">
-              <div className="text-red-300 font-semibold text-lg">
+            <div className="bg-white p-6 border border-[#E8E6E3] rounded-xl text-center shadow-md">
+              <div className="text-[#E1261C] font-semibold text-lg">
                 ⚠ No properties found
               </div>
-            </Card>
+            </div>
           )}
         </motion.div>
 
-        {/* Warning about DIY */}
+        {/* Warning about DIY - Red Themed */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 2.5 }}
         >
-          <Card className="glass-card p-6 border border-red-400/20 mb-8 rounded-xl">
+          <div className="bg-white border border-[#E8E6E3] p-6 mb-8 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
             <div className="flex items-start">
               <motion.div
                 animate={{ rotate: [-2, 2, -2] }}
                 transition={{ duration: 2, repeat: Infinity }}
               >
-                <AlertTriangle className="h-6 w-6 text-red-400 mr-3 mt-1" />
+                <AlertTriangle className="h-6 w-6 text-[#E1261C] mr-3 mt-1" />
               </motion.div>
               <div className="w-[90%]">
-                <h4 className="font-bold text-red-300 mb-2">
+                <h4 className="font-bold text-[#0A0A0A] mb-2 font-['Fraunces']">
                   Don't Try This Yourself - Here's Why:
                 </h4>
-                <ul className="space-y-2 text-red-400">
+                <ul className="space-y-2 text-[#4A4A4A]">
                   <li>
                     • Complex legal forms require specific language and
                     notarization
@@ -314,24 +377,25 @@ const PropertyResults = ({ propertyData, onNext }) => {
                     denies claims
                   </li>
                 </ul>
-                <div className="mt-3 font-medium text-red-300">
+                <div className="mt-3 font-medium text-[#E1261C]">
                   Let our licensed investigators handle this complex process for
                   you.
                 </div>
               </div>
             </div>
-          </Card>
+          </div>
         </motion.div>
 
-        {/* What Happens Next */}
+        {/* What Happens Next - Red Themed */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 2.8 }}
         >
-          <Card className="glass-card p-6 mb-8 border border-teal-500/10 rounded-xl">
-            <h4 className="font-bold text-white mb-4 flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-teal-400" />
+          <div className="bg-white border border-[#E8E6E3] p-6 mb-8 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
+            <h4 className="font-bold text-[#0A0A0A] mb-4 flex items-center gap-2 font-['Fraunces']">
+              <TrendingUp className="h-5 w-5 text-[#E1261C]" />
               What Happens Next:
             </h4>
             <div className="space-y-3">
@@ -345,19 +409,21 @@ const PropertyResults = ({ propertyData, onNext }) => {
                   whileHover={{ x: 5 }}
                 >
                   <motion.div
-                    className="w-8 h-8 bg-gradient-to-br from-teal-500/30 to-mint-green/20 rounded-full flex items-center justify-center mr-3"
+                    className="w-8 h-8 bg-[#FCE9E7] rounded-full flex items-center justify-center mr-3"
                     whileHover={{ scale: 1.1 }}
                   >
-                    <span className="text-teal-300 font-bold">{index + 1}</span>
+                    <span className="text-[#E1261C] font-bold font-['JetBrains_Mono']">
+                      {index + 1}
+                    </span>
                   </motion.div>
-                  <span className="text-gray-300 w-[90%]">{step}</span>
+                  <span className="text-[#4A4A4A] w-[90%]">{step}</span>
                 </motion.div>
               ))}
             </div>
-          </Card>
+          </div>
         </motion.div>
 
-        {/* CTA */}
+        {/* CTA - Red Themed */}
         <motion.div
           className="text-center"
           initial={{ opacity: 0, y: 20 }}
@@ -365,25 +431,42 @@ const PropertyResults = ({ propertyData, onNext }) => {
           transition={{ delay: 3.5 }}
         >
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button
+            <button
               onClick={handleClaim}
-               disabled={parseFloat(propertyData.totalAmount.replace("$", "")) === 0.00}
-              className="glass-button text-white sm:px-16 px-6 py-6 text-xl rounded-xl hover:text-teal-200 pulse-glow relative overflow-hidden"
+              disabled={
+                parseFloat(
+                  propertyData.totalAmount.replace("$", "").replace(",", ""),
+                ) === 0.0
+              }
+              className={`px-6 sm:px-16 py-6 text-xl font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3 mx-auto ${
+                parseFloat(
+                  propertyData.totalAmount.replace("$", "").replace(",", ""),
+                ) > 0
+                  ? "bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg"
+                  : "bg-[#D4D4D4] text-[#888888] cursor-not-allowed"
+              }`}
             >
               <span className="relative z-10 flex items-center gap-3">
-                Claim My ${propertyData.totalAmount.replace("$", "")} Now
+                Claim My $
+                {parseFloat(
+                  propertyData.totalAmount.replace("$", "").replace(",", ""),
+                ).toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                Now
                 <motion.span
                   animate={{ scale: [1, 1.2, 1] }}
                   transition={{ duration: 1, repeat: Infinity }}
-                  className="text-yellow-600"
+                  className="text-yellow-400"
                 >
                   💰
                 </motion.span>
               </span>
-            </Button>
+            </button>
           </motion.div>
           <motion.div
-            className="text-gray-400 mt-4"
+            className="text-[#888888] mt-4 text-sm font-['JetBrains_Mono']"
             animate={{ opacity: [0.7, 1, 0.7] }}
             transition={{ duration: 2, repeat: Infinity }}
           >
