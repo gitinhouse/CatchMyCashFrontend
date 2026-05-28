@@ -14,8 +14,8 @@ import DocumentUpload from './components/DocumentUpload';
 import CaseTracking from './components/CaseTracking';
 import ReferralSystem from './components/ReferralSystem';
 import Leaderboard from './components/Leaderboared';
-import { useRouter } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { useRouter } from 'next/navigation';
+import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchStore } from './store/searchStore';
 
@@ -26,7 +26,7 @@ export const SiteHeader = () => {
   const { goToSearch } = useSearchStore();
 
   const handleLogin = async () => {
-    router.push("/userLogin");
+    router.push('/userLogin');
   };
 
   const handleSearchNow = () => {
@@ -34,11 +34,11 @@ export const SiteHeader = () => {
   };
 
   const navItems = [
-    { name: "About", path: "/about" },
-    { name: "How It Works", path: "/how-it-works" },
-    { name: "Privacy", path: "/privacy" },
-    { name: "FAQ", path: "/faq" },
-    { name: "Contact", path: "/contact" },
+    { name: 'About', path: '/about' },
+    { name: 'How It Works', path: '/how-it-works' },
+    { name: 'Privacy', path: '/privacy' },
+    { name: 'FAQ', path: '/faq' },
+    { name: 'Contact', path: '/contact' },
   ];
 
   return (
@@ -59,8 +59,8 @@ export const SiteHeader = () => {
               key={item.name}
               href={item.path}
               className={`text-sm font-medium transition-colors ${
-                pathname === item.path 
-                  ? 'text-[#0A0A0A]' 
+                pathname === item.path
+                  ? 'text-[#0A0A0A]'
                   : 'text-[#4A4A4A] hover:text-[#0A0A0A]'
               }`}
             >
@@ -141,6 +141,12 @@ export default function Home() {
     goToAutomation,
   } = useSearchStore();
 
+  const [filledFields, setFilledFields] = React.useState(0);
+
+  useEffect(() => {
+    setFilledFields(0);
+  }, [currentStep]);
+
   useEffect(() => {
     const stepParam = searchParams.get('step');
     if (stepParam) {
@@ -182,7 +188,10 @@ export default function Home() {
     const stepComponents = {
       landing: <LandingPage onNext={() => handleStepChange('search')} />,
       search: (
-        <PropertySearch onNext={(data) => handleStepChange('results', data)} />
+        <PropertySearch
+          onNext={(data) => handleStepChange('results', data)}
+          onFieldFilled={setFilledFields}
+        />
       ),
       results: (
         <PropertyResults
@@ -194,6 +203,7 @@ export default function Home() {
       userinfo: (
         <UserInformation
           onNext={(data) => handleStepChange('automation', data)}
+          onFieldFilled={setFilledFields}
         />
       ),
       automation: (
@@ -202,7 +212,12 @@ export default function Home() {
           onNext={() => handleStepChange('documents')}
         />
       ),
-      documents: <DocumentUpload onNext={() => handleStepChange('tracking')} />,
+      documents: (
+        <DocumentUpload
+          onNext={() => handleStepChange('tracking')}
+          onFieldFilled={setFilledFields}
+        />
+      ),
       tracking: (
         <CaseTracking
           onViewLeaderboard={() => handleStepChange('leaderboard')}
@@ -234,8 +249,9 @@ export default function Home() {
       <div className="absolute inset-0 pointer-events-none">
         <FloatingElements />
       </div>
-      
-      <ProgressHeader currentStep={currentStep} />
+
+      <ProgressHeader currentStep={currentStep} filledFields={filledFields} />
+
       <div className={currentStep !== 'landing' ? '' : ''}>
         {renderCurrentStep()}
       </div>

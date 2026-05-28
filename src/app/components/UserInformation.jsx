@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
-import { Button } from "./uicomponents/Button";
-import { Card } from "./uicomponents/Card";
-import { Textarea } from "./uicomponents/Textarea";
+import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { Button } from './uicomponents/Button';
+import { Card } from './uicomponents/Card';
+import { Textarea } from './uicomponents/Textarea';
 import {
   Shield,
   FileText,
@@ -16,26 +16,26 @@ import {
   User,
   CreditCard,
   Building,
-} from "lucide-react";
-import { InputField } from "./uicomponents/InputField";
-import { useSearchStore } from "../store/searchStore";
-import axios from "axios";
+} from 'lucide-react';
+import { InputField } from './uicomponents/InputField';
+import { useSearchStore } from '../store/searchStore';
+import axios from 'axios';
 
-const UserInformation = ({ onNext }) => {
+const UserInformation = ({ onNext, onFieldFilled }) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    phone: "",
-    address: "",
-    city: "",
-    state: "CA",
-    zipCode: "",
-    dateOfBirth: "",
-    ssn: "",
-    currentEmployer: "",
-    formerEmployers: "",
-    previousAddresses: "",
+    fullName: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: 'CA',
+    zipCode: '',
+    dateOfBirth: '',
+    ssn: '',
+    currentEmployer: '',
+    formerEmployers: '',
+    previousAddresses: '',
   });
   const {
     userData,
@@ -45,27 +45,27 @@ const UserInformation = ({ onNext }) => {
     setSearchResults,
   } = useSearchStore();
   const [errors, setErrors] = useState({
-    phone: "",
-    ssn: "",
-    zipCode: "",
+    phone: '',
+    ssn: '',
+    zipCode: '',
   });
-  const [apiError, setApiError] = useState("");
+  const [apiError, setApiError] = useState('');
   const [agreeSMS, setAgreeSMS] = useState(false);
   const addressInputRef = useRef(null);
   const autocompleteRef = useRef(null);
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    setErrors((prev) => ({ ...prev, [field]: "" }));
+    setErrors((prev) => ({ ...prev, [field]: '' }));
   };
   const setCityRef = useRef(null);
   const setAddressRef = useRef(null);
   const setZipRef = useRef(null);
 
   useEffect(() => {
-    setAddressRef.current = (val) => handleInputChange("address", val);
-    setCityRef.current = (val) => handleInputChange("city", val);
-    setZipRef.current = (val) => handleInputChange("zipCode", val);
+    setAddressRef.current = (val) => handleInputChange('address', val);
+    setCityRef.current = (val) => handleInputChange('city', val);
+    setZipRef.current = (val) => handleInputChange('zipCode', val);
   });
 
   useEffect(() => {
@@ -77,40 +77,40 @@ const UserInformation = ({ onNext }) => {
       const ac = new window.google.maps.places.Autocomplete(
         addressInputRef.current,
         {
-          types: ["address"],
-          componentRestrictions: { country: "us" },
-          fields: ["formatted_address", "address_components"],
+          types: ['address'],
+          componentRestrictions: { country: 'us' },
+          fields: ['formatted_address', 'address_components'],
         },
       );
       autocompleteRef.current = ac;
 
-      ac.addListener("place_changed", () => {
+      ac.addListener('place_changed', () => {
         const place = ac.getPlace();
         if (!place.address_components) return;
 
-        let streetNum = "",
-          route = "",
-          cityName = "",
-          zip = "";
+        let streetNum = '',
+          route = '',
+          cityName = '',
+          zip = '';
 
         place.address_components.forEach((c) => {
           const t = c.types ?? [];
-          if (t.includes("street_number")) streetNum = c.long_name ?? "";
-          if (t.includes("route")) route = c.long_name ?? "";
-          if (t.includes("locality")) cityName = c.long_name ?? "";
-          if (!cityName && t.includes("sublocality_level_1"))
-            cityName = c.long_name ?? "";
-          if (!cityName && t.includes("administrative_area_level_3"))
-            cityName = c.long_name ?? "";
-          if (!cityName && t.includes("administrative_area_level_2"))
-            cityName = c.long_name ?? "";
-          if (t.includes("postal_code")) zip = c.long_name ?? "";
+          if (t.includes('street_number')) streetNum = c.long_name ?? '';
+          if (t.includes('route')) route = c.long_name ?? '';
+          if (t.includes('locality')) cityName = c.long_name ?? '';
+          if (!cityName && t.includes('sublocality_level_1'))
+            cityName = c.long_name ?? '';
+          if (!cityName && t.includes('administrative_area_level_3'))
+            cityName = c.long_name ?? '';
+          if (!cityName && t.includes('administrative_area_level_2'))
+            cityName = c.long_name ?? '';
+          if (t.includes('postal_code')) zip = c.long_name ?? '';
         });
 
         const street =
-          [streetNum, route].filter(Boolean).join(" ") ||
+          [streetNum, route].filter(Boolean).join(' ') ||
           place.formatted_address ||
-          "";
+          '';
 
         setAddressRef.current(street);
         setCityRef.current(cityName);
@@ -123,21 +123,21 @@ const UserInformation = ({ onNext }) => {
     }
 
     function loadScript() {
-      if (document.getElementById("google-maps-script")) return;
-      const s = document.createElement("script");
-      s.id = "google-maps-script";
+      if (document.getElementById('google-maps-script')) return;
+      const s = document.createElement('script');
+      s.id = 'google-maps-script';
       s.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&v=weekly`;
       s.async = true;
       s.defer = true;
       s.onload = onScriptReady;
-      s.onerror = () => console.error("Google Maps failed to load");
+      s.onerror = () => console.error('Google Maps failed to load');
       document.head.appendChild(s);
     }
 
-    const existing = document.getElementById("google-maps-script");
+    const existing = document.getElementById('google-maps-script');
     if (!existing) loadScript();
     else if (window.google?.maps?.places) initAutocomplete();
-    else existing.addEventListener("load", onScriptReady);
+    else existing.addEventListener('load', onScriptReady);
 
     return () => {
       if (autocompleteRef.current) {
@@ -150,14 +150,14 @@ const UserInformation = ({ onNext }) => {
   }, []);
 
   useEffect(() => {
-    const savedProperty = localStorage.getItem("propertyData");
+    const savedProperty = localStorage.getItem('propertyData');
     if (savedProperty) {
       setSearchResults(JSON.parse(savedProperty));
     }
   }, []);
 
   const handlePhoneChange = (value) => {
-    const digits = value.replace(/\D/g, "").slice(0, 10);
+    const digits = value.replace(/\D/g, '').slice(0, 10);
     let formatted = digits;
     if (digits.length > 6) {
       formatted = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
@@ -166,38 +166,38 @@ const UserInformation = ({ onNext }) => {
     } else if (digits.length > 0) {
       formatted = `(${digits}`;
     }
-    handleInputChange("phone", formatted);
+    handleInputChange('phone', formatted);
   };
 
   const handlePhoneBlur = () => {
-    const phoneDigits = formData.phone.replace(/\D/g, "");
+    const phoneDigits = formData.phone.replace(/\D/g, '');
     if (phoneDigits.length !== 10) {
       setErrors((prev) => ({
         ...prev,
-        phone: "Phone number must be exactly 10 digits.",
+        phone: 'Phone number must be exactly 10 digits.',
       }));
     } else {
-      setErrors((prev) => ({ ...prev, phone: "" }));
+      setErrors((prev) => ({ ...prev, phone: '' }));
     }
   };
 
   const handleSSNChange = (value) => {
-    const digits = value.replace(/\D/g, "").slice(0, 9);
+    const digits = value.replace(/\D/g, '').slice(0, 9);
     let formatted = digits;
     if (digits.length > 5) {
       formatted = `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
     } else if (digits.length > 3) {
       formatted = `${digits.slice(0, 3)}-${digits.slice(3)}`;
     }
-    handleInputChange("ssn", formatted);
+    handleInputChange('ssn', formatted);
   };
 
   const handleSSNBlur = () => {
-    const ssnDigits = formData.ssn.replace(/\D/g, "");
+    const ssnDigits = formData.ssn.replace(/\D/g, '');
     if (ssnDigits.length !== 9) {
-      setErrors((prev) => ({ ...prev, ssn: "SSN must be exactly 9 digits." }));
+      setErrors((prev) => ({ ...prev, ssn: 'SSN must be exactly 9 digits.' }));
     } else {
-      setErrors((prev) => ({ ...prev, ssn: "" }));
+      setErrors((prev) => ({ ...prev, ssn: '' }));
     }
   };
 
@@ -207,63 +207,78 @@ const UserInformation = ({ onNext }) => {
     if (!zipRegex.test(zip)) {
       setErrors((prev) => ({
         ...prev,
-        zipCode: "ZIP code must be exactly 5 digits.",
+        zipCode: 'ZIP code must be exactly 5 digits.',
       }));
     } else {
-      setErrors((prev) => ({ ...prev, zipCode: "" }));
+      setErrors((prev) => ({ ...prev, zipCode: '' }));
     }
   };
 
-  const getFirstAndLastName = (fullName = "") => {
+  const getFirstAndLastName = (fullName = '') => {
     const trimmed = fullName.trim();
-    if (!trimmed.includes(" ")) {
-      return { firstName: trimmed, lastName: "" };
+    if (!trimmed.includes(' ')) {
+      return { firstName: trimmed, lastName: '' };
     }
-    const firstSpaceIndex = trimmed.indexOf(" ");
+    const firstSpaceIndex = trimmed.indexOf(' ');
     return {
       firstName: trimmed.slice(0, firstSpaceIndex),
       lastName: trimmed.slice(firstSpaceIndex + 1),
     };
   };
 
+  useEffect(() => {
+    const requiredFields = [
+      formData.fullName,
+      formData.email,
+      formData.phone,
+      formData.address,
+      formData.city,
+      formData.zipCode,
+      formData.dateOfBirth,
+      formData.ssn,
+    ];
+    const count = requiredFields.filter((v) => v && v.trim()).length;
+    onFieldFilled?.(count);
+  }, [formData]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (loading) return;
 
     const requiredFields = [
-      "fullName",
-      "email",
-      "phone",
-      "address",
-      "city",
-      "zipCode",
-      "dateOfBirth",
-      "ssn",
+      'fullName',
+      'email',
+      'phone',
+      'address',
+      'city',
+      'zipCode',
+      'dateOfBirth',
+      'ssn',
     ];
     const missingFields = requiredFields.filter((field) => !formData[field]);
 
     if (missingFields.length > 0) {
       setApiError(
-        `Please fill in all required fields: ${missingFields.join(", ")}`,
+        `Please fill in all required fields: ${missingFields.join(', ')}`,
       );
       return;
     }
 
     let newErrors = {};
 
-    const phoneDigits = formData.phone.replace(/\D/g, "");
+    const phoneDigits = formData.phone.replace(/\D/g, '');
     if (phoneDigits.length !== 10) {
-      newErrors.phone = "Phone number must be exactly 10 digits.";
+      newErrors.phone = 'Phone number must be exactly 10 digits.';
     }
 
-    const ssnDigits = formData.ssn.replace(/\D/g, "");
+    const ssnDigits = formData.ssn.replace(/\D/g, '');
     if (ssnDigits.length !== 9) {
-      newErrors.ssn = "SSN must be exactly 9 digits.";
+      newErrors.ssn = 'SSN must be exactly 9 digits.';
     }
 
-    const zipDigits = formData.zipCode.replace(/\D/g, "");
+    const zipDigits = formData.zipCode.replace(/\D/g, '');
     if (zipDigits.length !== 5) {
-      newErrors.zipCode = "ZIP code must be exactly 5 digits.";
+      newErrors.zipCode = 'ZIP code must be exactly 5 digits.';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -272,10 +287,10 @@ const UserInformation = ({ onNext }) => {
     }
 
     if (!agreeSMS) {
-      setApiError("You must agree to receive SMS updates before continuing.");
+      setApiError('You must agree to receive SMS updates before continuing.');
       return;
     } else {
-      setApiError("");
+      setApiError('');
     }
 
     try {
@@ -298,19 +313,19 @@ const UserInformation = ({ onNext }) => {
       const payloadData = {
         userEmail: formData.email,
         user_id: userData._id,
-        userType: "User",
+        userType: 'User',
       };
 
-      const res = await axios.post("/api/register", payloadData);
+      const res = await axios.post('/api/register', payloadData);
       setUserLogin(res.data);
-      localStorage.setItem("userLogin", JSON.stringify(res.data));
+      localStorage.setItem('userLogin', JSON.stringify(res.data));
 
-      const { data } = await axios.post("/api/legalDetails", payload);
+      const { data } = await axios.post('/api/legalDetails', payload);
       setUserAgreement(data);
-      localStorage.setItem("userAgreement", JSON.stringify(data));
+      localStorage.setItem('userAgreement', JSON.stringify(data));
 
       const { firstName, lastName } = getFirstAndLastName(formData.fullName);
-      const [dobYear, dobMonth, dobDay] = formData.dateOfBirth.split("-");
+      const [dobYear, dobMonth, dobDay] = formData.dateOfBirth.split('-');
       const propertyIds = Array.isArray(searchResults)
         ? searchResults.map((item) => item?.property_id).filter(Boolean)
         : [];
@@ -329,25 +344,25 @@ const UserInformation = ({ onNext }) => {
           dobDay: dobDay,
           dobYear: dobYear,
           address1: formData.address,
-          address2: "",
+          address2: '',
           city: formData.city,
-          state: "CA",
+          state: 'CA',
           postalCode: formData.zipCode,
-          countryCode: "USA",
-          taxIdentifierType: "Individual",
-          sourceOfClaim: "Media",
-          assistedByFinder: "false",
+          countryCode: 'USA',
+          taxIdentifierType: 'Individual',
+          sourceOfClaim: 'Media',
+          assistedByFinder: 'false',
         },
       };
 
-      await axios.post("/api/sqs", SQSPayloadData);
+      await axios.post('/api/sqs', SQSPayloadData);
       onNext(data);
     } catch (err) {
-      console.error("Error saving user properties:", err);
+      console.error('Error saving user properties:', err);
       if (err.response && err.response.data?.message) {
         setApiError(err.response.data.message);
       } else {
-        setApiError("An unexpected error occurred. Please try again.");
+        setApiError('An unexpected error occurred. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -355,10 +370,7 @@ const UserInformation = ({ onNext }) => {
   };
 
   return (
-    <div
-      className="min-h-screen bg-[#F7F5F2] pt-5"
-       
-    >
+    <div className="min-h-screen bg-[#F7F5F2] pt-5">
       <style>{`
         .pac-container {
           z-index: 99999 !important;
@@ -407,7 +419,7 @@ const UserInformation = ({ onNext }) => {
             <FileText className="h-8 w-8 text-[#E1261C]" />
           </div>
           <h2 className="text-3xl font-bold text-[#0A0A0A] mb-4 font-['Fraunces']">
-            Investigator{" "}
+            Investigator{' '}
             <span className="text-[#E1261C] italic font-normal">Agreement</span>
           </h2>
           <p className="text-[#4A4A4A] mb-6">
@@ -452,7 +464,7 @@ const UserInformation = ({ onNext }) => {
                     <User className="h-4 w-4 text-[#E1261C]" />
                   </div>
                   <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
-                    Personal{" "}
+                    Personal{' '}
                     <span className="text-[#E1261C] italic font-normal">
                       Information
                     </span>
@@ -468,7 +480,7 @@ const UserInformation = ({ onNext }) => {
                   type="text"
                   value={formData.fullName}
                   onChange={(e) =>
-                    handleInputChange("fullName", e.target.value)
+                    handleInputChange('fullName', e.target.value)
                   }
                   placeholder="As it appears on government documents"
                   className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
@@ -484,7 +496,7 @@ const UserInformation = ({ onNext }) => {
                   type="date"
                   value={formData.dateOfBirth}
                   onChange={(e) =>
-                    handleInputChange("dateOfBirth", e.target.value)
+                    handleInputChange('dateOfBirth', e.target.value)
                   }
                   className="w-full text-[#0A0A0A] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
                   required
@@ -498,7 +510,7 @@ const UserInformation = ({ onNext }) => {
                 <InputField
                   type="email"
                   value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
                   placeholder="your@email.com"
                   className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
                   required
@@ -552,7 +564,7 @@ const UserInformation = ({ onNext }) => {
                   type="text"
                   value={formData.currentEmployer}
                   onChange={(e) =>
-                    handleInputChange("currentEmployer", e.target.value)
+                    handleInputChange('currentEmployer', e.target.value)
                   }
                   placeholder="Company name"
                   className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
@@ -566,7 +578,7 @@ const UserInformation = ({ onNext }) => {
                     <MapPin className="h-4 w-4 text-[#E1261C]" />
                   </div>
                   <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
-                    Current{" "}
+                    Current{' '}
                     <span className="text-[#E1261C] italic font-normal">
                       Address
                     </span>
@@ -584,10 +596,10 @@ const UserInformation = ({ onNext }) => {
                   value={formData.address}
                   placeholder="Enter address…"
                   autoComplete="new-password"
-                  onChange={(e) => handleInputChange("address", e.target.value)}
+                  onChange={(e) => handleInputChange('address', e.target.value)}
                   required
                   className="w-full rounded-lg border-2 border-[#E8E6E3] bg-white px-4 py-2.5 text-sm text-[#0A0A0A] placeholder-[#888888] leading-6 focus:outline-none focus:border-[#E1261C] transition-all duration-300"
-                  style={{ caretColor: "#E1261C", fontFamily: "inherit" }}
+                  style={{ caretColor: '#E1261C', fontFamily: 'inherit' }}
                 />
               </div>
 
@@ -598,7 +610,7 @@ const UserInformation = ({ onNext }) => {
                 <InputField
                   type="text"
                   value={formData.city}
-                  onChange={(e) => handleInputChange("city", e.target.value)}
+                  onChange={(e) => handleInputChange('city', e.target.value)}
                   placeholder="Los Angeles"
                   className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
                   required
@@ -612,7 +624,7 @@ const UserInformation = ({ onNext }) => {
                 <InputField
                   type="text"
                   value={formData.zipCode}
-                  onChange={(e) => handleInputChange("zipCode", e.target.value)}
+                  onChange={(e) => handleInputChange('zipCode', e.target.value)}
                   onBlur={handleZipBlur}
                   placeholder="90210"
                   className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
@@ -645,7 +657,7 @@ const UserInformation = ({ onNext }) => {
                     <Building className="h-4 w-4 text-[#E1261C]" />
                   </div>
                   <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
-                    Additional{" "}
+                    Additional{' '}
                     <span className="text-[#E1261C] italic font-normal">
                       Information
                     </span>
@@ -660,7 +672,7 @@ const UserInformation = ({ onNext }) => {
                 <Textarea
                   value={formData.formerEmployers}
                   onChange={(e) =>
-                    handleInputChange("formerEmployers", e.target.value)
+                    handleInputChange('formerEmployers', e.target.value)
                   }
                   placeholder="List any companies you've worked for that might have unclaimed property..."
                   rows={3}
@@ -675,7 +687,7 @@ const UserInformation = ({ onNext }) => {
                 <Textarea
                   value={formData.previousAddresses}
                   onChange={(e) =>
-                    handleInputChange("previousAddresses", e.target.value)
+                    handleInputChange('previousAddresses', e.target.value)
                   }
                   placeholder="List any previous addresses where you might have lived..."
                   rows={3}
@@ -687,7 +699,7 @@ const UserInformation = ({ onNext }) => {
             {/* Agreement Terms - Red Themed */}
             <div className="mt-8 p-4 bg-[#FCE9E7] rounded-lg border border-[#E8E6E3]">
               <h4 className="font-bold text-[#0A0A0A] mb-2 font-['Fraunces']">
-                Agreement{" "}
+                Agreement{' '}
                 <span className="text-[#E1261C] italic font-normal">Terms</span>
               </h4>
               <ul className="text-sm text-[#4A4A4A] space-y-1">
@@ -743,11 +755,11 @@ const UserInformation = ({ onNext }) => {
                 disabled={loading}
                 className={`px-8 py-3 text-white font-semibold rounded-xl transition-all duration-300 ${
                   loading
-                    ? "bg-[#D4D4D4] text-[#888888] cursor-not-allowed"
-                    : "bg-[#E1261C] hover:bg-[#B11912] shadow-md hover:shadow-lg"
+                    ? 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
+                    : 'bg-[#E1261C] hover:bg-[#B11912] shadow-md hover:shadow-lg'
                 }`}
               >
-                {loading ? "Submitting..." : "Continue to Form Automation"}
+                {loading ? 'Submitting...' : 'Continue to Form Automation'}
               </button>
             </div>
 

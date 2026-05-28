@@ -1,9 +1,9 @@
-"use client";
-import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useSearchStore } from "../store/searchStore";
-import ReCAPTCHA from "react-google-recaptcha";
-import axios from "axios";
+'use client';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useSearchStore } from '../store/searchStore';
+import ReCAPTCHA from 'react-google-recaptcha';
+import axios from 'axios';
 import {
   Search,
   Globe,
@@ -15,43 +15,43 @@ import {
   AlertTriangle,
   MapPin,
   Home,
-} from "lucide-react";
-import { Button } from "./uicomponents/Button";
-import { InputField } from "./uicomponents/InputField";
+} from 'lucide-react';
+import { Button } from './uicomponents/Button';
+import { InputField } from './uicomponents/InputField';
 
 // ============================================================
 // DESIGN TOKENS — matching the HTML mockup exactly
 // ============================================================
 const colors = {
-  black: "#0A0A0A",
-  white: "#FFFFFF",
-  offWhite: "#F7F5F2",
-  red: "#E1261C",
-  redDeep: "#B11912",
-  redTint: "#FCE9E7",
-  gray900: "#1A1A1A",
-  gray700: "#4A4A4A",
-  gray500: "#888888",
-  gray300: "#D4D4D4",
-  gray200: "#E8E6E3",
-  gray100: "#F0EEEB",
+  black: '#0A0A0A',
+  white: '#FFFFFF',
+  offWhite: '#F7F5F2',
+  red: '#E1261C',
+  redDeep: '#B11912',
+  redTint: '#FCE9E7',
+  gray900: '#1A1A1A',
+  gray700: '#4A4A4A',
+  gray500: '#888888',
+  gray300: '#D4D4D4',
+  gray200: '#E8E6E3',
+  gray100: '#F0EEEB',
 };
 
-const PropertySearch = ({ onNext }) => {
+const PropertySearch = ({ onNext, onFieldFilled }) => {
   const [captchaToken, setCaptchaToken] = useState(null);
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [address, setAddress] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("California");
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('California');
   const addressInputRef = useRef(null);
   const autocompleteRef = useRef(null);
-  const [zipCode, setZipCode] = useState("");
+  const [zipCode, setZipCode] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [showBrowser, setShowBrowser] = useState(false);
   const [searchProgress, setSearchProgress] = useState(0);
-  const [currentSearchStep, setCurrentSearchStep] = useState("");
-  const [validationError, setValidationError] = useState("");
+  const [currentSearchStep, setCurrentSearchStep] = useState('');
+  const [validationError, setValidationError] = useState('');
   const { setUserData, setSearchResults } = useSearchStore();
 
   const setAddressRef = useRef(setAddress);
@@ -65,17 +65,17 @@ const PropertySearch = ({ onNext }) => {
   });
 
   const searchSteps = [
-    "Initializing secure connection...",
-    "Accessing California SCO database...",
-    "Cross-referencing address history...",
-    "Scanning bank records...",
-    "Checking insurance policies...",
-    "Reviewing utility deposits...",
-    "Analyzing investment accounts...",
-    "Validating geographic data...",
-    "Cross-referencing multiple sources...",
-    "Calculating total amounts...",
-    "Generating detailed report...",
+    'Initializing secure connection...',
+    'Accessing California SCO database...',
+    'Cross-referencing address history...',
+    'Scanning bank records...',
+    'Checking insurance policies...',
+    'Reviewing utility deposits...',
+    'Analyzing investment accounts...',
+    'Validating geographic data...',
+    'Cross-referencing multiple sources...',
+    'Calculating total amounts...',
+    'Generating detailed report...',
   ];
 
   useEffect(() => {
@@ -93,6 +93,17 @@ const PropertySearch = ({ onNext }) => {
     return () => clearInterval(interval);
   }, [isSearching]);
 
+  useEffect(() => {
+    const count = [
+      firstName.trim(),
+      lastName.trim(),
+      address.trim(),
+      city.trim(),
+      zipCode.trim(),
+    ].filter(Boolean).length;
+    onFieldFilled?.(count);
+  }, [firstName, lastName, address, city, zipCode]);
+
   // ─── Google Maps PlaceAutocompleteElement ─────────────────────────────────
   useEffect(() => {
     function initAutocomplete() {
@@ -103,40 +114,40 @@ const PropertySearch = ({ onNext }) => {
       const ac = new window.google.maps.places.Autocomplete(
         addressInputRef.current,
         {
-          types: ["address"],
-          componentRestrictions: { country: "us" },
-          fields: ["formatted_address", "address_components"],
+          types: ['address'],
+          componentRestrictions: { country: 'us' },
+          fields: ['formatted_address', 'address_components'],
         },
       );
       autocompleteRef.current = ac;
 
-      ac.addListener("place_changed", () => {
+      ac.addListener('place_changed', () => {
         const place = ac.getPlace();
         if (!place.address_components) return;
 
-        let streetNum = "",
-          route = "",
-          cityName = "",
-          zip = "";
+        let streetNum = '',
+          route = '',
+          cityName = '',
+          zip = '';
 
         place.address_components.forEach((c) => {
           const t = c.types ?? [];
-          if (t.includes("street_number")) streetNum = c.long_name ?? "";
-          if (t.includes("route")) route = c.long_name ?? "";
-          if (t.includes("locality")) cityName = c.long_name ?? "";
-          if (!cityName && t.includes("sublocality_level_1"))
-            cityName = c.long_name ?? "";
-          if (!cityName && t.includes("administrative_area_level_3"))
-            cityName = c.long_name ?? "";
-          if (!cityName && t.includes("administrative_area_level_2"))
-            cityName = c.long_name ?? "";
-          if (t.includes("postal_code")) zip = c.long_name ?? "";
+          if (t.includes('street_number')) streetNum = c.long_name ?? '';
+          if (t.includes('route')) route = c.long_name ?? '';
+          if (t.includes('locality')) cityName = c.long_name ?? '';
+          if (!cityName && t.includes('sublocality_level_1'))
+            cityName = c.long_name ?? '';
+          if (!cityName && t.includes('administrative_area_level_3'))
+            cityName = c.long_name ?? '';
+          if (!cityName && t.includes('administrative_area_level_2'))
+            cityName = c.long_name ?? '';
+          if (t.includes('postal_code')) zip = c.long_name ?? '';
         });
 
         const street =
-          [streetNum, route].filter(Boolean).join(" ") ||
+          [streetNum, route].filter(Boolean).join(' ') ||
           place.formatted_address ||
-          "";
+          '';
 
         setAddressRef.current(street);
         setCityRef.current(cityName);
@@ -149,21 +160,21 @@ const PropertySearch = ({ onNext }) => {
     }
 
     function loadScript() {
-      if (document.getElementById("google-maps-script")) return;
-      const s = document.createElement("script");
-      s.id = "google-maps-script";
+      if (document.getElementById('google-maps-script')) return;
+      const s = document.createElement('script');
+      s.id = 'google-maps-script';
       s.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&v=weekly`;
       s.async = true;
       s.defer = true;
       s.onload = onScriptReady;
-      s.onerror = () => console.error("Google Maps failed to load");
+      s.onerror = () => console.error('Google Maps failed to load');
       document.head.appendChild(s);
     }
 
-    const existing = document.getElementById("google-maps-script");
+    const existing = document.getElementById('google-maps-script');
     if (!existing) loadScript();
     else if (window.google?.maps?.places) initAutocomplete();
-    else existing.addEventListener("load", onScriptReady);
+    else existing.addEventListener('load', onScriptReady);
 
     return () => {
       if (autocompleteRef.current) {
@@ -178,11 +189,11 @@ const PropertySearch = ({ onNext }) => {
   // ─── Form submit ──────────────────────────────────────────────────────────
   const handleSearch = async () => {
     const missingFields = [];
-    if (!firstName.trim()) missingFields.push("first name");
-    if (!lastName.trim()) missingFields.push("last name");
-    if (!address.trim()) missingFields.push("address");
-    if (!city.trim()) missingFields.push("city");
-    if (!zipCode.trim()) missingFields.push("ZIP code");
+    if (!firstName.trim()) missingFields.push('first name');
+    if (!lastName.trim()) missingFields.push('last name');
+    if (!address.trim()) missingFields.push('address');
+    if (!city.trim()) missingFields.push('city');
+    if (!zipCode.trim()) missingFields.push('ZIP code');
 
     if (missingFields.length > 0) {
       setValidationError(
@@ -190,7 +201,7 @@ const PropertySearch = ({ onNext }) => {
           ? `Please enter your ${missingFields[0]}`
           : missingFields.length === 2
             ? `Please enter your ${missingFields[0]} and ${missingFields[1]}`
-            : `Please fill in all required fields: ${missingFields.join(", ")}`,
+            : `Please fill in all required fields: ${missingFields.join(', ')}`,
       );
       return;
     }
@@ -198,13 +209,13 @@ const PropertySearch = ({ onNext }) => {
     const zipPattern = /^\d{5}(-\d{4})?$/;
     if (!zipPattern.test(zipCode.trim())) {
       setValidationError(
-        "Please enter a valid ZIP code (e.g., 90210 or 90210-1234)",
+        'Please enter a valid ZIP code (e.g., 90210 or 90210-1234)',
       );
       return;
     }
 
     if (!captchaToken) {
-      setValidationError("Please confirm you are not a robot.");
+      setValidationError('Please confirm you are not a robot.');
       return;
     }
 
@@ -213,7 +224,7 @@ const PropertySearch = ({ onNext }) => {
       last_name: lastName.trim(),
       address: address.trim(),
       city: city.trim(),
-      state: "CA",
+      state: 'CA',
       zip_code: zipCode.trim(),
     };
 
@@ -236,24 +247,24 @@ const PropertySearch = ({ onNext }) => {
         last_name: lastName.trim().toUpperCase(),
         address: address.trim().toUpperCase(),
         city: city.trim().toUpperCase(),
-        state: "CA",
+        state: 'CA',
         zip_code: zipCode.trim(),
       };
 
       const { totalMatched, matchedProperties } = await axios
-        .post("/api/filterProperty", propertyPayload, {
-          headers: { "x-captcha-token": captchaToken },
+        .post('/api/filterProperty', propertyPayload, {
+          headers: { 'x-captcha-token': captchaToken },
         })
         .then((res) => res.data);
 
       setSearchResults(matchedProperties);
-      localStorage.setItem("propertyData", JSON.stringify(matchedProperties));
+      localStorage.setItem('propertyData', JSON.stringify(matchedProperties));
       setSearchProgress(100);
 
       if (matchedProperties.length > 0) {
-        const { data } = await axios.post("/api/users", payload);
+        const { data } = await axios.post('/api/users', payload);
         setUserData(data);
-        localStorage.setItem("userData", JSON.stringify(data));
+        localStorage.setItem('userData', JSON.stringify(data));
       }
 
       setTimeout(() => {
@@ -262,8 +273,8 @@ const PropertySearch = ({ onNext }) => {
           type: prop.property_type,
           holder: prop.owner_name,
           amount: prop.current_cash_balance || prop.cash_reported,
-          reportDate: new Date().toISOString().split("T")[0],
-          status: "Available",
+          reportDate: new Date().toISOString().split('T')[0],
+          status: 'Available',
           lastKnownAddress: `${prop.owner_street_1}, ${prop.owner_city}, ${prop.owner_state} ${prop.owner_zip}`,
         }));
 
@@ -278,8 +289,8 @@ const PropertySearch = ({ onNext }) => {
           properties: transformedProperties,
           totalAmount: transformedProperties
             .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
-            .toLocaleString("en-US", { style: "currency", currency: "USD" }),
-          searchTime: "4.2 seconds",
+            .toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
+          searchTime: '4.2 seconds',
           databasesSearched: 52,
           addressMatches: totalMatched,
         });
@@ -287,7 +298,7 @@ const PropertySearch = ({ onNext }) => {
     } catch (error) {
       console.error(error);
       setValidationError(
-        "There was a problem submitting your search. Please try again.",
+        'There was a problem submitting your search. Please try again.',
       );
       setIsSearching(false);
     }
@@ -302,10 +313,7 @@ const PropertySearch = ({ onNext }) => {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div
-      className="min-h-screen bg-[#F7F5F2]"
-       
-    >
+    <div className="min-h-screen bg-[#F7F5F2]">
       <style>{`
         /* Google Places Autocomplete Styling - Red Themed */
         .pac-container {
@@ -385,9 +393,9 @@ const PropertySearch = ({ onNext }) => {
                   className="absolute inset-0 border-2 border-[#E1261C]/0 rounded-xl pointer-events-none"
                   animate={{
                     borderColor: [
-                      "rgba(225,38,28,0)",
-                      "rgba(225,38,28,0.15)",
-                      "rgba(225,38,28,0)",
+                      'rgba(225,38,28,0)',
+                      'rgba(225,38,28,0.15)',
+                      'rgba(225,38,28,0)',
                     ],
                   }}
                   transition={{ duration: 3, repeat: Infinity }}
@@ -409,7 +417,7 @@ const PropertySearch = ({ onNext }) => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
                   >
-                    Advanced Property{" "}
+                    Advanced Property{' '}
                     <span className="text-[#E1261C] italic font-normal">
                       Search
                     </span>
@@ -420,10 +428,10 @@ const PropertySearch = ({ onNext }) => {
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.4 }}
                   >
-                    Our proprietary AI searches across{" "}
+                    Our proprietary AI searches across{' '}
                     <span className="text-[#E1261C] font-semibold">
                       52+ databases
-                    </span>{" "}
+                    </span>{' '}
                     using your personal and address history
                   </motion.div>
                 </div>
@@ -475,9 +483,9 @@ const PropertySearch = ({ onNext }) => {
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         placeholder="Enter first name"
-                        className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${firstName.trim() ? "border-[#E1261C]/50 focus:border-[#E1261C]" : "border-[#E8E6E3] focus:border-[#E1261C]"}`}
+                        className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${firstName.trim() ? 'border-[#E1261C]/50 focus:border-[#E1261C]' : 'border-[#E8E6E3] focus:border-[#E1261C]'}`}
                         onKeyPress={(e) =>
-                          e.key === "Enter" && isFormValid && handleSearch()
+                          e.key === 'Enter' && isFormValid && handleSearch()
                         }
                         disabled={isSearching}
                       />
@@ -501,9 +509,9 @@ const PropertySearch = ({ onNext }) => {
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
                         placeholder="Enter last name"
-                        className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${lastName.trim() ? "border-[#E1261C]/50 focus:border-[#E1261C]" : "border-[#E8E6E3] focus:border-[#E1261C]"}`}
+                        className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${lastName.trim() ? 'border-[#E1261C]/50 focus:border-[#E1261C]' : 'border-[#E8E6E3] focus:border-[#E1261C]'}`}
                         onKeyPress={(e) =>
-                          e.key === "Enter" && isFormValid && handleSearch()
+                          e.key === 'Enter' && isFormValid && handleSearch()
                         }
                         disabled={isSearching}
                       />
@@ -547,8 +555,8 @@ const PropertySearch = ({ onNext }) => {
                       disabled={isSearching}
                       onChange={(e) => setAddressRef.current(e.target.value)}
                       autoComplete="new-password"
-                      className={`w-full rounded-lg border-2 transition-all duration-300 text-[#0A0A0A] placeholder-[#888888] text-sm bg-white px-4 py-[0.65rem] leading-6 focus:outline-none focus:ring-0 ${address.trim() ? "border-[#E1261C]/50 focus:border-[#E1261C]" : "border-[#E8E6E3] focus:border-[#E1261C]"}`}
-                      style={{ caretColor: "#E1261C", fontFamily: "inherit" }}
+                      className={`w-full rounded-lg border-2 transition-all duration-300 text-[#0A0A0A] placeholder-[#888888] text-sm bg-white px-4 py-[0.65rem] leading-6 focus:outline-none focus:ring-0 ${address.trim() ? 'border-[#E1261C]/50 focus:border-[#E1261C]' : 'border-[#E8E6E3] focus:border-[#E1261C]'}`}
+                      style={{ caretColor: '#E1261C', fontFamily: 'inherit' }}
                     />
                     {address.trim() && (
                       <motion.div
@@ -572,9 +580,9 @@ const PropertySearch = ({ onNext }) => {
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
                         placeholder="Auto-filled from address"
-                        className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${city.trim() ? "border-[#E1261C]/50 focus:border-[#E1261C]" : "border-[#E8E6E3] focus:border-[#E1261C]"}`}
+                        className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${city.trim() ? 'border-[#E1261C]/50 focus:border-[#E1261C]' : 'border-[#E8E6E3] focus:border-[#E1261C]'}`}
                         onKeyPress={(e) =>
-                          e.key === "Enter" && isFormValid && handleSearch()
+                          e.key === 'Enter' && isFormValid && handleSearch()
                         }
                         disabled={isSearching}
                       />
@@ -599,9 +607,9 @@ const PropertySearch = ({ onNext }) => {
                         onChange={(e) => setZipCode(e.target.value)}
                         placeholder="Auto-filled from address"
                         maxLength={10}
-                        className={`remove-arrow w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${zipCode.trim() ? "border-[#E1261C]/50 focus:border-[#E1261C]" : "border-[#E8E6E3] focus:border-[#E1261C]"}`}
+                        className={`remove-arrow w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${zipCode.trim() ? 'border-[#E1261C]/50 focus:border-[#E1261C]' : 'border-[#E8E6E3] focus:border-[#E1261C]'}`}
                         onKeyPress={(e) =>
-                          e.key === "Enter" && isFormValid && handleSearch()
+                          e.key === 'Enter' && isFormValid && handleSearch()
                         }
                         disabled={isSearching}
                       />
@@ -667,12 +675,12 @@ const PropertySearch = ({ onNext }) => {
                       sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
                       onChange={(token) => {
                         setCaptchaToken(token);
-                        setValidationError("");
+                        setValidationError('');
                       }}
                       onExpired={() => {
                         setCaptchaToken(null);
                         setValidationError(
-                          "Captcha expired. Please verify again.",
+                          'Captcha expired. Please verify again.',
                         );
                       }}
                     />
@@ -687,8 +695,8 @@ const PropertySearch = ({ onNext }) => {
                       onClick={handleSearch}
                       className={`w-full py-4 text-lg font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3 ${
                         isFormValid && !isSearching && captchaToken
-                          ? "bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg"
-                          : "bg-[#D4D4D4] text-[#888888] cursor-not-allowed"
+                          ? 'bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg'
+                          : 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
                       }`}
                       disabled={!isFormValid || !captchaToken || isSearching}
                     >
@@ -700,7 +708,7 @@ const PropertySearch = ({ onNext }) => {
                               transition={{
                                 duration: 1,
                                 repeat: Infinity,
-                                ease: "linear",
+                                ease: 'linear',
                               }}
                               className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
                             />
@@ -728,20 +736,20 @@ const PropertySearch = ({ onNext }) => {
                 {[
                   {
                     icon: Globe,
-                    title: "52+ Database Search",
-                    desc: "SCO, banks, insurance, utilities, address history",
+                    title: '52+ Database Search',
+                    desc: 'SCO, banks, insurance, utilities, address history',
                     delay: 0.8,
                   },
                   {
                     icon: Shield,
-                    title: "Bank-Level Security",
-                    desc: "256-bit encryption protects your data",
+                    title: 'Bank-Level Security',
+                    desc: '256-bit encryption protects your data',
                     delay: 1.0,
                   },
                   {
                     icon: Zap,
-                    title: "Lightning Fast",
-                    desc: "Complete search in under 5 seconds",
+                    title: 'Lightning Fast',
+                    desc: 'Complete search in under 5 seconds',
                     delay: 1.2,
                   },
                 ].map((feature, index) => (
@@ -799,9 +807,9 @@ const PropertySearch = ({ onNext }) => {
                   </motion.h3>
                   <div className="flex items-center space-x-2">
                     {[
-                      { color: "bg-red-500", delay: 0 },
-                      { color: "bg-yellow-500", delay: 0.3 },
-                      { color: "bg-green-500", delay: 0.6 },
+                      { color: 'bg-red-500', delay: 0 },
+                      { color: 'bg-yellow-500', delay: 0.3 },
+                      { color: 'bg-green-500', delay: 0.6 },
                     ].map((dot, i) => (
                       <motion.div
                         key={i}
@@ -875,7 +883,7 @@ const PropertySearch = ({ onNext }) => {
                         transition={{
                           duration: 1,
                           repeat: Infinity,
-                          ease: "linear",
+                          ease: 'linear',
                         }}
                         className="w-4 h-4 border-2 border-[#E1261C]/30 border-t-[#E1261C] rounded-full"
                       />
@@ -885,12 +893,12 @@ const PropertySearch = ({ onNext }) => {
 
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     {[
-                      "California SCO",
-                      "Banking Networks",
-                      "Insurance Companies",
-                      "Utility Providers",
-                      "Investment Firms",
-                      "Address History",
+                      'California SCO',
+                      'Banking Networks',
+                      'Insurance Companies',
+                      'Utility Providers',
+                      'Investment Firms',
+                      'Address History',
                     ].map((db, index) => (
                       <motion.div
                         key={db}
@@ -905,8 +913,8 @@ const PropertySearch = ({ onNext }) => {
                         <motion.div
                           className={`w-2 h-2 rounded-full ${
                             searchProgress > index * 15
-                              ? "bg-[#E1261C]"
-                              : "bg-[#D4D4D4]"
+                              ? 'bg-[#E1261C]'
+                              : 'bg-[#D4D4D4]'
                           }`}
                           animate={
                             searchProgress > index * 15
@@ -918,8 +926,8 @@ const PropertySearch = ({ onNext }) => {
                         <span
                           className={
                             searchProgress > index * 15
-                              ? "text-[#0A0A0A]"
-                              : "text-[#888888]"
+                              ? 'text-[#0A0A0A]'
+                              : 'text-[#888888]'
                           }
                         >
                           {db}
@@ -942,7 +950,7 @@ const PropertySearch = ({ onNext }) => {
                     transition={{
                       duration: 2,
                       repeat: Infinity,
-                      ease: "linear",
+                      ease: 'linear',
                     }}
                     className="w-6 h-6 border-2 border-[#E1261C]/30 border-t-[#E1261C] rounded-full"
                   />
