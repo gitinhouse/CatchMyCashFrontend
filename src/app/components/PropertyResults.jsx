@@ -1,7 +1,7 @@
-"use client";
-import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import axios from "axios";
+'use client';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import axios from 'axios';
 import {
   CheckCircle,
   DollarSign,
@@ -10,19 +10,19 @@ import {
   AlertTriangle,
   Sparkles,
   TrendingUp,
-} from "lucide-react";
-import JackpotCelebration from "./uicomponents/JackpotCelebration";
-import { Card } from "./uicomponents/Card";
-import { Button } from "./uicomponents/Button";
-import { Badge } from "./uicomponents/Badge";
-import { useSearchStore } from "../store/searchStore";
+} from 'lucide-react';
+import JackpotCelebration from './uicomponents/JackpotCelebration';
+import { Card } from './uicomponents/Card';
+import { Button } from './uicomponents/Button';
+import { Badge } from './uicomponents/Badge';
+import { useSearchStore } from '../store/searchStore';
 
 const infoArray = [
-  "Provide your information for our investigator agreement",
-  "We automatically prepare and submit all required forms",
-  "Upload supporting documents through our secure portal",
+  'Provide your information for our investigator agreement',
+  'We automatically prepare and submit all required forms',
+  'Upload supporting documents through our secure portal',
   "We build your case and submit to the State Controller's Office",
-  "You receive your money (typically 30-60 days)",
+  'You receive your money (typically 30-60 days)',
 ];
 
 const PropertyResults = ({ propertyData, onNext, onBack }) => {
@@ -30,7 +30,7 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
   const [animatedAmount, setAnimatedAmount] = useState(0);
 
   const totalAmount = parseFloat(
-    propertyData.totalAmount.replace("$", "").replace(",", ""),
+    propertyData.totalAmount.replace('$', '').replace(',', ''),
   );
   const commission = (totalAmount * 0.1).toFixed(2);
   const netAmount = (totalAmount * 0.9).toFixed(2);
@@ -61,23 +61,20 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
     try {
       setShowCelebration(true);
       const userId = userData?._id;
-      const response = await axios.post("/api/property", {
+      const response = await axios.post('/api/property', {
         user_id: userId,
         properties: propertyData.properties,
       });
       onNext(response.data);
     } catch (err) {
-      console.error("Error saving user properties:", err);
+      console.error('Error saving user properties:', err);
     }
   };
   const propertyCount = propertyData?.properties?.length || 0;
   const isJackpot = propertyCount > 0;
 
   return (
-    <div
-      className="min-h-screen bg-[#F7F5F2]"
-       
-    >
+    <div className="min-h-screen bg-[#F7F5F2]">
       <JackpotCelebration showCelebration={showCelebration} />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -88,51 +85,52 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{
-              delay: 0.2,
-              type: "spring",
-              stiffness: 200,
-              damping: 10,
-            }}
-            className="relative inline-block mb-6"
-          >
-            <motion.div
-              animate={{
-                rotate: [0, 360],
-                scale: [1, 1.1, 1],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-              className="absolute inset-0 rounded-full bg-gradient-to-r from-[#E1261C]/30 to-[#B11912]/30 blur-xl"
-            />
-            <CheckCircle className="h-20 w-20 text-[#E1261C] relative z-10" />
-          </motion.div>
-
           <motion.h2
-            className="text-5xl font-bold text-[#0A0A0A] mb-4 font-['Fraunces']"
+            className="text-5xl font-bold text-[#0A0A0A] mb-4 font-['Fraunces'] flex flex-col items-center justify-center gap-3"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
             {isJackpot ? (
               <>
-                <span className="text-orange-500">🎉</span> Jackpot,{" "}
-                <span className="text-[#E1261C] italic">
-                  {propertyData.name.split(" ")[0]}
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{
+                    delay: 0.2,
+                    type: 'spring',
+                    stiffness: 200,
+                    damping: 10,
+                  }}
+                  className="relative block mb-6"
+                >
+                  <motion.span
+                    animate={{
+                      rotate: [0, 360],
+                      scale: [1, 1.1, 1],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    }}
+                    className="absolute inset-0 block rounded-full bg-gradient-to-r from-[#E1261C]/30 to-[#B11912]/30 blur-xl"
+                  />
+                  <CheckCircle className="h-20 w-20 text-[#E1261C] relative z-10" />
+                </motion.span>
+                <span className="flex items-center gap-1">
+                  <span className="text-orange-500">🎉</span> Jackpot,{' '}
+                  <span className="text-[#E1261C] italic">
+                    {propertyData.name.split(' ')[0]}
+                  </span>
+                  !
                 </span>
-                !
               </>
             ) : (
               <>
-                <span className="text-orange-500">😔</span> Sorry,{" "}
+                <span className="text-orange-500"></span> Sorry,{' '}
                 <span className="text-[#E1261C] italic">
-                  {propertyData.name.split(" ")[0]}
+                  {propertyData.name.split(' ')[0]}
                 </span>
               </>
             )}
@@ -146,10 +144,10 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
           >
             {isJackpot ? (
               <>
-                We found{" "}
+                We found{' '}
                 <span className="text-[#E1261C] font-semibold">
                   {propertyCount} unclaimed properties
-                </span>{" "}
+                </span>{' '}
                 in your name
               </>
             ) : (
@@ -205,7 +203,7 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
                   >
                     $
                     <span className="text-black">
-                      {animatedAmount.toLocaleString("en-US", {
+                      {animatedAmount.toLocaleString('en-US', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}
@@ -225,10 +223,10 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
                     Our Fee (10%)
                   </div>
                   <div className="text-xl font-semibold text-[#E1261C]">
-                    ${" "}
+                    ${' '}
                     <span className="text-black">
-                      {" "}
-                      {parseFloat(commission).toLocaleString("en-US", {
+                      {' '}
+                      {parseFloat(commission).toLocaleString('en-US', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}
@@ -243,16 +241,16 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
                     className="text-2xl font-bold text-[#E1261C] font-['Fraunces']"
                     animate={{
                       textShadow: [
-                        "0 0 10px rgba(225, 38, 28, 0.3)",
-                        "0 0 20px rgba(225, 38, 28, 0.5)",
-                        "0 0 10px rgba(225, 38, 28, 0.3)",
+                        '0 0 10px rgba(225, 38, 28, 0.3)',
+                        '0 0 20px rgba(225, 38, 28, 0.5)',
+                        '0 0 10px rgba(225, 38, 28, 0.3)',
                       ],
                     }}
                     transition={{ duration: 2, repeat: Infinity }}
                   >
-                    ${" "}
+                    ${' '}
                     <span className="text-black">
-                      {parseFloat(netAmount).toLocaleString("en-US", {
+                      {parseFloat(netAmount).toLocaleString('en-US', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}
@@ -300,10 +298,10 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
                             delay: index * 0.5,
                           }}
                         >
-                          ${" "}
+                          ${' '}
                           <span className="text-black">
                             {parseFloat(property.amount).toLocaleString(
-                              "en-US",
+                              'en-US',
                               {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2,
@@ -435,25 +433,25 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
               onClick={handleClaim}
               disabled={
                 parseFloat(
-                  propertyData.totalAmount.replace("$", "").replace(",", ""),
+                  propertyData.totalAmount.replace('$', '').replace(',', ''),
                 ) === 0.0
               }
               className={`px-6 sm:px-16 py-6 text-xl font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3 mx-auto ${
                 parseFloat(
-                  propertyData.totalAmount.replace("$", "").replace(",", ""),
+                  propertyData.totalAmount.replace('$', '').replace(',', ''),
                 ) > 0
-                  ? "bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg"
-                  : "bg-[#D4D4D4] text-[#888888] cursor-not-allowed"
+                  ? 'bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg'
+                  : 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
               }`}
             >
               <span className="relative z-10 flex items-center gap-3">
                 Claim My $
                 {parseFloat(
-                  propertyData.totalAmount.replace("$", "").replace(",", ""),
-                ).toLocaleString("en-US", {
+                  propertyData.totalAmount.replace('$', '').replace(',', ''),
+                ).toLocaleString('en-US', {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
-                })}{" "}
+                })}{' '}
                 Now
                 <motion.span
                   animate={{ scale: [1, 1.2, 1] }}

@@ -17,7 +17,7 @@ import {
 import { useSearchStore } from '../store/searchStore';
 import { QRCodeSVG } from 'qrcode.react';
 
-const DocumentUpload = ({ onNext }) => {
+const DocumentUpload = ({ onNext, onFieldFilled }) => {
   const [uploadedDocs, setUploadedDocs] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState({});
   const [isScanning, setIsScanning] = useState(false);
@@ -221,6 +221,15 @@ const DocumentUpload = ({ onNext }) => {
   }, [docusignComplete]);
 
   useEffect(() => {
+    const requiredDocIds = ['id', 'ssn', 'address', 'agreement'];
+    const uploadedRequired = requiredDocIds.filter((id) =>
+      uploadedDocs.includes(id),
+    ).length;
+    const docusignCount = docusignComplete ? 1 : 0;
+    onFieldFilled?.(uploadedRequired + docusignCount);
+  }, [uploadedDocs, docusignComplete]);
+
+  useEffect(() => {
     async function createCaseIfSigned() {
       if (hasRun.current) return;
       hasRun.current = true;
@@ -412,12 +421,16 @@ const DocumentUpload = ({ onNext }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F5F2] pt-4"  >
+    <div className="min-h-screen bg-[#F7F5F2] pt-4">
       {/* Header */}
       <div className="bg-white border-b border-[#E8E6E3] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <h1 className="text-3xl font-bold text-[#0A0A0A] font-['Fraunces']">CatchMyCash</h1>
-          <p className="text-[#4A4A4A] mt-1">Document Collection & Signatures</p>
+          <h1 className="text-3xl font-bold text-[#0A0A0A] font-['Fraunces']">
+            CatchMyCash
+          </h1>
+          <p className="text-[#4A4A4A] mt-1">
+            Document Collection & Signatures
+          </p>
         </div>
       </div>
 
@@ -428,10 +441,13 @@ const DocumentUpload = ({ onNext }) => {
             <FileText className="h-8 w-8 text-[#E1261C]" />
           </div>
           <h2 className="text-3xl font-bold text-[#0A0A0A] mb-4 font-['Fraunces']">
-            Sign <span className="text-[#E1261C] italic font-normal">Documents</span> & Upload ID
+            Sign{' '}
+            <span className="text-[#E1261C] italic font-normal">Documents</span>{' '}
+            & Upload ID
           </h2>
           <p className="text-[#4A4A4A] mb-6">
-            Complete the legal process by signing forms and providing identity verification
+            Complete the legal process by signing forms and providing identity
+            verification
           </p>
         </div>
 
@@ -440,7 +456,10 @@ const DocumentUpload = ({ onNext }) => {
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
-              Step 1: Digital <span className="text-[#E1261C] italic font-normal">Signatures</span>
+              Step 1: Digital{' '}
+              <span className="text-[#E1261C] italic font-normal">
+                Signatures
+              </span>
             </h3>
             {docusignComplete && (
               <Badge className="bg-[#003f2f] text-white border-none">
@@ -453,7 +472,8 @@ const DocumentUpload = ({ onNext }) => {
           {!docusignComplete ? (
             <div>
               <p className="text-[#4A4A4A] mb-4">
-                Sign your investigator agreement and authorization forms via DocuSign
+                Sign your investigator agreement and authorization forms via
+                DocuSign
               </p>
               <div className="bg-[#FCE9E7] border border-[#E8E6E3] rounded-lg p-4 mb-4">
                 <h4 className="font-medium text-[#0A0A0A] mb-2 font-['JetBrains_Mono']">
@@ -479,7 +499,9 @@ const DocumentUpload = ({ onNext }) => {
                 className="bg-[#E1261C] hover:bg-[#B11912] text-white px-4 py-3 rounded-lg transition-all shadow-md hover:shadow-lg"
                 disabled={isDocuSignLoading}
               >
-                {isDocuSignLoading ? 'Processing for DocuSign...' : 'Open DocuSign to Sign Documents'}
+                {isDocuSignLoading
+                  ? 'Processing for DocuSign...'
+                  : 'Open DocuSign to Sign Documents'}
               </button>
             </div>
           ) : (
@@ -497,16 +519,26 @@ const DocumentUpload = ({ onNext }) => {
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
-              Step 2: Upload <span className="text-[#E1261C] italic font-normal">Supporting Documents</span>
+              Step 2: Upload{' '}
+              <span className="text-[#E1261C] italic font-normal">
+                Supporting Documents
+              </span>
             </h3>
-            <Badge className={requiredDocsUploaded ? 'bg-[#003f2f] text-white border-none' : 'bg-[#D4D4D4] text-[#4A4A4A] border-none'}>
+            <Badge
+              className={
+                requiredDocsUploaded
+                  ? 'bg-[#003f2f] text-white border-none'
+                  : 'bg-[#D4D4D4] text-[#4A4A4A] border-none'
+              }
+            >
               {uploadedDocs.length}/
               {requiredDocuments.filter((d) => d.required).length} Required
             </Badge>
           </div>
 
           <p className="text-[#4A4A4A] mb-3">
-            Upload or scan your identity documents. We automatically transfer these to your case file.
+            Upload or scan your identity documents. We automatically transfer
+            these to your case file.
           </p>
 
           {/* Document List */}
@@ -581,7 +613,8 @@ const DocumentUpload = ({ onNext }) => {
         <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 mb-8 shadow-md relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
           <h3 className="text-lg font-bold text-[#0A0A0A] mb-4 font-['Fraunces']">
-            Completion <span className="text-[#E1261C] italic font-normal">Status</span>
+            Completion{' '}
+            <span className="text-[#E1261C] italic font-normal">Status</span>
           </h3>
           <div className="space-y-3">
             <div className="flex items-center justify-between py-2 border-b border-[#E8E6E3]">
@@ -612,10 +645,14 @@ const DocumentUpload = ({ onNext }) => {
                   <CheckCircle className="h-10 w-10 text-[#E1261C]" />
                 </div>
                 <h3 className="text-2xl font-bold text-[#0A0A0A] mb-2 font-['Fraunces']">
-                  All Documents <span className="text-[#E1261C] italic font-normal">Collected!</span>
+                  All Documents{' '}
+                  <span className="text-[#E1261C] italic font-normal">
+                    Collected!
+                  </span>
                 </h3>
                 <p className="text-[#4A4A4A]">
-                  Your case is ready for submission to the State Controller's Office
+                  Your case is ready for submission to the State Controller's
+                  Office
                 </p>
               </div>
               <button
@@ -669,10 +706,14 @@ const DocumentUpload = ({ onNext }) => {
               ✕
             </button>
             <h3 className="text-lg font-bold text-[#0A0A0A] mb-4 font-['Fraunces']">
-              Scan to Upload: <span className="text-[#E1261C] italic font-normal">{qrPopupDoc.docName}</span>
+              Scan to Upload:{' '}
+              <span className="text-[#E1261C] italic font-normal">
+                {qrPopupDoc.docName}
+              </span>
             </h3>
             <p className="text-[#4A4A4A] mb-4 text-sm">
-              Use your mobile device to scan the QR code below to upload this document.
+              Use your mobile device to scan the QR code below to upload this
+              document.
             </p>
             <div className="flex justify-center mb-4">
               <QRCodeSVG

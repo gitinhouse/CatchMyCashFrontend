@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
   Clock,
@@ -13,26 +13,26 @@ import {
   Award,
   Menu,
   X,
-} from "lucide-react";
-import { ImageWithFallback } from "./uicomponents/ImageWithFallback";
-import { Button } from "./uicomponents/Button";
+} from 'lucide-react';
+import { ImageWithFallback } from './uicomponents/ImageWithFallback';
+import { Button } from './uicomponents/Button';
 
 // ============================================================
 // DESIGN TOKENS — matching the HTML mockup exactly
 // ============================================================
 const colors = {
-  black: "#0A0A0A",
-  white: "#FFFFFF",
-  offWhite: "#F7F5F2",
-  red: "#E1261C",
-  redDeep: "#B11912",
-  redTint: "#FCE9E7",
-  gray900: "#1A1A1A",
-  gray700: "#4A4A4A",
-  gray500: "#888888",
-  gray300: "#D4D4D4",
-  gray200: "#E8E6E3",
-  gray100: "#F0EEEB",
+  black: '#0A0A0A',
+  white: '#FFFFFF',
+  offWhite: '#F7F5F2',
+  red: '#E1261C',
+  redDeep: '#B11912',
+  redTint: '#FCE9E7',
+  gray900: '#1A1A1A',
+  gray700: '#4A4A4A',
+  gray500: '#888888',
+  gray300: '#D4D4D4',
+  gray200: '#E8E6E3',
+  gray100: '#F0EEEB',
 };
 
 // ============================================================
@@ -41,21 +41,21 @@ const colors = {
 
 const SolutionArray = [
   {
-    num: "1",
-    title: "We Search & Find",
-    desc: "Our advanced system scans all California databases",
+    num: '1',
+    title: 'We Search & Find',
+    desc: 'Our advanced system scans all California databases',
     delay: 2.8,
   },
   {
-    num: "2",
-    title: "We Handle Everything",
-    desc: "Professional case preparation and submission",
+    num: '2',
+    title: 'We Handle Everything',
+    desc: 'Professional case preparation and submission',
     delay: 3.0,
   },
   {
-    num: "3",
-    title: "You Get Paid",
-    desc: "94% success rate - money in your account",
+    num: '3',
+    title: 'You Get Paid',
+    desc: '94% success rate - money in your account',
     delay: 3.2,
   },
 ];
@@ -63,18 +63,18 @@ const SolutionArray = [
 const ResonsArray = [
   {
     icon: Clock,
-    title: "Extremely Time-Consuming",
-    desc: "Average claim takes 6-18 months to process",
+    title: 'Extremely Time-Consuming',
+    desc: 'Average claim takes 6-18 months to process',
   },
   {
     icon: FileText,
-    title: "Complex Legal Documentation",
-    desc: "Requires multiple forms, notarizations, and proof documents",
+    title: 'Complex Legal Documentation',
+    desc: 'Requires multiple forms, notarizations, and proof documents',
   },
   {
     icon: AlertTriangle,
-    title: "High Rejection Rate",
-    desc: "Over 70% of DIY claims are rejected due to errors",
+    title: 'High Rejection Rate',
+    desc: 'Over 70% of DIY claims are rejected due to errors',
   },
 ];
 
@@ -99,15 +99,15 @@ const LandingPage = ({ onNext }) => {
   }, []);
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
       maximumFractionDigits: 0,
     }).format(amount);
   };
 
   const handleLogin = async () => {
-    router.push("/userLogin");
+    router.push('/userLogin');
   };
 
   return (
@@ -198,17 +198,17 @@ const LandingPage = ({ onNext }) => {
             {
               icon: TrendingUp,
               value: formatCurrency(stats.totalRecovered),
-              label: "Total Recovered",
+              label: 'Total Recovered',
             },
             {
               icon: Users,
               value: stats.happyClients.toLocaleString(),
-              label: "Happy Clients",
+              label: 'Happy Clients',
             },
             {
               icon: Award,
               value: `${stats.successRate}%`,
-              label: "Success Rate",
+              label: 'Success Rate',
             },
           ].map((item, idx) => (
             <motion.div
@@ -239,8 +239,8 @@ const LandingPage = ({ onNext }) => {
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]">
             <motion.div
               className="h-full w-full bg-gradient-to-r from-transparent via-white/30 to-transparent"
-              animate={{ x: ["-100%", "100%"] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              animate={{ x: ['-100%', '100%'] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
             />
           </div>
 
@@ -313,8 +313,8 @@ const LandingPage = ({ onNext }) => {
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]">
             <motion.div
               className="h-full w-full bg-gradient-to-r from-transparent via-white/30 to-transparent"
-              animate={{ x: ["-100%", "100%"] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              animate={{ x: ['-100%', '100%'] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
             />
           </div>
 
@@ -388,11 +388,7 @@ const LandingPage = ({ onNext }) => {
             className="flex items-center justify-center mb-4"
             whileHover={{ scale: 1.1 }}
           >
-            <motion.div
-              animate={{ rotate: [0, 360] }}
-              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-              className="w-10 h-10 bg-[#FCE9E7] rounded-full flex items-center justify-center"
-            >
+            <motion.div className="w-10 h-10 bg-[#FCE9E7] rounded-full flex items-center justify-center">
               <DollarSign className="h-5 w-5 text-[#E1261C]" />
             </motion.div>
             <h3 className="sm:text-[24px] text-[20px] font-bold text-[#0A0A0A] ml-2 font-['Fraunces']">
@@ -401,24 +397,9 @@ const LandingPage = ({ onNext }) => {
           </motion.div>
 
           <motion.div className="relative" whileHover={{ scale: 1.1 }}>
-            <motion.div
-              className="text-4xl sm:text-6xl font-bold text-[#E1261C] mb-2 relative z-10 font-['Fraunces']"
-              animate={{
-                textShadow: [
-                  "0 0 20px rgba(225, 38, 28, 0.3)",
-                  "0 0 40px rgba(225, 38, 28, 0.8)",
-                  "0 0 20px rgba(225, 38, 28, 0.3)",
-                ],
-              }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
+            <motion.div className="text-4xl sm:text-6xl font-bold text-[#E1261C] mb-2 relative z-10 font-['Fraunces']">
               <span className="text-black"> 10</span>%
             </motion.div>
-            <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-transparent via-[#E1261C]/10 to-transparent"
-              animate={{ x: ["-100%", "100%"] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            />
           </motion.div>
 
           <div className="text-[#4A4A4A] mb-6 sm:text-[18px] text-[16px]">
@@ -486,10 +467,10 @@ const LandingPage = ({ onNext }) => {
             animate={{ opacity: 1 }}
             transition={{ delay: 4.4 }}
           >
-            Join{" "}
+            Join{' '}
             <span className="text-[#E1261C] font-semibold">
               {stats.happyClients.toLocaleString()}+
-            </span>{" "}
+            </span>{' '}
             people who have recovered their money
           </motion.div>
         </motion.div>
