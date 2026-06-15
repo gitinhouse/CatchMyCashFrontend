@@ -43,6 +43,7 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
     setUserLogin,
     searchResults,
     setSearchResults,
+    ownPropertyIds,
   } = useSearchStore();
   const [errors, setErrors] = useState({
     phone: '',
@@ -326,18 +327,14 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
 
       const { firstName, lastName } = getFirstAndLastName(formData.fullName);
       const [dobYear, dobMonth, dobDay] = formData.dateOfBirth.split('-');
-      const propertyIds = Array.isArray(searchResults)
-        ? searchResults.map((item) => item?.property_id).filter(Boolean)
-        : [];
 
-      const SQSPayloadData = {
+      const claimSubmissionPayloadData = {
         userId: userData._id,
-        propertyId: propertyIds,
-        formData: {
+        property_ids: ownPropertyIds,
+        form_data: {
           firstName: firstName,
           lastName: lastName,
           email: formData.email,
-          emailConfirm: formData.email,
           phone1: formData.phone,
           taxID: formData.ssn,
           dobMonth: dobMonth,
@@ -350,12 +347,18 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
           postalCode: formData.zipCode,
           countryCode: 'USA',
           taxIdentifierType: 'Individual',
-          sourceOfClaim: 'Media',
-          assistedByFinder: 'false',
+          sourceOfClaim: '1',
+          assistedByFinder: false,
         },
+        max_concurrent: 1,
+        max_search_pages: 1,
+        post_click_wait_secs: 10,
+        enable_document_upload: false,
+        claim_id_override: '',
+        documents_to_upload: [],
       };
 
-      await axios.post('/api/sqs', SQSPayloadData);
+      await axios.post('/api/claim-submission', claimSubmissionPayloadData);
       onNext(data);
     } catch (err) {
       console.error('Error saving user properties:', err);
