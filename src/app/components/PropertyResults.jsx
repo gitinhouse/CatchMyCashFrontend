@@ -28,15 +28,25 @@ const infoArray = [
 const PropertyResults = ({ propertyData, onNext, onBack }) => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [animatedAmount, setAnimatedAmount] = useState(0);
+  const [selectedProperties, setSelectedProperties] = useState([]);
 
   const totalAmount = parseFloat(
     propertyData.totalAmount.replace('$', '').replace(',', ''),
   );
   const commission = (totalAmount * 0.1).toFixed(2);
   const netAmount = (totalAmount * 0.9).toFixed(2);
-  const { userData } = useSearchStore();
+  const { userData, ownPropertyIds, setOwnPropertyIds } = useSearchStore();
+
+  const handleCheckboxChange = (propertyId) => {
+    setSelectedProperties((prev) =>
+      prev.includes(propertyId)
+        ? prev.filter((id) => id !== propertyId)
+        : [...prev, propertyId],
+    );
+  };
 
   useEffect(() => {
+    console.log('---user data--', userData);
     setShowCelebration(true);
 
     const duration = 2000;
@@ -59,6 +69,15 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
 
   const handleClaim = async () => {
     try {
+      if (isButtonDisabled) return;
+
+      const selectedPropertyObjects = propertyData.properties.filter(
+        (property) => selectedProperties.includes(property.id),
+      );
+      setOwnPropertyIds(selectedProperties);
+      console.log('Selected Property IDs:', selectedProperties);
+      console.log('Selected Properties:', selectedPropertyObjects);
+
       setShowCelebration(true);
       const userId = userData?._id;
       const response = await axios.post('/api/property', {
@@ -72,6 +91,13 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
   };
   const propertyCount = propertyData?.properties?.length || 0;
   const isJackpot = propertyCount > 0;
+
+  const totalAmountValue = parseFloat(
+    propertyData.totalAmount.replace('$', '').replace(/,/g, ''),
+  );
+
+  const isButtonDisabled =
+    totalAmountValue <= 0 || selectedProperties.length === 0;
 
   return (
     <div className="min-h-screen bg-[#F7F5F2]">
@@ -284,6 +310,12 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
               >
                 <div className="bg-white p-6 border border-[#E8E6E3] rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
                   <div className="flex items-start justify-between flex-wrap gap-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedProperties.includes(property.id)}
+                      onChange={() => handleCheckboxChange(property.id)}
+                      className="mt-2 h-5 w-5 cursor-pointer accent-[#E1261C]"
+                    />
                     <div className="flex-1">
                       <div className="flex items-center flex-wrap gap-3 mb-2">
                         <span className="bg-[#FCE9E7] text-[#E1261C] text-xs font-semibold px-3 py-1 rounded-full border border-[#E8E6E3]">
@@ -431,24 +463,29 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <button
               onClick={handleClaim}
-              disabled={
-                parseFloat(
-                  propertyData.totalAmount.replace('$', '').replace(',', ''),
-                ) === 0.0
-              }
+              // disabled={
+              //   selectedProperties.length === 0 ||
+              //   parseFloat(
+              //     propertyData.totalAmount.replace('$', '').replace(',', ''),
+              //   ) === 0.0
+              // }
+              disabled={isButtonDisabled}
+              // className={`px-6 sm:px-16 py-6 text-xl font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3 mx-auto ${
+              //   parseFloat(
+              //     propertyData.totalAmount.replace('$', '').replace(',', ''),
+              //   ) > 0
+              //     ? 'bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg'
+              //     : 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
+              // }`}
               className={`px-6 sm:px-16 py-6 text-xl font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3 mx-auto ${
-                parseFloat(
-                  propertyData.totalAmount.replace('$', '').replace(',', ''),
-                ) > 0
+                !isButtonDisabled
                   ? 'bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg'
-                  : 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
+                  : 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed opacity-60'
               }`}
             >
               <span className="relative z-10 flex items-center gap-3">
                 Claim My $
-                {parseFloat(
-                  propertyData.totalAmount.replace('$', '').replace(',', ''),
-                ).toLocaleString('en-US', {
+                {totalAmountValue.toLocaleString('en-US', {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}{' '}
