@@ -71,8 +71,8 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
     try {
       if (isButtonDisabled) return;
 
-      const selectedPropertyObjects = propertyData.properties.filter(
-        (property) => selectedProperties.includes(property.id),
+      const selectedPropertyObjects = uniqueProperties.filter((property) =>
+        selectedProperties.includes(property.id),
       );
       setOwnPropertyIds(selectedProperties);
       console.log('Selected Property IDs:', selectedProperties);
@@ -89,8 +89,6 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
       console.error('Error saving user properties:', err);
     }
   };
-  const propertyCount = propertyData?.properties?.length || 0;
-  const isJackpot = propertyCount > 0;
 
   const totalAmountValue = parseFloat(
     propertyData.totalAmount.replace('$', '').replace(/,/g, ''),
@@ -98,6 +96,14 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
 
   const isButtonDisabled =
     totalAmountValue <= 0 || selectedProperties.length === 0;
+
+  const uniqueProperties = Array.from(
+    new Map(
+      propertyData.properties.map((property) => [property.id, property]),
+    ).values(),
+  );
+  const propertyCount = uniqueProperties?.length || 0;
+  const isJackpot = propertyCount > 0;
 
   return (
     <div className="min-h-screen bg-[#F7F5F2]">
@@ -299,8 +305,8 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
             <Sparkles className="h-5 w-5 text-[#E1261C]" />
             Property Details
           </h3>
-          {propertyData.properties.length > 0 ? (
-            propertyData.properties.map((property, index) => (
+          {uniqueProperties.length > 0 ? (
+            uniqueProperties.map((property, index) => (
               <motion.div
                 key={property.id}
                 initial={{ opacity: 0, x: -20 }}
