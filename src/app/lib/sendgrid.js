@@ -6,7 +6,7 @@ if (!process.env.SENDGRID_API_KEY) {
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-export async function sendEmailTwilio({ to, subject, text, html }) {
+export async function sendEmailTwilio({ to, subject, text, html, replyTo }) {
   const msg = {
     to,
     from: process.env.SENDGRID_FROM_EMAIL,
@@ -14,6 +14,10 @@ export async function sendEmailTwilio({ to, subject, text, html }) {
     text,
     html,
   };
+
+  if (replyTo) {
+    msg.replyTo = replyTo;
+  }
 
   try {
     await sgMail.send(msg);
