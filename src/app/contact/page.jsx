@@ -9,12 +9,34 @@ export default function ContactPage() {
     subject: 'General question',
     message: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    alert('Thank you for your message! We\'ll get back to you within one business day.');
-    setFormData({ name: '', email: '', subject: 'General question', message: '' });
+    setSubmitError('');
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to send message');
+      }
+
+      alert('Thank you for your message! We\'ll get back to you within one business day.');
+      setFormData({ name: '', email: '', subject: 'General question', message: '' });
+    } catch (error) {
+      setSubmitError(error.message || 'There was a problem sending your message. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -116,9 +138,16 @@ export default function ContactPage() {
                   required
                 />
               </div>
-              <button type="submit" className="inline-flex items-center gap-2 px-8 py-4 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm">
-                Send message →
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-2 px-8 py-4 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? 'Sending...' : 'Send message →'}
               </button>
+              {submitError && (
+                <p className="mt-4 text-sm text-[#E1261C]">{submitError}</p>
+              )}
             </form>
           </div>
         </div>
