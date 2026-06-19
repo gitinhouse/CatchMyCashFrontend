@@ -317,14 +317,6 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
         userType: 'User',
       };
 
-      const res = await axios.post('/api/register', payloadData);
-      setUserLogin(res.data);
-      localStorage.setItem('userLogin', JSON.stringify(res.data));
-
-      const { data } = await axios.post('/api/legalDetails', payload);
-      setUserAgreement(data);
-      localStorage.setItem('userAgreement', JSON.stringify(data));
-
       const { firstName, lastName } = getFirstAndLastName(formData.fullName);
       const [dobYear, dobMonth, dobDay] = formData.dateOfBirth.split('-');
 
@@ -358,7 +350,26 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
         documents_to_upload: [],
       };
 
-      await axios.post('/api/claim-submission', claimSubmissionPayloadData);
+      const { data: claimSubmission } = await axios.post(
+        '/api/claim-submission',
+        claimSubmissionPayloadData,
+      );
+
+      const res = await axios.post('/api/register', payloadData);
+      setUserLogin(res.data);
+      localStorage.setItem('userLogin', JSON.stringify(res.data));
+
+      const { data } = await axios.post('/api/legalDetails', {
+        ...payload,
+        claimSubmission,
+      });
+      setUserAgreement(data);
+      localStorage.setItem('userAgreement', JSON.stringify(data));
+
+      if (data.userCase) {
+        localStorage.setItem('userCase', JSON.stringify(data.userCase));
+      }
+
       onNext(data);
     } catch (err) {
       console.error('Error saving user properties:', err);

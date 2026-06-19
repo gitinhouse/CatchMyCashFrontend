@@ -8,10 +8,18 @@ const UserCasesSchema = new mongoose.Schema({
   },
   case_id: { type: String, required: true },
   status: { type: Boolean, default: true },
-  automation_id:{type: String},
-  claim_id:{ type: String },
-  claim_status:{ type: String, enum: ['Success', 'Pending', 'Failed'], },
-  claim_message:{type: String, default:""},
+  automation_id: { type: String },
+  claim_id: { type: String },
+  claim_status: {
+    type: String,
+    enum: ['Success', 'Pending', 'Failed'],
+  },
+  claim_message: { type: String, default: '' },
+  task_id: { type: String },
+  property_ids: [{ type: String }],
+  task_status: { type: String },
+  poll_url: { type: String },
+  submitted_at: { type: Date },
   createdAt: { type: Date, default: Date.now },
 });
 
