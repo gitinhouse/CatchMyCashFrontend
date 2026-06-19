@@ -117,6 +117,20 @@ function buildAddressQuery(address) {
     })),
   };
 }
+
+function getUniquePropertiesById(properties) {
+  return Array.from(
+    properties
+      .reduce((map, property) => {
+        if (!map.has(property.property_id)) {
+          map.set(property.property_id, property);
+        }
+        return map;
+      }, new Map())
+      .values(),
+  );
+}
+
 export async function POST(req) {
   try {
     const captchaToken = req.headers.get('x-captcha-token');
@@ -172,7 +186,9 @@ export async function POST(req) {
       owner_zip: zip_code,
     };
 
-    const totalMatched = await AllProperty.countDocuments(query);
+    const totalMatched = (
+      await AllProperty.distinct('property_id', query)
+    ).length;
 
     const matchedProperties = await AllProperty.find(query)
       .skip((page - 1) * limit)
@@ -181,12 +197,14 @@ export async function POST(req) {
         'property_id property_type owner_name owner_street_1 owner_city owner_state owner_zip cash_reported shares_reported current_cash_balance',
       );
 
+    const uniqueMatchedProperties = getUniquePropertiesById(matchedProperties);
+
     return NextResponse.json(
       {
         totalMatched,
         currentPage: page,
         pageSize: limit,
-        matchedProperties,
+        matchedProperties: uniqueMatchedProperties,
       },
       { status: 200 },
     );

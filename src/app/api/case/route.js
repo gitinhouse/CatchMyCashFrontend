@@ -4,21 +4,7 @@ import UserCases from "../../models/userCases";
 import User from "../../models/UserInformation";
 import { Types } from "mongoose";
 import { verifyToken } from "../../lib/verifyToken";
-
-async function generateCaseNumber() {
-  const year = new Date().getFullYear();
-  let unique = false;
-  let caseNumber;
-
-  while (!unique) {
-    const randomNum = Math.floor(100000 + Math.random() * 900000);
-    caseNumber = `CM-${year}-${randomNum}`;
-    const exists = await UserCases.findOne({ case_id: caseNumber });
-    if (!exists) unique = true;
-  }
-
-  return caseNumber;
-}
+import { generateCaseNumber } from "../../lib/generateCaseNumber";
 
 export async function POST(req) {
   try {
@@ -39,6 +25,11 @@ export async function POST(req) {
         { error: "User not found with provided user_id" },
         { status: 404 }
       );
+    }
+
+    const existingCase = await UserCases.findOne({ user_id });
+    if (existingCase) {
+      return NextResponse.json(existingCase, { status: 200 });
     }
 
     const case_id = await generateCaseNumber();

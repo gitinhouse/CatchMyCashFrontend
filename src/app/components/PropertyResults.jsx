@@ -25,14 +25,42 @@ const infoArray = [
   'You receive your money (typically 30-60 days)',
 ];
 
+const parsePropertyAmount = (amount) => parseFloat(amount || 0) || 0;
+
+const getUniquePropertiesWithTotals = (properties = []) =>
+  Array.from(
+    properties
+      .reduce((map, property) => {
+        const amount = parsePropertyAmount(property.amount);
+        const existing = map.get(property.id);
+
+        if (existing) {
+          map.set(property.id, {
+            ...existing,
+            amount: parsePropertyAmount(existing.amount) + amount,
+          });
+        } else {
+          map.set(property.id, { ...property, amount });
+        }
+
+        return map;
+      }, new Map())
+      .values(),
+  );
+
+const getTotalPropertyAmount = (properties = []) =>
+  properties.reduce(
+    (sum, property) => sum + parsePropertyAmount(property.amount),
+    0,
+  );
+
 const PropertyResults = ({ propertyData, onNext, onBack }) => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [animatedAmount, setAnimatedAmount] = useState(0);
   const [selectedProperties, setSelectedProperties] = useState([]);
 
-  const totalAmount = parseFloat(
-    propertyData.totalAmount.replace('$', '').replace(',', ''),
-  );
+  const uniqueProperties = getUniquePropertiesWithTotals(propertyData.properties);
+  const totalAmount = getTotalPropertyAmount(propertyData.properties);
   const commission = (totalAmount * 0.1).toFixed(2);
   const netAmount = (totalAmount * 0.9).toFixed(2);
   const { userData, ownPropertyIds, setOwnPropertyIds } = useSearchStore();
@@ -90,18 +118,11 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
     }
   };
 
-  const totalAmountValue = parseFloat(
-    propertyData.totalAmount.replace('$', '').replace(/,/g, ''),
-  );
+  const totalAmountValue = totalAmount;
 
   const isButtonDisabled =
     totalAmountValue <= 0 || selectedProperties.length === 0;
 
-  const uniqueProperties = Array.from(
-    new Map(
-      propertyData.properties.map((property) => [property.id, property]),
-    ).values(),
-  );
   const propertyCount = uniqueProperties?.length || 0;
   const isJackpot = propertyCount > 0;
 
