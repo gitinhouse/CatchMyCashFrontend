@@ -122,14 +122,44 @@ function getUniquePropertiesById(properties) {
   return Array.from(
     properties
       .reduce((map, property) => {
-        if (!map.has(property.property_id)) {
-          map.set(property.property_id, property);
+        const propertyId = String(property.property_id ?? '').trim();
+        if (!propertyId || map.has(propertyId)) {
+          return map;
         }
+        map.set(propertyId, property);
         return map;
       }, new Map())
       .values(),
   );
 }
+
+function normalizePropertyIdExpression() {
+  return {
+    $trim: {
+      input: {
+        $convert: {
+          input: '$property_id',
+          to: 'string',
+          onError: '',
+          onNull: '',
+        },
+      },
+    },
+  };
+}
+
+const MATCHED_PROPERTY_FIELDS = {
+  property_id: 1,
+  property_type: 1,
+  owner_name: 1,
+  owner_street_1: 1,
+  owner_city: 1,
+  owner_state: 1,
+  owner_zip: 1,
+  cash_reported: 1,
+  shares_reported: 1,
+  current_cash_balance: 1,
+};
 
 export async function POST(req) {
   try {
@@ -186,16 +216,40 @@ export async function POST(req) {
       owner_zip: zip_code,
     };
 
-    const totalMatched = (
-      await AllProperty.distinct('property_id', query)
-    ).length;
+    const normalizedPropertyId = normalizePropertyIdExpression();
 
-    const matchedProperties = await AllProperty.find(query)
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .select(
-        'property_id property_type owner_name owner_street_1 owner_city owner_state owner_zip cash_reported shares_reported current_cash_balance',
-      );
+    const totalMatchedResult = await AllProperty.aggregate([
+      { $match: query },
+      { $group: { _id: normalizedPropertyId } },
+      { $match: { _id: { $ne: '' } } },
+      { $count: 'total' },
+    ]);
+    const totalMatched = totalMatchedResult[0]?.total ?? 0;
+
+    const matchedProperties = await AllProperty.aggregate([
+      { $match: query },
+      { $sort: { _id: 1 } },
+      {
+        $group: {
+          _id: normalizedPropertyId,
+          property_id: { $first: '$property_id' },
+          property_type: { $first: '$property_type' },
+          owner_name: { $first: '$owner_name' },
+          owner_street_1: { $first: '$owner_street_1' },
+          owner_city: { $first: '$owner_city' },
+          owner_state: { $first: '$owner_state' },
+          owner_zip: { $first: '$owner_zip' },
+          cash_reported: { $first: '$cash_reported' },
+          shares_reported: { $first: '$shares_reported' },
+          current_cash_balance: { $first: '$current_cash_balance' },
+        },
+      },
+      { $match: { _id: { $ne: '' } } },
+      { $sort: { _id: 1 } },
+      { $skip: (page - 1) * limit },
+      { $limit: limit },
+      { $project: { _id: 0, ...MATCHED_PROPERTY_FIELDS } },
+    ]);
 
     const uniqueMatchedProperties = getUniquePropertiesById(matchedProperties);
 
