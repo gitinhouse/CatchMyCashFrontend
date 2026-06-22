@@ -4,7 +4,7 @@ import { sendEmailTwilio } from '../../lib/sendgrid';
 export const runtime = 'nodejs';
 
 const CONTACT_TO_EMAIL =
-  process.env.CONTACT_TO_EMAIL || 'chirag.mahajan@brihaspatitech.com';
+  process.env.CONTACT_TO_EMAIL || 'misterevancarter@gmail.com';
 
 export async function POST(req) {
   try {
