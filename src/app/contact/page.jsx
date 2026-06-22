@@ -11,10 +11,12 @@ export default function ContactPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [submitSuccess, setSubmitSuccess] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitError('');
+    setSubmitSuccess('');
     setIsSubmitting(true);
 
     try {
@@ -30,7 +32,9 @@ export default function ContactPage() {
         throw new Error(data.message || 'Failed to send message');
       }
 
-      alert('Thank you for your message! We\'ll get back to you within one business day.');
+      setSubmitSuccess(
+        "Thank you for your message! We'll get back to you within one business day.",
+      );
       setFormData({ name: '', email: '', subject: 'General question', message: '' });
     } catch (error) {
       setSubmitError(error.message || 'There was a problem sending your message. Please try again.');
@@ -147,6 +151,9 @@ export default function ContactPage() {
               </button>
               {submitError && (
                 <p className="mt-4 text-sm text-[#E1261C]">{submitError}</p>
+              )}
+              {submitSuccess && (
+                <p className="mt-4 text-sm text-[#00C896]">{submitSuccess}</p>
               )}
             </form>
           </div>
