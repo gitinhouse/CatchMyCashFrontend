@@ -1,9 +1,9 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const UserCasesSchema = new mongoose.Schema({
   user_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "UserInformation",
+    ref: 'UserInformation',
     required: true,
   },
   case_id: { type: String, required: true },
@@ -15,7 +15,13 @@ const UserCasesSchema = new mongoose.Schema({
     enum: ['Success', 'Pending', 'Failed'],
   },
   claim_message: { type: String, default: '' },
-  task_id: { type: String },
+  claim_process_task_id: { type: String, index: true },
+  claim_process_task_status: { type: String },
+  claim_process_message: { type: String, default: '' },
+  document_upload_task_id: { type: String, index: true },
+  document_upload_task_status: { type: String },
+  document_upload_message: { type: String, default: '' },
+  claim_process_stage: { type: Number },
   property_ids: [{ type: String }],
   task_status: { type: String },
   poll_url: { type: String },
@@ -24,6 +30,6 @@ const UserCasesSchema = new mongoose.Schema({
 });
 
 const UserCases =
-  mongoose.models.UserCases || mongoose.model("UserCases", UserCasesSchema);
+  mongoose.models.UserCases || mongoose.model('UserCases', UserCasesSchema);
 
 export default UserCases;
