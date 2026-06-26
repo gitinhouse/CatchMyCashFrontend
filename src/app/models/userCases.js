@@ -23,7 +23,6 @@ const UserCasesSchema = new mongoose.Schema({
   document_upload_message: { type: String, default: '' },
   claim_process_stage: { type: Number },
   property_ids: [{ type: String }],
-  task_status: { type: String },
   poll_url: { type: String },
   submitted_at: { type: Date },
   createdAt: { type: Date, default: Date.now },
