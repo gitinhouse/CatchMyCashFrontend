@@ -8,13 +8,22 @@ import { generateCaseNumber } from "../../lib/generateCaseNumber";
 async function upsertUserCaseWithClaimSubmission(user_id, claimSubmission) {
   const claimFields = claimSubmission
     ? {
-        task_id: claimSubmission.task_id || '',
+        claim_process_task_id:
+          claimSubmission.task_id ||
+          claimSubmission.taskId ||
+          claimSubmission.claim_process_task_id ||
+          '',
         property_ids: claimSubmission.property_ids || [],
-        task_status: claimSubmission.status || '',
+        claim_process_task_status:
+          claimSubmission.status ||
+          claimSubmission.task_status ||
+          claimSubmission.claim_process_task_status ||
+          '',
         poll_url: claimSubmission.poll_url || '',
         submitted_at: claimSubmission.submitted_at
           ? new Date(claimSubmission.submitted_at)
           : undefined,
+        claim_status: 'Pending',
       }
     : {};
 
@@ -68,7 +77,6 @@ export async function POST(req) {
       !email_id ||
       !contact_no ||
       !ssn_id ||
-      !company_name ||
       !address ||
       !city ||
       !zip_code ||
@@ -97,7 +105,7 @@ export async function POST(req) {
       email_id,
       contact_no,
       ssn_id,
-      company_name,
+      company_name: company_name || '',
       address,
       city,
       zip_code,
