@@ -33,7 +33,7 @@ async function upsertUserCaseWithClaimSubmission(user_id, claimSubmission) {
     if (claimSubmission) {
       return UserCases.findOneAndUpdate(
         { user_id },
-        claimFields,
+        { $set: claimFields },
         { new: true },
       );
     }

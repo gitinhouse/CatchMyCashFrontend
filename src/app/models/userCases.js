@@ -28,7 +28,10 @@ const UserCasesSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-const UserCases =
-  mongoose.models.UserCases || mongoose.model('UserCases', UserCasesSchema);
+if (mongoose.models.UserCases) {
+  mongoose.deleteModel('UserCases');
+}
+
+const UserCases = mongoose.model('UserCases', UserCasesSchema);
 
 export default UserCases;
