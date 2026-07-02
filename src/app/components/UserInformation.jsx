@@ -350,9 +350,9 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
         documents_to_upload: [],
       };
 
-      const res = await axios.post('/api/register', payloadData);
-      setUserLogin(res.data);
-      localStorage.setItem('userLogin', JSON.stringify(res.data));
+      // const res = await axios.post('/api/register', payloadData);
+      // setUserLogin(res.data);
+      // localStorage.setItem('userLogin', JSON.stringify(res.data));
 
       const { data: claimSubmission } = await axios.post(
         '/api/claim-submission',
