@@ -326,7 +326,7 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
         form_data: {
           firstName: firstName,
           lastName: lastName,
-          email: formData.email,
+          email: 'help@mail.catchmycash.com',
           phone1: formData.phone,
           taxID: formData.ssn,
           dobMonth: dobMonth,
@@ -361,7 +361,7 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
 
       const { data } = await axios.post('/api/legalDetails', {
         ...payload,
-        //  claimSubmission,
+          claimSubmission,
       });
       setUserAgreement(data);
       localStorage.setItem('userAgreement', JSON.stringify(data));
