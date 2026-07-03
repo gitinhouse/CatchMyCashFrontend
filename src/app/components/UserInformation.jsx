@@ -326,7 +326,7 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
         form_data: {
           firstName: firstName,
           lastName: lastName,
-          email: 'help@mail.catchmycash.com',
+          email: formData.email,
           phone1: formData.phone,
           taxID: formData.ssn,
           dobMonth: dobMonth,
@@ -350,9 +350,9 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
         documents_to_upload: [],
       };
 
-      // const res = await axios.post('/api/register', payloadData);
-      // setUserLogin(res.data);
-      // localStorage.setItem('userLogin', JSON.stringify(res.data));
+      const res = await axios.post('/api/register', payloadData);
+      setUserLogin(res.data);
+      localStorage.setItem('userLogin', JSON.stringify(res.data));
 
       const { data: claimSubmission } = await axios.post(
         '/api/claim-submission',
@@ -361,7 +361,7 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
 
       const { data } = await axios.post('/api/legalDetails', {
         ...payload,
-        claimSubmission,
+        //  claimSubmission,
       });
       setUserAgreement(data);
       localStorage.setItem('userAgreement', JSON.stringify(data));

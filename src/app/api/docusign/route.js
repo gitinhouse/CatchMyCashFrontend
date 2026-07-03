@@ -7,22 +7,31 @@ import { PDFDocument } from "pdf-lib";
 import { NextResponse } from "next/server";
 import { fillInvestigatorAgreement } from "../../../utils/fillPDF";
 
+function splitLegalName(legalName) {
+  const name = String(legalName || "").trim();
+  if (!name) return { firstName: "", lastName: "" };
+
+  const parts = name.split(/\s+/);
+  if (parts.length === 1) {
+    return { firstName: "", lastName: parts[0] };
+  }
+
+  return {
+    firstName: parts[parts.length - 1],
+    lastName: parts.slice(0, -1).join(" "),
+  };
+}
+
 export async function POST(req) {
   try {
     const {
-      firstName,
-      lastName,
+      firstName: rawFirstName,
+      lastName: rawLastName,
       email,
       searchResults: rawResults,
       userAgreement: rawData,
     } = await req.json();
 
-    if (!firstName || !lastName || !email) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
     let searchResults;
     let userAgreement;
     try {
@@ -44,6 +53,17 @@ export async function POST(req) {
     } catch (err) {
       console.error("Failed to parse searchResults:", err);
       searchResults = [];
+    }
+
+    const fallbackName = splitLegalName(userAgreement?.legal_name);
+    const firstName = rawFirstName || fallbackName.firstName;
+    const lastName = rawLastName || fallbackName.lastName;
+
+    if (!firstName || !lastName || !email) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
     }
     const allProperty = searchResults;
     const property = searchResults?.[0];
@@ -75,8 +95,8 @@ export async function POST(req) {
     });
     // Initialize DocuSign client
     const dsApiClient = new docusign.ApiClient();
-    dsApiClient.setOAuthBasePath("account-d.docusign.com");
-    dsApiClient.setBasePath("https://demo.docusign.net/restapi");
+    dsApiClient.setOAuthBasePath("account.docusign.com");
+    dsApiClient.setBasePath("https://na4.docusign.net/restapi");
 
     // Load private RSA key
     const privateKeyPath = path.join(process.cwd(), "private.pem");
@@ -86,8 +106,8 @@ export async function POST(req) {
 
     // Request JWT token
     const results = await dsApiClient.requestJWTUserToken(
-      process.env.INTEGRATION_KEY.trim(),
-      process.env.USER_ID.trim(),
+      process.env.DOCU_SIGN_INTEGRATION_KEY.trim(),
+      process.env.DOCU_SIGN_USER_ID.trim(),
       ["signature", "impersonation"],
       privateKey,
       3600
@@ -98,7 +118,7 @@ export async function POST(req) {
     dsApiClient.addDefaultHeader("Authorization", `Bearer ${accessToken}`);
 
     const envelopesApi = new docusign.EnvelopesApi(dsApiClient);
-    const accountId = process.env.API_ACCOUNT_ID.trim();
+    const accountId = process.env.DOCU_SIGN_API_ACCOUNT_ID.trim();
     // Load PDF and determine last page
     const pdfPath = path.join(
       process.cwd(),
@@ -207,7 +227,7 @@ export async function POST(req) {
       return NextResponse.json(
         {
           error: "JWT consent required",
-          consentUrl: `https://account-d.docusign.com/oauth/auth?response_type=code&scope=signature%20impersonation&client_id=${process.env.INTEGRATION_KEY}&redirect_uri=${process.env.NEXT_PUBLIC_BASE_URL}`,
+          consentUrl: `https://account.docusign.com/oauth/auth?response_type=code&scope=signature%20impersonation&client_id=${process.env.DOCU_SIGN_INTEGRATION_KEY}&redirect_uri=${process.env.NEXT_PUBLIC_BASE_URL}`,
         },
         { status: 400 }
       );

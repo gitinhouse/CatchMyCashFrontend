@@ -37,8 +37,8 @@ export async function GET(req) {
     }
 
     const dsApiClient = new docusign.ApiClient();
-    dsApiClient.setOAuthBasePath("account-d.docusign.com");
-    dsApiClient.setBasePath("https://demo.docusign.net/restapi");
+    dsApiClient.setOAuthBasePath("account.docusign.com");
+    dsApiClient.setBasePath("https://na4.docusign.net/restapi");
 
     const privateKeyPath = path.join(process.cwd(), "private.pem");
     if (!fs.existsSync(privateKeyPath))
@@ -46,8 +46,8 @@ export async function GET(req) {
     const privateKey = fs.readFileSync(privateKeyPath, "utf8");
 
     const results = await dsApiClient.requestJWTUserToken(
-      process.env.INTEGRATION_KEY.trim(),
-      process.env.USER_ID.trim(),
+    process.env.DOCU_SIGN_INTEGRATION_KEY.trim(),
+      process.env.DOCU_SIGN_USER_ID.trim(),
       ["signature", "impersonation"],
       privateKey,
       3600
@@ -56,7 +56,7 @@ export async function GET(req) {
     dsApiClient.addDefaultHeader("Authorization", "Bearer " + accessToken);
 
     const envelopesApi = new docusign.EnvelopesApi(dsApiClient);
-    const accountId = process.env.API_ACCOUNT_ID.trim();
+    const accountId = process.env.DOCU_SIGN_API_ACCOUNT_ID.trim();
 
     const documentId = "1";
     const pdfBytes = await envelopesApi.getDocument(
@@ -107,7 +107,7 @@ export async function GET(req) {
       return NextResponse.json(
         {
           error: "JWT consent required",
-          consentUrl: `https://account-d.docusign.com/oauth/auth?response_type=code&scope=signature%20impersonation&client_id=${process.env.INTEGRATION_KEY}&redirect_uri=${process.env.NEXT_PUBLIC_BASE_URL}`,
+          consentUrl: `https://account.docusign.com/oauth/auth?response_type=code&scope=signature%20impersonation&client_id=${process.env.DOCU_SIGN_INTEGRATION_KEY}&redirect_uri=${process.env.NEXT_PUBLIC_BASE_URL}`,
         },
         { status: 400 }
       );
