@@ -9,6 +9,8 @@ export default function SignedPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const envelopeId = searchParams.get("envelopeId");
+  const signType = searchParams.get("type");
+  const userId = searchParams.get("user_id");
   const { setuserSignedAgreement } = useSearchStore();
   const [loading, setLoading] = useState(true);
 
@@ -17,6 +19,30 @@ export default function SignedPage() {
     const downloadSignedPDF = async () => {
       try {
         setLoading(true);
+
+        if (signType === "agreement") {
+          if (!userId) throw new Error("Missing user_id for agreement download");
+
+          const response = await fetch(
+            `/api/download/agreement?envelopeId=${envelopeId}&user_id=${userId}`,
+          );
+          if (!response.ok) throw new Error("Failed to download agreement PDF");
+
+          const data = await response.json();
+          localStorage.setItem("filledAgreementDoc", JSON.stringify(data));
+
+          const existingAllDocs = JSON.parse(
+            localStorage.getItem("userAllDocs") || "{}",
+          );
+          localStorage.setItem(
+            "userAllDocs",
+            JSON.stringify({ ...existingAllDocs, signed_doc: data.filePath }),
+          );
+
+          router.replace("/?step=documents");
+          return;
+        }
+
         const response = await fetch(`/api/download?envelopeId=${envelopeId}`);
         if (!response.ok) throw new Error("Failed to download PDF");
         const data = await response.json();
@@ -31,7 +57,7 @@ export default function SignedPage() {
     };
 
     downloadSignedPDF();
-  }, [envelopeId, router, setuserSignedAgreement]);
+  }, [envelopeId, signType, userId, router, setuserSignedAgreement]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center  text-black relative">
