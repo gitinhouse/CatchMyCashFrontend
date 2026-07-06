@@ -361,7 +361,10 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
 
       const { data } = await axios.post('/api/legalDetails', {
         ...payload,
-         // claimSubmission,
+        claimSubmission: {
+          ...claimSubmission,
+          property_ids: ownPropertyIds,
+        },
       });
       setUserAgreement(data);
       localStorage.setItem('userAgreement', JSON.stringify(data));
