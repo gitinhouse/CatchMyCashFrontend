@@ -354,17 +354,17 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
       setUserLogin(res.data);
       localStorage.setItem('userLogin', JSON.stringify(res.data));
 
-      const { data: claimSubmission } = await axios.post(
-        '/api/claim-submission',
-        claimSubmissionPayloadData,
-      );
+      // const { data: claimSubmission } = await axios.post(
+      //   '/api/claim-submission',
+      //   claimSubmissionPayloadData,
+      // );
 
       const { data } = await axios.post('/api/legalDetails', {
         ...payload,
-        claimSubmission: {
-          ...claimSubmission,
-          property_ids: ownPropertyIds,
-        },
+        // claimSubmission: {
+        //   ...claimSubmission,
+        //   property_ids: ownPropertyIds,
+        // },
       });
       setUserAgreement(data);
       localStorage.setItem('userAgreement', JSON.stringify(data));
