@@ -6,6 +6,11 @@ import docusign from "docusign-esign";
 import { PDFDocument } from "pdf-lib";
 import { NextResponse } from "next/server";
 import { fillInvestigatorAgreement } from "../../../utils/fillPDF";
+import {
+  createAuthenticatedDocuSignClient,
+  docuSignErrorResponse,
+  getAppBaseUrl,
+} from "../../lib/docusignClient";
 
 function splitLegalName(legalName) {
   const name = String(legalName || "").trim();
@@ -93,32 +98,8 @@ export async function POST(req) {
       ssnId: userAgreement?.ssn_id,
       allProperty: allProperty,
     });
-    // Initialize DocuSign client
-    const dsApiClient = new docusign.ApiClient();
-    dsApiClient.setOAuthBasePath("account.docusign.com");
-    dsApiClient.setBasePath("https://na4.docusign.net/restapi");
+    const { envelopesApi, accountId } = await createAuthenticatedDocuSignClient();
 
-    // Load private RSA key
-    const privateKeyPath = path.join(process.cwd(), "private.pem");
-    if (!fs.existsSync(privateKeyPath))
-      throw new Error("Private key file not found");
-    const privateKey = fs.readFileSync(privateKeyPath, "utf8");
-
-    // Request JWT token
-    const results = await dsApiClient.requestJWTUserToken(
-      process.env.DOCU_SIGN_INTEGRATION_KEY.trim(),
-      process.env.DOCU_SIGN_USER_ID.trim(),
-      ["signature", "impersonation"],
-      privateKey,
-      3600
-    );
-
-    const accessToken = results.body.access_token;
-    if (!accessToken) throw new Error("Failed to obtain access token");
-    dsApiClient.addDefaultHeader("Authorization", `Bearer ${accessToken}`);
-
-    const envelopesApi = new docusign.EnvelopesApi(dsApiClient);
-    const accountId = process.env.DOCU_SIGN_API_ACCOUNT_ID.trim();
     // Load PDF and determine last page
     const pdfPath = path.join(
       process.cwd(),
@@ -171,14 +152,16 @@ export async function POST(req) {
     initialHere2.yPosition = "370";
 
     const dynamicInitialTabs = [];
-    allProperty?.forEach((property, index) => {
-      const initialHere = new docusign.InitialHere();
-      initialHere.documentId = "1";
-      initialHere.pageNumber = "2"; 
-      initialHere.xPosition = "80"; 
-      initialHere.yPosition = String(180 + index * 170); 
-      dynamicInitialTabs.push(initialHere);
-    });
+    if (numberOfPages >= 2) {
+      allProperty?.forEach((property, index) => {
+        const initialHere = new docusign.InitialHere();
+        initialHere.documentId = "1";
+        initialHere.pageNumber = "2";
+        initialHere.xPosition = "80";
+        initialHere.yPosition = String(180 + index * 170);
+        dynamicInitialTabs.push(initialHere);
+      });
+    }
 
     const tabs = new docusign.Tabs();
     tabs.signHereTabs = [signHere];
@@ -194,9 +177,11 @@ export async function POST(req) {
     });
     const envelopeId = envelopeResponse.envelopeId;
 
+    const returnUrl = `${getAppBaseUrl()}/signed?envelopeId=${envelopeId}`;
+
     // Create recipient view (embedded signing)
     const viewRequest = new docusign.RecipientViewRequest();
-    viewRequest.returnUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/signed?envelopeId=${envelopeId}`;
+    viewRequest.returnUrl = returnUrl;
     viewRequest.authenticationMethod = "none";
     viewRequest.email = email;
     viewRequest.userName = `${firstName} ${lastName}`;
@@ -215,27 +200,6 @@ export async function POST(req) {
       envelopeId,
     });
   } catch (err) {
-    console.error(
-      "DocuSign sendEnvelope error:",
-      err.response?.body || err.message || err
-    );
-
-    if (
-      err.response?.body?.error === "invalid_grant" &&
-      err.response?.body?.error_description?.includes("consent")
-    ) {
-      return NextResponse.json(
-        {
-          error: "JWT consent required",
-          consentUrl: `https://account.docusign.com/oauth/auth?response_type=code&scope=signature%20impersonation&client_id=${process.env.DOCU_SIGN_INTEGRATION_KEY}&redirect_uri=${process.env.NEXT_PUBLIC_BASE_URL}`,
-        },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: "Failed to create envelope" },
-      { status: 500 }
-    );
+    return docuSignErrorResponse(err, "Failed to create envelope");
   }
 }

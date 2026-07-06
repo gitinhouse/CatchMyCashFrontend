@@ -3,6 +3,16 @@ import path from 'path';
 import docusign from 'docusign-esign';
 import { NextResponse } from 'next/server';
 
+export function getAppBaseUrl() {
+  const baseUrl =
+    process.env.APP_BASE_URL ||
+    process.env.BASE_URL ||
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    'http://localhost:3000';
+
+  return baseUrl.replace(/\/$/, '');
+}
+
 export function getDocuSignConfig() {
   const integrationKey =
     process.env.DOCU_SIGN_INTEGRATION_KEY || process.env.INTEGRATION_KEY || '';
@@ -90,18 +100,42 @@ export function buildDocuSignConsentUrl(config) {
   const oauthHost = config.isDemo
     ? 'account-d.docusign.com'
     : 'account.docusign.com';
-  const redirectUri = encodeURIComponent(process.env.NEXT_PUBLIC_BASE_URL || '');
+  const redirectUri = encodeURIComponent(getAppBaseUrl());
 
   return `https://${oauthHost}/oauth/auth?response_type=code&scope=signature%20impersonation&client_id=${config.integrationKey}&redirect_uri=${redirectUri}`;
 }
 
-export function docuSignErrorResponse(err, fallbackMessage) {
-  console.error(
-    'DocuSign error:',
-    err.response?.body || err.message || err,
-  );
+function extractDocuSignErrorBody(err) {
+  const body = err?.response?.body || err?.response?.data || err?.body;
 
-  const body = err.response?.body;
+  if (!body) return null;
+  if (typeof body === 'string') {
+    try {
+      return JSON.parse(body);
+    } catch {
+      return { message: body };
+    }
+  }
+
+  return body;
+}
+
+export function docuSignErrorResponse(err, fallbackMessage) {
+  const body = extractDocuSignErrorBody(err);
+  const httpStatus = err?.response?.status || err?.status;
+  const errorMessage =
+    body?.message ||
+    body?.errorCode ||
+    body?.error_description ||
+    body?.error ||
+    err?.message ||
+    fallbackMessage;
+
+  console.error('DocuSign error:', {
+    message: err?.message,
+    status: httpStatus,
+    body,
+  });
 
   if (
     body?.error === 'invalid_grant' &&
@@ -111,7 +145,10 @@ export function docuSignErrorResponse(err, fallbackMessage) {
     try {
       config = getDocuSignConfig();
     } catch {
-      config = { integrationKey: process.env.DOCU_SIGN_INTEGRATION_KEY, isDemo: false };
+      config = {
+        integrationKey: process.env.DOCU_SIGN_INTEGRATION_KEY,
+        isDemo: false,
+      };
     }
 
     return NextResponse.json(
@@ -125,9 +162,10 @@ export function docuSignErrorResponse(err, fallbackMessage) {
 
   return NextResponse.json(
     {
-      error: err.message || fallbackMessage,
-      details: body?.message || body?.errorCode || undefined,
+      error: errorMessage,
+      details: body?.errorDetails || body?.errorCode || undefined,
+      statusCode: httpStatus,
     },
-    { status: 500 },
+    { status: httpStatus && httpStatus >= 400 && httpStatus < 600 ? httpStatus : 500 },
   );
 }
