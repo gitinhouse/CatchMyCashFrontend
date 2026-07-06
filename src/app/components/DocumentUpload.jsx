@@ -413,6 +413,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   };
 
   const handleAgreementDocuSign = async () => {
+    //const userId = '6a476965c1f13aa713a9241d'; //userData?._id;
     const userId = userData?._id;
     if (!userId) {
       setError('User ID missing. Please complete the previous steps first.');

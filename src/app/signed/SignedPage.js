@@ -5,6 +5,25 @@ import { useSearchStore } from "../store/searchStore";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 
+// AUTO-DOWNLOAD (testing) — disable via NEXT_PUBLIC_AUTO_DOWNLOAD_AGREEMENT=false
+const AUTO_DOWNLOAD_AGREEMENT =
+  process.env.NEXT_PUBLIC_AUTO_DOWNLOAD_AGREEMENT === "true";
+
+async function triggerLocalPdfDownload(downloadUrl, fileName) {
+  const response = await fetch(downloadUrl);
+  if (!response.ok) throw new Error("Failed to fetch PDF for local download");
+
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = fileName || "FilledAgreement_form.pdf";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
+}
+
 export default function SignedPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -30,6 +49,14 @@ export default function SignedPage() {
 
           const data = await response.json();
           localStorage.setItem("filledAgreementDoc", JSON.stringify(data));
+
+          // AUTO-DOWNLOAD (testing) — remove block below to revert
+          if (AUTO_DOWNLOAD_AGREEMENT && data.filePath) {
+            await triggerLocalPdfDownload(
+              `/api/download/agreement/local?fileName=${encodeURIComponent(data.filePath)}`,
+              data.filePath,
+            );
+          }
 
           const existingAllDocs = JSON.parse(
             localStorage.getItem("userAllDocs") || "{}",
