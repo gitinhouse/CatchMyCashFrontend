@@ -2,7 +2,6 @@ export const runtime = "nodejs";
 
 import fs from "fs";
 import path from "path";
-import docusign from "docusign-esign";
 import { NextResponse } from "next/server";
 import {
   S3Client,
@@ -15,6 +14,10 @@ import {
   fromTemporaryCredentials,
 } from "@aws-sdk/credential-providers";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import {
+  createAuthenticatedDocuSignClient,
+  docuSignErrorResponse,
+} from "../../lib/docusignClient";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -36,27 +39,7 @@ export async function GET(req) {
       );
     }
 
-    const dsApiClient = new docusign.ApiClient();
-    dsApiClient.setOAuthBasePath("account.docusign.com");
-    dsApiClient.setBasePath("https://na4.docusign.net/restapi");
-
-    const privateKeyPath = path.join(process.cwd(), "private.pem");
-    if (!fs.existsSync(privateKeyPath))
-      throw new Error("Private key file not found");
-    const privateKey = fs.readFileSync(privateKeyPath, "utf8");
-
-    const results = await dsApiClient.requestJWTUserToken(
-    process.env.DOCU_SIGN_INTEGRATION_KEY.trim(),
-      process.env.DOCU_SIGN_USER_ID.trim(),
-      ["signature", "impersonation"],
-      privateKey,
-      3600
-    );
-    const accessToken = results.body.access_token;
-    dsApiClient.addDefaultHeader("Authorization", "Bearer " + accessToken);
-
-    const envelopesApi = new docusign.EnvelopesApi(dsApiClient);
-    const accountId = process.env.DOCU_SIGN_API_ACCOUNT_ID.trim();
+    const { envelopesApi, accountId } = await createAuthenticatedDocuSignClient();
 
     const documentId = "1";
     const pdfBytes = await envelopesApi.getDocument(
@@ -96,25 +79,6 @@ export async function GET(req) {
       filePath: s3Key,
     });
   } catch (err) {
-    console.error(
-      "DocuSign download error:",
-      err.response?.body || err.message || err
-    );
-    if (
-      err.response?.body?.error === "invalid_grant" &&
-      err.response?.body?.error_description?.includes("consent")
-    ) {
-      return NextResponse.json(
-        {
-          error: "JWT consent required",
-          consentUrl: `https://account.docusign.com/oauth/auth?response_type=code&scope=signature%20impersonation&client_id=${process.env.DOCU_SIGN_INTEGRATION_KEY}&redirect_uri=${process.env.NEXT_PUBLIC_BASE_URL}`,
-        },
-        { status: 400 }
-      );
-    }
-    return NextResponse.json(
-      { error: "Failed to save document" },
-      { status: 500 }
-    );
+    return docuSignErrorResponse(err, "Failed to save document");
   }
 }
