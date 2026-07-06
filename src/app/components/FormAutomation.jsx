@@ -85,7 +85,14 @@ const FormAutomation = ({ userData, onNext }) => {
         return;
       }
 
-      const response = await axios.post('/api/case', { user_id: userId });
+      const propertyIds = JSON.parse(
+        localStorage.getItem('ownPropertyIds') || '[]',
+      );
+
+      const response = await axios.post('/api/case', {
+        user_id: userId,
+        property_ids: propertyIds,
+      });
 
       localStorage.setItem('userCase', JSON.stringify(response.data));
       setUserCase(response.data);

@@ -103,6 +103,7 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
         selectedProperties.includes(property.id),
       );
       setOwnPropertyIds(selectedProperties);
+      localStorage.setItem('ownPropertyIds', JSON.stringify(selectedProperties));
       console.log('Selected Property IDs:', selectedProperties);
       console.log('Selected Properties:', selectedPropertyObjects);
 

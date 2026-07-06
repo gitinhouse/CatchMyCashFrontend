@@ -344,7 +344,11 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
             return;
           }
 
-          const payload = { user_id: userId };
+          const propertyIds = JSON.parse(
+            localStorage.getItem('ownPropertyIds') || '[]',
+          );
+
+          const payload = { user_id: userId, property_ids: propertyIds };
           const response = await axios.post('/api/case', payload);
 
           localStorage.setItem('userCase', JSON.stringify(response.data));
