@@ -15,6 +15,11 @@ import {
 import connectToDatabase from '../../../lib/mongodb';
 import UserDocs from '../../../models/userDocs';
 import UserDetails from '../../../models/userDetails';
+import {
+  createAuthenticatedDocuSignClient,
+  docuSignErrorResponse,
+  getAppBaseUrl,
+} from '../../../lib/docusignClient';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -403,32 +408,7 @@ export async function POST(req) {
 
     const pdfBase64 = pdfBuffer.toString('base64');
 
-    const dsApiClient = new docusign.ApiClient();
-    dsApiClient.setOAuthBasePath('account.docusign.com');
-    dsApiClient.setBasePath('https://na4.docusign.net/restapi');
-
-    const privateKeyPath = path.join(process.cwd(), 'private.pem');
-    if (!fs.existsSync(privateKeyPath)) {
-      throw new Error('Private key file not found');
-    }
-
-    const privateKey = fs.readFileSync(privateKeyPath, 'utf8');
-
-    const results = await dsApiClient.requestJWTUserToken(
-      process.env.DOCU_SIGN_INTEGRATION_KEY.trim(),
-      process.env.DOCU_SIGN_USER_ID.trim(),
-      ['signature', 'impersonation'],
-      privateKey,
-      3600,
-    );
-
-    const accessToken = results.body.access_token;
-    if (!accessToken) throw new Error('Failed to obtain access token');
-
-    dsApiClient.addDefaultHeader('Authorization', `Bearer ${accessToken}`);
-
-    const envelopesApi = new docusign.EnvelopesApi(dsApiClient);
-    const accountId = process.env.DOCU_SIGN_API_ACCOUNT_ID.trim();
+    const { envelopesApi, accountId } = await createAuthenticatedDocuSignClient();
 
     const envelopeDefinition = new docusign.EnvelopeDefinition();
     envelopeDefinition.emailSubject = `Please sign your agreement form - ${userDetails.legal_name}`;
@@ -478,7 +458,7 @@ export async function POST(req) {
     const envelopeId = envelopeResponse.envelopeId;
 
     const viewRequest = new docusign.RecipientViewRequest();
-    viewRequest.returnUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/signed?envelopeId=${envelopeId}&type=agreement&user_id=${user_id}`;
+    viewRequest.returnUrl = `${getAppBaseUrl()}/signed?envelopeId=${envelopeId}&type=agreement&user_id=${user_id}`;
     viewRequest.authenticationMethod = 'none';
     viewRequest.email = userDetails.email_id;
     viewRequest.userName = userDetails.legal_name;
@@ -501,31 +481,17 @@ export async function POST(req) {
       agreementDocKey: s3Key,
     });
   } catch (err) {
-    console.error(
-      'DocuSign agreement error:',
-      err.response?.body || err.message || err,
-    );
-
-    if (
-      err.response?.body?.error === 'invalid_grant' &&
-      err.response?.body?.error_description?.includes('consent')
-    ) {
+    if (isS3NotFoundError(err)) {
       return NextResponse.json(
         {
-          error: 'JWT consent required',
-          consentUrl: `https://account.docusign.com/oauth/auth?response_type=code&scope=signature%20impersonation&client_id=${process.env.DOCU_SIGN_INTEGRATION_KEY}&redirect_uri=${process.env.NEXT_PUBLIC_BASE_URL}`,
+          error: err.message || 'Agreement file not found',
+          bucket: process.env.AGREEMENT_BUCKET_NAME,
+          region: process.env.AGREEMENT_AWS_REGION || 'eu-central-1',
         },
-        { status: 400 },
+        { status: 404 },
       );
     }
 
-    return NextResponse.json(
-      {
-        error: err.message || 'Failed to create agreement envelope',
-        bucket: process.env.AGREEMENT_BUCKET_NAME,
-        region: process.env.AGREEMENT_AWS_REGION || 'eu-central-1',
-      },
-      { status: isS3NotFoundError(err) ? 404 : 500 },
-    );
+    return docuSignErrorResponse(err, 'Failed to create agreement envelope');
   }
 }
