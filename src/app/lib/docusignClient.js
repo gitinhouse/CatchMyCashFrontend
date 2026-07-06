@@ -42,7 +42,12 @@ export function getDocuSignConfig() {
 
   const isDemo = /demo\.docusign\.net/i.test(normalizedBase);
   const oauthBasePath = isDemo ? 'account-d.docusign.com' : 'account.docusign.com';
-
+console.log('integrationKey', integrationKey);
+console.log('userId', userId);
+console.log('accountId', accountId);
+console.log('restApiBase', restApiBase);
+console.log('oauthBasePath', oauthBasePath);
+console.log('isDemo', isDemo);
   return {
     integrationKey: integrationKey.trim(),
     userId: userId.trim(),
