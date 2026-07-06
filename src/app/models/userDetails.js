@@ -11,7 +11,7 @@ const UserDetailsSchema = new mongoose.Schema({
   email_id: { type: String, required: true },
   contact_no: { type: String, required: true },
   ssn_id: { type: String, required: true },
-  company_name: { type: String, required: true },
+  company_name: { type: String, required: false },
   address: { type: String, required: true },
   city: { type: String, required: true },
   zip_code: { type: String, required: true },

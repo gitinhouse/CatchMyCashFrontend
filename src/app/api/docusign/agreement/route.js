@@ -242,6 +242,11 @@ function agreementFieldY(labelYMin) {
   return String(Math.round(labelYMin + 15));
 }
 
+function agreementSignatureY() {
+  // Same row as the date field; height is constrained on the SignHere tab.
+  return agreementFieldY(248.602);
+}
+
 function splitLegalName(legalName) {
   const name = String(legalName || '').trim();
   if (!name) return { firstName: '', lastName: '' };
@@ -446,8 +451,10 @@ export async function POST(req) {
     const signHere = new docusign.SignHere();
     signHere.documentId = '1';
     signHere.pageNumber = lastPage;
-    signHere.xPosition = '70';
-    signHere.yPosition = agreementFieldY(266.602);
+    signHere.xPosition = '72';
+    signHere.yPosition = agreementSignatureY();
+    signHere.width = '310';
+    signHere.height = '16';
 
     const dateSigned = new docusign.DateSigned();
     dateSigned.documentId = '1';
