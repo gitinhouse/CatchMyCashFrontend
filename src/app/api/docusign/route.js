@@ -137,7 +137,7 @@ export async function POST(req) {
     signHere.documentId = "1";
     signHere.pageNumber = "1"; //numberOfPages.toString();
     signHere.xPosition = "180";
-    signHere.yPosition = "593";
+    signHere.yPosition = "520";
 
     const initialHere1 = new docusign.InitialHere();
     initialHere1.documentId = "1";
