@@ -458,7 +458,7 @@ export async function POST(req) {
     const envelopeId = envelopeResponse.envelopeId;
 
     const viewRequest = new docusign.RecipientViewRequest();
-    viewRequest.returnUrl = `${getAppBaseUrl()}/signed?envelopeId=${envelopeId}&type=agreement&user_id=${user_id}`;
+    viewRequest.returnUrl = `${getAppBaseUrl()}/signed?envelopeId=${envelopeId}&type=agreement&user_id=${user_id}&case_id=${userDocs.case_id}`;
     viewRequest.authenticationMethod = 'none';
     viewRequest.email = userDetails.email_id;
     viewRequest.userName = userDetails.legal_name;

@@ -37,6 +37,7 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const envelopeId = searchParams.get('envelopeId');
     const user_id = searchParams.get('user_id');
+    const case_id = searchParams.get('case_id');
 
     if (!envelopeId) {
       return NextResponse.json({ error: 'Missing envelopeId' }, { status: 400 });
@@ -84,9 +85,13 @@ export async function GET(req) {
 
     await connectToDatabase();
 
+    const updateFilter = case_id
+      ? { case_id: toObjectId(case_id) }
+      : { user_id: toObjectId(user_id) };
+
     const updatedDocs = await UserDocs.findOneAndUpdate(
-      { user_id: toObjectId(user_id) },
-      { $set: { signed_doc: fileName } },
+      updateFilter,
+      { $set: { filled_agreement_doc: fileName } },
       { new: true },
     );
 
@@ -100,7 +105,7 @@ export async function GET(req) {
     return NextResponse.json({
       success: true,
       filePath: fileName,
-      signed_doc: fileName,
+      filled_agreement_doc: fileName,
       ...(autoDownloadEnabled && { localFilePath }),
     });
   } catch (err) {

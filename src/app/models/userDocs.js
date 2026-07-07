@@ -19,6 +19,7 @@ const UserDocsSchema = new mongoose.Schema({
   signed_doc: { type: String, required: true },
   claim_doc: { type: String, required: false },
   agreement_doc: { type: String, required: false },
+  filled_agreement_doc: { type: String, required: false },
   createdAt: { type: Date, default: Date.now },
 });
 

@@ -30,6 +30,7 @@ export default function SignedPage() {
   const envelopeId = searchParams.get("envelopeId");
   const signType = searchParams.get("type");
   const userId = searchParams.get("user_id");
+  const caseId = searchParams.get("case_id");
   const { setuserSignedAgreement } = useSearchStore();
   const [loading, setLoading] = useState(true);
 
@@ -42,8 +43,14 @@ export default function SignedPage() {
         if (signType === "agreement") {
           if (!userId) throw new Error("Missing user_id for agreement download");
 
+          const agreementParams = new URLSearchParams({
+            envelopeId,
+            user_id: userId,
+          });
+          if (caseId) agreementParams.set("case_id", caseId);
+
           const response = await fetch(
-            `/api/download/agreement?envelopeId=${envelopeId}&user_id=${userId}`,
+            `/api/download/agreement?${agreementParams.toString()}`,
           );
           if (!response.ok) throw new Error("Failed to download agreement PDF");
 
@@ -63,7 +70,10 @@ export default function SignedPage() {
           );
           localStorage.setItem(
             "userAllDocs",
-            JSON.stringify({ ...existingAllDocs, signed_doc: data.filePath }),
+            JSON.stringify({
+              ...existingAllDocs,
+              filled_agreement_doc: data.filePath,
+            }),
           );
 
           router.replace("/?step=documents");
@@ -84,7 +94,7 @@ export default function SignedPage() {
     };
 
     downloadSignedPDF();
-  }, [envelopeId, signType, userId, router, setuserSignedAgreement]);
+  }, [envelopeId, signType, userId, caseId, router, setuserSignedAgreement]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center  text-black relative">
