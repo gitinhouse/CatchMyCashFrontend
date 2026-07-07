@@ -337,6 +337,7 @@ export async function POST(req) {
     }
 
     const payload = {
+      claim_id: claimId,
       claims: [
         {
           claim_id: claimId,
