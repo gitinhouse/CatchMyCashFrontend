@@ -211,7 +211,10 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       if (savedAllDocs) {
         try {
           const allDocs = JSON.parse(savedAllDocs);
-          if (isFilledAgreementDoc(allDocs?.signed_doc)) {
+          if (
+            isFilledAgreementDoc(allDocs?.filled_agreement_doc) ||
+            isFilledAgreementDoc(allDocs?.signed_doc)
+          ) {
             setAgreementDocuSignComplete(true);
           }
         } catch {
@@ -256,7 +259,11 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
         'userAgreement',
         JSON.stringify(data?.data?.[0]?.user_details?.[0]),
       );
-      const signedDocValue = data?.data?.[0]?.user_docs?.[0]?.signed_doc;
+      const userDocs = data?.data?.[0]?.user_docs?.[0] || [];
+      const signedDocValue = userDocs.signed_doc;
+      const filledAgreementValue =
+        userDocs.filled_agreement_doc || userDocs.signed_doc;
+
       if (isInvestigatorSignedDoc(signedDocValue)) {
         localStorage.setItem(
           'signedDoc',
@@ -268,7 +275,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
         setuserSignedAgreement(signedDocValue);
       }
 
-      if (isFilledAgreementDoc(signedDocValue)) {
+      if (isFilledAgreementDoc(filledAgreementValue)) {
         setAgreementDocuSignComplete(true);
       }
       const caseData = data?.data?.[0];
@@ -285,7 +292,6 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
         JSON.stringify(data?.data?.[0]?.user_docs?.[0]),
       );
 
-      const userDocs = data?.data?.[0]?.user_docs?.[0] || [];
       const uploadedIds = [];
 
       if (userDocs.proof_id) uploadedIds.push('id');
@@ -570,6 +576,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
 
       await axios.post('/api/document-upload', {
         user_id: userData._id,
+        case_id: userCase?._id,
       });
 
       setIsSubmitted(false);

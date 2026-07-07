@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import connectToDatabase from '../../lib/mongodb.js';
 import UserDocs from '../../models/userDocs.js';
 import UserCases from '../../models/userCases.js';
@@ -7,15 +8,23 @@ import UserDetails from '../../models/userDetails.js';
 export const runtime = 'nodejs';
 
 const DOCUMENT_TYPE_MAP = {
+  signed_doc: 'Digital Signature Form',
+  filled_agreement_doc: 'Signed Agreement Form',
+  agreement_doc: 'Agreement Document',
   proof_id: 'Government-issued Photo ID',
   ssn_id: 'Social Security Card or W2',
   adress_proof: 'Proof of Address (utility bill, bank statement)',
   brith_proof: 'Birth Certificate',
   employee_proof: 'Employment Records (if applicable)',
   claim_doc: 'Claim Form',
-  signed_doc: 'Signed Agreement Form',
-  agreement_doc: 'Agreement Document',
 };
+
+function toObjectId(id) {
+  if (!id) return null;
+  return mongoose.Types.ObjectId.isValid(id)
+    ? new mongoose.Types.ObjectId(id)
+    : id;
+}
 
 function filenameFromS3Key(key) {
   const base = key.split('/').pop() || key;
@@ -65,14 +74,20 @@ export async function POST(req) {
       );
     }
 
-    const { user_id } = await req.json();
+    const { user_id, case_id } = await req.json();
     if (!user_id) {
       return NextResponse.json({ message: 'user_id is required' }, { status: 400 });
     }
 
     await connectToDatabase();
 
-    const userDocs = await UserDocs.findOne({ user_id });
+    const userId = toObjectId(user_id);
+    const caseObjectId = toObjectId(case_id);
+
+    const userDocs = caseObjectId
+      ? await UserDocs.findOne({ case_id: caseObjectId })
+      : await UserDocs.findOne({ user_id: userId }).sort({ createdAt: -1 });
+
     if (!userDocs) {
       return NextResponse.json(
         { message: 'User documents not found' },
@@ -80,8 +95,22 @@ export async function POST(req) {
       );
     }
 
-    const userCase = await UserCases.findOne({ user_id }).select('claim_id');
-    const userDetails = await UserDetails.findOne({ user_id }).select('email_id');
+    const userCase = await UserCases.findById(userDocs.case_id).select('claim_id');
+    const claimId = userCase?.claim_id;
+
+    if (!claimId) {
+      return NextResponse.json(
+        {
+          message: 'claim_id is required',
+          success: false,
+        },
+        { status: 400 },
+      );
+    }
+
+    const userDetails = await UserDetails.findOne({ user_id: userId })
+      .sort({ createdAt: -1 })
+      .select('email_id');
 
     const documents = buildDocumentsFromUserDocs(userDocs, bucket, region);
     if (documents.length === 0) {
@@ -94,7 +123,7 @@ export async function POST(req) {
     const payload = {
       claims: [
         {
-          claim_id: userCase?.claim_id || '',
+          claim_id: String(claimId),
           email: userDetails?.email_id || '',
           documents,
         },

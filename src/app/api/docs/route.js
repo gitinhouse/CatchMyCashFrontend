@@ -59,7 +59,16 @@ export async function POST(req) {
         status: 404,
       });
 
-    // Create base record
+    const existingDocs = await UserDocs.findOne({ case_id });
+    if (existingDocs) {
+      const updatedDocs = await UserDocs.findOneAndUpdate(
+        { case_id },
+        { $set: { signed_doc } },
+        { new: true }
+      );
+      return new Response(JSON.stringify(updatedDocs), { status: 200 });
+    }
+
     const newDocs = await UserDocs.create({
       user_id,
       case_id,
