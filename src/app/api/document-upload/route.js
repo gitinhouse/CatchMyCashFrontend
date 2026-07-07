@@ -13,7 +13,6 @@ const LOG_PREFIX = '[document-upload]';
 const USER_DOC_FIELDS = [
   'signed_doc',
   'filled_agreement_doc',
-  'agreement_doc',
   'proof_id',
   'ssn_id',
   'adress_proof',
