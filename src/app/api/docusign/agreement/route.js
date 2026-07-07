@@ -2,6 +2,10 @@ export const runtime = 'nodejs';
 
 import fs from 'fs';
 import path from 'path';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import { mkdtemp, writeFile, readFile, rm } from 'fs/promises';
+import { tmpdir } from 'os';
 import docusign from 'docusign-esign';
 import { PDFDocument } from 'pdf-lib';
 import mongoose from 'mongoose';
@@ -20,6 +24,34 @@ import {
   docuSignErrorResponse,
   getAppBaseUrl,
 } from '../../../lib/docusignClient';
+
+const execFileAsync = promisify(execFile);
+
+// DocuSign Y axis: smaller value = higher on the page.
+// Fine-tune after layout detection (negative = move signature up).
+const AGREEMENT_SIGNATURE_Y_ADJUSTMENT = 0;
+
+const AGREEMENT_LAYOUT_PROFILES = {
+  // Claimant table on page 2 when the agreement PDF is 2 pages total.
+  compact: {
+    nameRow: 483.602,
+    addressRow: 513.602,
+    contactRow: 543.602,
+    signatureRow: 573.602,
+    // SignHere sits inside the box (above the old +15 text-field offset).
+    signatureFieldY: 566.602,
+    dateRow: 573.602,
+  },
+  // Claimant table on page 3 when the agreement PDF is 3+ pages.
+  standard: {
+    nameRow: 176.602,
+    addressRow: 206.602,
+    contactRow: 236.602,
+    signatureRow: 248.602,
+    signatureFieldY: 263.602,
+    dateRow: 266.602,
+  },
+};
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -247,9 +279,87 @@ function agreementFieldY(labelYMin) {
   return String(Math.round(labelYMin + 15));
 }
 
-function agreementSignatureY() {
-  // Same row as the date field; height is constrained on the SignHere tab.
-  return agreementFieldY(248.602);
+function agreementSignatureY(signatureFieldY) {
+  return String(
+    Math.round(signatureFieldY + AGREEMENT_SIGNATURE_Y_ADJUSTMENT),
+  );
+}
+
+async function detectClaimantNameRowY(pdfBuffer, lastPageNumber) {
+  let tempDir = null;
+  try {
+    tempDir = await mkdtemp(path.join(tmpdir(), 'agreement-layout-'));
+    const pdfPath = path.join(tempDir, 'agreement.pdf');
+    const xmlPath = path.join(tempDir, 'agreement.xml');
+
+    await writeFile(pdfPath, pdfBuffer);
+    await execFileAsync('pdftotext', [
+      '-bbox',
+      '-f',
+      String(lastPageNumber),
+      '-l',
+      String(lastPageNumber),
+      pdfPath,
+      xmlPath,
+    ]);
+
+    const xml = await readFile(xmlPath, 'utf8');
+    const legalWordMatch = xml.match(
+      /<word[^>]*yMin="(\d+(?:\.\d+)?)"[^>]*>LEGAL<\/word>/,
+    );
+
+    if (!legalWordMatch) return null;
+
+    const legalY = parseFloat(legalWordMatch[1]);
+    const currentBeforeLegal = xml.match(
+      new RegExp(
+        `<word[^>]*yMin="${legalWordMatch[1]}"[^>]*>CURRENT</word>\\s*<word[^>]*yMin="${legalWordMatch[1]}"[^>]*>LEGAL</word>`,
+      ),
+    );
+
+    if (!currentBeforeLegal) return null;
+
+    return legalY;
+  } catch {
+    return null;
+  } finally {
+    if (tempDir) {
+      await rm(tempDir, { recursive: true, force: true }).catch(() => {});
+    }
+  }
+}
+
+function buildLayoutFromNameRow(nameRowY, pageCount) {
+  const isCompact = nameRowY > 350;
+  const signatureOffset = isCompact ? 90 : 72;
+  const dateOffset = isCompact ? 90 : 90;
+  const signatureRow = nameRowY + signatureOffset;
+
+  return {
+    nameRow: nameRowY,
+    addressRow: nameRowY + 30,
+    contactRow: nameRowY + 60,
+    signatureRow,
+    signatureFieldY: isCompact ? signatureRow - 7 : signatureRow + 15,
+    dateRow: nameRowY + dateOffset,
+    profile: isCompact ? 'compact-detected' : 'standard-detected',
+    pageCount,
+  };
+}
+
+async function resolveAgreementLayout(pdfBuffer, pageCount) {
+  const detectedNameRowY = await detectClaimantNameRowY(pdfBuffer, pageCount);
+
+  if (detectedNameRowY != null) {
+    return buildLayoutFromNameRow(detectedNameRowY, pageCount);
+  }
+
+  const profile = pageCount <= 2 ? 'compact' : 'standard';
+  return {
+    ...AGREEMENT_LAYOUT_PROFILES[profile],
+    profile: `${profile}-fallback`,
+    pageCount,
+  };
 }
 
 function splitLegalName(legalName) {
@@ -267,7 +377,7 @@ function splitLegalName(legalName) {
   };
 }
 
-function buildAgreementTextTabs(userDetails, pageNumber) {
+function buildAgreementTextTabs(userDetails, pageNumber, layout) {
   const { firstName, lastName } = splitLegalName(userDetails.legal_name);
 
   const fields = [
@@ -275,77 +385,77 @@ function buildAgreementTextTabs(userDetails, pageNumber) {
       label: 'last_name',
       value: lastName,
       x: 70,
-      y: agreementFieldY(176.602),
+      y: agreementFieldY(layout.nameRow),
       width: 190,
     },
     {
       label: 'first_name',
       value: firstName,
       x: 280,
-      y: agreementFieldY(176.602),
+      y: agreementFieldY(layout.nameRow),
       width: 140,
     },
     {
       label: 'ssn',
       value: userDetails.ssn_id,
       x: 440,
-      y: agreementFieldY(176.602),
+      y: agreementFieldY(layout.nameRow),
       width: 120,
     },
     {
       label: 'mailing_address',
       value: userDetails.address,
       x: 70,
-      y: agreementFieldY(206.602),
+      y: agreementFieldY(layout.addressRow),
       width: 190,
     },
     {
       label: 'city',
       value: userDetails.city,
       x: 280,
-      y: agreementFieldY(206.602),
+      y: agreementFieldY(layout.addressRow),
       width: 50,
     },
     {
       label: 'state',
       value: userDetails.state,
       x: 340,
-      y: agreementFieldY(206.602),
+      y: agreementFieldY(layout.addressRow),
       width: 70,
     },
     {
       label: 'zip_code',
       value: userDetails.zip_code,
       x: 420,
-      y: agreementFieldY(206.602),
+      y: agreementFieldY(layout.addressRow),
       width: 55,
     },
     {
       label: 'country',
       value: 'USA',
       x: 490,
-      y: agreementFieldY(206.602),
+      y: agreementFieldY(layout.addressRow),
       width: 70,
     },
     {
       label: 'date_of_birth',
       value: userDetails.date_of_birth,
       x: 220,
-      y: agreementFieldY(236.602),
+      y: agreementFieldY(layout.contactRow),
       width: 65,
     },
     {
       label: 'email',
       value: userDetails.email_id,
       x: 300,
-      y: agreementFieldY(236.602),
+      y: agreementFieldY(layout.contactRow),
       width: 135,
     },
     {
       label: 'phone',
       value: userDetails.contact_no,
       x: 450,
-      y: agreementFieldY(236.602),
+      y: agreementFieldY(layout.contactRow),
       width: 100,
     },
   ];
@@ -405,6 +515,21 @@ export async function POST(req) {
     const pdfDoc = await PDFDocument.load(pdfBuffer);
     const numberOfPages = pdfDoc.getPageCount();
     const lastPage = String(numberOfPages);
+    const layout = await resolveAgreementLayout(pdfBuffer, numberOfPages);
+
+    console.log('[docusign/agreement] layout resolved', {
+      numberOfPages,
+      lastPage,
+      profile: layout.profile,
+      rows: {
+        nameRow: layout.nameRow,
+        addressRow: layout.addressRow,
+        contactRow: layout.contactRow,
+        signatureRow: layout.signatureRow,
+        signatureFieldY: layout.signatureFieldY,
+        dateRow: layout.dateRow,
+      },
+    });
 
     const pdfBase64 = pdfBuffer.toString('base64');
 
@@ -432,20 +557,20 @@ export async function POST(req) {
     signHere.documentId = '1';
     signHere.pageNumber = lastPage;
     signHere.xPosition = '72';
-    signHere.yPosition = agreementSignatureY();
-    signHere.width = '310';
-    signHere.height = '16';
+    signHere.yPosition = agreementSignatureY(layout.signatureFieldY);
+    signHere.width = '280';
+    signHere.height = '18';
 
     const dateSigned = new docusign.DateSigned();
     dateSigned.documentId = '1';
     dateSigned.pageNumber = lastPage;
     dateSigned.xPosition = '410';
-    dateSigned.yPosition = agreementFieldY(266.602);
+    dateSigned.yPosition = agreementFieldY(layout.dateRow);
 
     const tabs = new docusign.Tabs();
     tabs.signHereTabs = [signHere];
     tabs.dateSignedTabs = [dateSigned];
-    tabs.textTabs = buildAgreementTextTabs(userDetails, lastPage);
+    tabs.textTabs = buildAgreementTextTabs(userDetails, lastPage, layout);
     signer.tabs = tabs;
 
     envelopeDefinition.recipients = { signers: [signer] };
