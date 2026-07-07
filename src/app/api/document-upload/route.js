@@ -26,6 +26,66 @@ function toObjectId(id) {
     : id;
 }
 
+async function resolveClaimId({ userId, caseIdParam }) {
+  const caseObjectId = toObjectId(caseIdParam);
+  const userObjectId = toObjectId(userId);
+
+  if (caseObjectId) {
+    const userCaseById = await UserCases.findById(caseObjectId)
+      .select('claim_id claim_message')
+      .lean();
+    if (userCaseById?.claim_id) {
+      return String(userCaseById.claim_id);
+    }
+  }
+
+  if (caseIdParam) {
+    const userCaseByCaseNumber = await UserCases.findOne({
+      case_id: String(caseIdParam),
+    })
+      .select('claim_id claim_message')
+      .lean();
+    if (userCaseByCaseNumber?.claim_id) {
+      return String(userCaseByCaseNumber.claim_id);
+    }
+  }
+
+  if (userObjectId) {
+    const userCaseByUser = await UserCases.findOne({ user_id: userObjectId })
+      .sort({ createdAt: -1 })
+      .select('claim_id claim_message')
+      .lean();
+    if (userCaseByUser?.claim_id) {
+      return String(userCaseByUser.claim_id);
+    }
+
+    const claimMatch = userCaseByUser?.claim_message?.match(/Claim\s+(\d+)\s+filed/i);
+    if (claimMatch?.[1]) {
+      return claimMatch[1];
+    }
+  }
+
+  return null;
+}
+
+async function findUserDocs({ userId, caseIdParam }) {
+  const caseObjectId = toObjectId(caseIdParam);
+  const userObjectId = toObjectId(userId);
+
+  if (caseObjectId) {
+    const byCaseId = await UserDocs.findOne({ case_id: caseObjectId }).sort({
+      createdAt: -1,
+    });
+    if (byCaseId) return byCaseId;
+  }
+
+  if (userObjectId) {
+    return UserDocs.findOne({ user_id: userObjectId }).sort({ createdAt: -1 });
+  }
+
+  return null;
+}
+
 function filenameFromS3Key(key) {
   const base = key.split('/').pop() || key;
   const match = base.match(/^\d+-(.+)$/);
@@ -81,22 +141,7 @@ export async function POST(req) {
 
     await connectToDatabase();
 
-    const userId = toObjectId(user_id);
-    const caseObjectId = toObjectId(case_id);
-
-    const userDocs = caseObjectId
-      ? await UserDocs.findOne({ case_id: caseObjectId })
-      : await UserDocs.findOne({ user_id: userId }).sort({ createdAt: -1 });
-
-    if (!userDocs) {
-      return NextResponse.json(
-        { message: 'User documents not found' },
-        { status: 404 },
-      );
-    }
-
-    const userCase = await UserCases.findById(userDocs.case_id).select('claim_id');
-    const claimId = userCase?.claim_id;
+    const claimId = await resolveClaimId({ userId: user_id, caseIdParam: case_id });
 
     if (!claimId) {
       return NextResponse.json(
@@ -108,7 +153,16 @@ export async function POST(req) {
       );
     }
 
-    const userDetails = await UserDetails.findOne({ user_id: userId })
+    const userDocs = await findUserDocs({ userId: user_id, caseIdParam: case_id });
+
+    if (!userDocs) {
+      return NextResponse.json(
+        { message: 'User documents not found' },
+        { status: 404 },
+      );
+    }
+
+    const userDetails = await UserDetails.findOne({ user_id: toObjectId(user_id) })
       .sort({ createdAt: -1 })
       .select('email_id');
 
@@ -123,7 +177,7 @@ export async function POST(req) {
     const payload = {
       claims: [
         {
-          claim_id: String(claimId),
+          claim_id: claimId,
           email: userDetails?.email_id || '',
           documents,
         },

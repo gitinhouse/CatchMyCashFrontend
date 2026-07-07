@@ -4,6 +4,7 @@ import connectToDatabase from "../../lib/mongodb.js";
 import User from "../../models/UserInformation.js";
 import UserDocs from "../../models/userDocs.js";
 import UserCases from "../../models/userCases.js";
+import mongoose from "mongoose";
 import {
   S3Client,
   PutObjectCommand,
@@ -160,8 +161,14 @@ export async function GET(req) {
       });
     }
 
+    const userObjectId = mongoose.Types.ObjectId.isValid(user_id)
+      ? new mongoose.Types.ObjectId(user_id)
+      : user_id;
+
     /* ---------------- FETCH USER DOCS ---------------- */
-    const userDocs = await UserDocs.findOne({ user_id });
+    const userDocs = await UserDocs.findOne({ user_id: userObjectId }).sort({
+      createdAt: -1,
+    });
     if (!userDocs) {
       return new Response(
         JSON.stringify({ error: "User documents not found" }),
@@ -170,7 +177,9 @@ export async function GET(req) {
     }
 
     /* ---------------- FETCH USER CASE ---------------- */
-    const userCase = await UserCases.findOne({ user_id }).select("claim_id");
+    const userCase = await UserCases.findOne({ user_id: userObjectId })
+      .sort({ createdAt: -1 })
+      .select("claim_id");
     const claimId = userCase?.claim_id || null;
 
     /* ---------------- S3 CONFIG ---------------- */
