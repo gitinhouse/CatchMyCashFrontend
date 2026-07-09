@@ -8,15 +8,17 @@ export default function PrivacyPage() {
   const isScrollingRef = useRef(false);
 
   const sections = [
-    { id: 'p-collect', title: 'What we collect' },
-    { id: 'p-use', title: 'How we use it' },
-    { id: 'p-sms', title: 'SMS Communications ' },
-    { id: 'p-smsprivacy', title: 'SMS Privacy' },
+    { id: 'p-acceptanceTerms', title: 'Acceptance of Terms' },
+    { id: 'p-use', title: 'Use of Our Services' },
+    { id: 'p-accountResponsibility', title: 'Account Responsibilities ' },
+    { id: 'p-smsCommunications', title: 'SMS Communications' },
     // { id: 'p-share', title: "What's shared with California" },
-    { id: 'p-protect', title: "How it's protected" },
-    { id: 'p-rights', title: 'Your rights' },
-    { id: 'p-smsconsent', title: 'SMS Consent' },
-    { id: 'p-contact', title: 'Questions' },
+    { id: 'p-smsProgramTerms', title: 'SMS Program Terms' },
+    { id: 'p-optIn', title: 'Opt-In and Consent' },
+    { id: 'p-optOut', title: 'Opt-Out Instructions' },
+    { id: 'p-help', title: 'Help and Support' },
+    { id: 'p-message', title: 'Message Frequency' },
+    { id: 'p-contact', title: 'Contact Us' },
   ];
 
   useEffect(() => {
@@ -97,7 +99,7 @@ export default function PrivacyPage() {
       <section className="py-12.5 lg:py-25 border-b border-[#E8E6E3] bg-white">
         <div className="max-w-[1240px] mx-auto px-6 sm:px-8">
           <h1 className="font-['Fraunces'] text-[clamp(40px,6vw,78px)] font-semibold tracking-[-0.02em] leading-[1.02] max-w-[16ch] mb-6">
-            Your data, in{' '}
+            Terms & Conditions in{' '}
             <em className="italic text-[#E1261C] font-normal">
               plain language.
             </em>
@@ -144,170 +146,161 @@ export default function PrivacyPage() {
           {/* Main Content */}
           <div className="space-y-16">
             {/* What we collect */}
-            <section id="p-collect" className="scroll-mt-24">
+            <section id="p-acceptanceTerms" className="scroll-mt-24">
               <h2 className="font-['Fraunces'] text-2xl md:text-3xl font-semibold tracking-[-0.01em] mb-5 pb-3 border-b-2 border-[#E1261C] inline-block">
-                What we collect
+                Acceptance of Terms
               </h2>
               <p className="text-base leading-relaxed text-[#4A4A4A] mb-4">
-                We collect only the information needed to (a) help you find
-                unclaimed property and (b) file a successful claim with the
-                State Controller's Office.
+                By using the CatchMyCash website or services, you agree to
+                comply with these Terms & Conditions. If you do not agree with
+                these terms, please do not use our website or services.
               </p>
-              <ul className="space-y-3 mt-4 font-['Inter'] ">
-                <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed ">
-                  <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  <span className="text-black font-semibold">
-                    Search inputs.
-                  </span>{' '}
-                  The names you enter into our search tool, including any prior
-                  or maiden names, and the business names you ask us to look up.
-                </li>
-                <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
-                  <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  <span className="text-black font-semibold">
-                    Account information.
-                  </span>{' '}
-                  {/* Your name, email address, and phone number when you create an
-                  account or sign a recovery agreement. */}
-                  Your name, email address, mobile phone number, and SMS
-                  communication preferences when you create an account, submit a
-                  service request, or opt in to receive SMS notifications.
-                </li>
-                {/* <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
-                  <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  <span className="text-black font-semibold">
-                    Claim documents.
-                  </span>{' '}
-                  Government-issued ID, proof of address, and any supporting
-                  documents required by California for your specific claim type.
-                </li> */}
-                <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
-                  <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  <span className="text-black font-semibold">
-                    Communications.
-                  </span>{' '}
-                  Messages you send us about your status, and our responses.
-                </li>
-                <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
-                  <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  <span className="text-black font-semibold">
-                    Technical data.
-                  </span>{' '}
-                  Standard web logs (IP address, browser, pages visited) used to
-                  keep the site secure and improve it.
-                </li>
-              </ul>
             </section>
 
             {/* How we use it */}
             <section id="p-use" className="scroll-mt-24">
               <h2 className="font-['Fraunces'] text-2xl md:text-3xl font-semibold tracking-[-0.01em] mb-5 pb-3 border-b-2 border-[#E1261C] inline-block">
-                How we use it
+                Use of Our Services
               </h2>
               <p className="text-base leading-relaxed text-[#4A4A4A] mb-4">
-                {/* Your information is used for one purpose: to help you recover
-                your unclaimed property. Specifically: */}
-                Your information is used for one purpose Specifically:
+                Our services are intended for lawful purposes only. You agree to
+                provide accurate and complete information when using our website
+                and to use our services in accordance with all applicable laws
+                and regulations.
               </p>
-              <ul className="space-y-3 mt-4 font-['Inter'] font-[15px]">
-                <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
-                  <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  Running searches against California's public database.
-                </li>
-                <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
-                  <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  {/* Preparing and filing your claim package with California. */}
-                  Preparing and filing your details with California.
-                </li>
-                <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
-                  <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  Verifying your identity, which is required by California.
-                </li>
-                <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
-                  <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  Sending transactional SMS notifications (only if you have
-                  opted in), requests for additional information, identity
-                  verification notifications, and status updates.
-                </li>
-                {/* <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
-                  <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  Communicating with you about your claim's status.
-                </li>
-                <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
-                  <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  Processing payment after California approves your claim.
-                </li> */}
-              </ul>
-              {/* <div className="bg-[#FCE9E7] border-l-3 border-[#E1261C] p-5 mt-6 rounded-r-lg">
-                <p className="text-black font-medium">
-                  We do not sell your personal information. We do not share it
-                  with advertisers, data brokers, or any third party except as
-                  described in "What's shared with California" below.
-                </p>
-              </div> */}
             </section>
 
-            <section id="p-sms" className="scroll-mt-24">
+            <section id="p-accountResponsibility" className="scroll-mt-24">
+              <h2 className="font-['Fraunces'] text-2xl md:text-3xl font-semibold tracking-[-0.01em] mb-5 pb-3 border-b-2 border-[#E1261C] inline-block">
+                Account Responsibilities
+              </h2>
+              <p className="text-base leading-relaxed text-[#4A4A4A] mb-4">
+                If you create an account, you are responsible for maintaining
+                the confidentiality of your account credentials and for all
+                activities that occur under your account. <br /> You agree to
+                notify us immediately of any unauthorized use of your account.
+              </p>
+            </section>
+
+            <section id="p-smsCommunications" className="scroll-mt-24">
               <h2 className="font-['Fraunces'] text-2xl md:text-3xl font-semibold tracking-[-0.01em] mb-5 pb-3 border-b-2 border-[#E1261C] inline-block">
                 SMS Communications
               </h2>
               <p className="text-base leading-relaxed text-[#4A4A4A] mb-4">
-                If you choose to receive SMS messages from CatchMyCash, we use
-                your mobile phone number only to send transactional
-                notifications related to your service request. These messages
-                may include:
+                If you choose to receive SMS messages from CatchMyCash, you
+                agree to receive transactional text messages related to your
+                account activity and service updates.
+                <br />
+                Examples of SMS messages include:
               </p>
               <ul className="space-y-3 mt-4 font-['Inter'] font-[15px] ">
                 <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
                   <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  Service request confirmations.
+                  Account notifications
                 </li>
                 <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
                   <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  Requests for additional documentation.
+                  Service request confirmations
                 </li>
                 <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
                   <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  Identity verification notifications.
+                  Status updates
                 </li>
                 <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
                   <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  Message and data rates may apply.
+                  Requests for additional information
                 </li>
                 <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
                   <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  You may opt out at any time by replying STOP.
+                  Security or verification notifications
                 </li>
                 <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
                   <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  For assistance, reply HELP or contact us at
-                  help@catchmycash.com.
+                  Important service announcements
+                </li>
+              </ul>
+              <p className="text-base leading-relaxed text-[#4A4A4A] mt-4">
+                SMS messages are sent only to users who have provided their
+                mobile phone number and explicitly consented to receive SMS
+                communications.
+              </p>
+            </section>
+
+            <section id="p-smsProgramTerms" className="scroll-mt-24">
+              <h2 className="font-['Fraunces'] text-2xl md:text-3xl font-semibold tracking-[-0.01em] mb-5 pb-3 border-b-2 border-[#E1261C] inline-block">
+                SMS Program Terms
+              </h2>
+              <p className="text-base leading-relaxed text-[#4A4A4A] mb-4">
+                By opting in to receive SMS messages:
+              </p>
+              <ul className="space-y-3 mt-4 font-['Inter'] font-[15px] ">
+                <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
+                  <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
+                  You authorize CatchMyCash to send SMS notifications to the
+                  mobile number you provided.
+                </li>
+                <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
+                  <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
+                  SMS messages are intended only for the person who provided the
+                  phone number.
+                </li>
+                <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
+                  <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
+                  Consent to receive SMS messages is not a condition of
+                  purchasing any product or service.
+                </li>
+                <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
+                  <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
+                  SMS communications are intended for informational and
+                  transactional purposes only.
                 </li>
               </ul>
             </section>
-            <section id="p-smsprivacy" className="scroll-mt-24">
+
+            <section id="p-optIn" className="scroll-mt-24">
               <h2 className="font-['Fraunces'] text-2xl md:text-3xl font-semibold tracking-[-0.01em] mb-5 pb-3 border-b-2 border-[#E1261C] inline-block">
-                SMS Privacy
+                Opt-In and Consent
               </h2>
               <p className="text-base leading-relaxed text-[#4A4A4A] mb-4">
-                CatchMyCash respects your privacy.
+                You may opt in to receive SMS messages by:
               </p>
               <ul className="space-y-3 mt-4 font-['Inter'] font-[15px] ">
                 <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
                   <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  Mobile phone numbers and SMS consent information are used only
-                  for providing the SMS services you requested.
+                  Selecting the SMS consent checkbox during process.
                 </li>
                 <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
                   <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  Mobile information will not be shared with third parties or
-                  affiliates for marketing or promotional purposes.
+                  Providing your mobile phone number through our website.
                 </li>
                 <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
                   <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  Text messaging originator opt-in data and consent will not be
-                  shared with any third parties except messaging service
-                  providers required to deliver SMS messages.
+                  Explicitly requesting SMS notifications through our services.
+                </li>
+              </ul>
+              <p className="text-base leading-relaxed text-[#4A4A4A] mt-4">
+                The SMS consent checkbox is never pre-selected. Your consent is
+                recorded at the time of opt-in.
+              </p>
+            </section>
+
+            <section id="p-optOut" className="scroll-mt-24">
+              <h2 className="font-['Fraunces'] text-2xl md:text-3xl font-semibold tracking-[-0.01em] mb-5 pb-3 border-b-2 border-[#E1261C] inline-block">
+                Opt-Out Instructions
+              </h2>
+              <p className="text-base leading-relaxed text-[#4A4A4A] mb-4">
+                You may stop receiving SMS messages at any time by replying:
+              </p>
+              <ul className="space-y-3 mt-4 font-['Inter'] font-[15px] ">
+                <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
+                  <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
+                  Stop:After opting out, you will receive one confirmation
+                  message confirming your unsubscribe request. No additional SMS
+                  messages will be sent unless you opt in again.
+                </li>
+                <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
+                  <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
+                  You may opt back in by replying: START
                 </li>
               </ul>
             </section>
@@ -350,63 +343,41 @@ export default function PrivacyPage() {
               </p>
             </section> */}
 
-            {/* How it's protected */}
-            <section id="p-protect" className="scroll-mt-24">
+            {/* Questions */}
+            <section id="p-help" className="scroll-mt-24">
               <h2 className="font-['Fraunces'] text-2xl md:text-3xl font-semibold tracking-[-0.01em] mb-5 pb-3 border-b-2 border-[#E1261C] inline-block">
-                How it's protected
-              </h2>
-              <p className="text-base leading-relaxed text-[#4A4A4A] mb-4">
-                We treat your documents the way we'd want our own treated.
-              </p>
-              <ul className="space-y-3 mt-4 font-['Inter'] font-[15px]">
-                <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
-                  <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  <span className="text-black font-semibold">In transit:</span>{' '}
-                  all data is sent over TLS-encrypted connections.
-                </li>
-                <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
-                  <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  <span className="text-black font-semibold">At rest:</span>{' '}
-                  documents are stored encrypted in access-controlled cloud
-                  storage.
-                </li>
-                <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
-                  <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  <span className="text-black font-semibold">Access:</span> only
-                  employees handling your claim can view your documents, and
-                  access is logged.
-                </li>
-                <li className="pl-8 pb-2 border-b border-[#E8E6E3] font-[15px] relative text-[#4A4A4A] leading-relaxed">
-                  <span className="absolute left-2 top-2.5 w-2 h-2 bg-[#E1261C]"></span>
-                  <span className="text-black font-semibold">Retention:</span>{' '}
-                  we keep claim records for the period required to support the
-                  claim and resolve any disputes; after that, they're deleted on
-                  a defined schedule.
-                </li>
-              </ul>
-            </section>
-
-            {/* Your rights */}
-            <section id="p-rights" className="scroll-mt-24">
-              <h2 className="font-['Fraunces'] text-2xl md:text-3xl font-semibold tracking-[-0.01em] mb-5 pb-3 border-b-2 border-[#E1261C] inline-block">
-                Your rights
+                Help and Support
               </h2>
               <p className="text-base leading-relaxed text-[#4A4A4A]">
-                {/* You can ask us, at any time, what data we hold about you,
-                request a copy, or request deletion (subject to record-keeping
-                requirements tied to a filed claim). California residents have
-                additional rights under the CCPA, including the right to know,
-                the right to delete, and the right to non-discrimination for
-                exercising those rights. */}
-                You can ask us, at any time, what data we hold about you,
-                request a copy, or request deletion, or withdraw your consent to
-                receive SMS notifications at any time.You may opt out of SMS
-                communications at any time by replying STOP to any SMS message.
-                Opting out of SMS messages will not affect your ability to
-                communicate with us by email.
+                If you need assistance with our SMS program, reply:{' '}
+                <span className="text-black font-semibold">HELP</span> and we'll
+                answer.
               </p>
-              <p className="text-base leading-relaxed text-[#4A4A4A] mt-4">
-                To exercise any of these rights,{' '}
+            </section>
+
+            <section id="p-message" className="scroll-mt-24">
+              <h2 className="font-['Fraunces'] text-2xl md:text-3xl font-semibold tracking-[-0.01em] mb-5 pb-3 border-b-2 border-[#E1261C] inline-block">
+                Message Frequency
+              </h2>
+              <p className="text-base leading-relaxed text-[#4A4A4A] mb-4">
+                Message frequency varies based on your account activity and
+                service interactions.
+              </p>
+              <p className="text-base leading-relaxed text-[#4A4A4A] mb-4">
+                We only send messages when necessary to provide requested
+                updates or important notifications.
+              </p>
+            </section>
+
+            <section id="p-contact" className="scroll-mt-24">
+              <h2 className="font-['Fraunces'] text-2xl md:text-3xl font-semibold tracking-[-0.01em] mb-5 pb-3 border-b-2 border-[#E1261C] inline-block">
+                Contact Us
+              </h2>
+              <p className="text-base leading-relaxed text-[#4A4A4A]">
+                If you have questions regarding these Terms & Conditions, please
+                contact us.
+              </p>
+              <p className="text-base leading-relaxed text-[#4A4A4A]">
                 <span className="text-black font-semibold">
                   <br /> Email: help@catchmycash.com <br /> Website:
                   https://catchmycash.com
@@ -414,35 +385,6 @@ export default function PrivacyPage() {
                   SMS Support: Reply HELP to any SMS message.
                 </span>
                 .
-              </p>
-            </section>
-
-            <section id="p-smsconsent" className="scroll-mt-24">
-              <h2 className="font-['Fraunces'] text-2xl md:text-3xl font-semibold tracking-[-0.01em] mb-5 pb-3 border-b-2 border-[#E1261C] inline-block">
-                SMS Consent
-              </h2>
-              <p className="text-base leading-relaxed text-[#4A4A4A]">
-                By providing your mobile phone number and explicitly opting in,
-                you consent to receive transactional SMS messages from
-                CatchMyCash regarding your service requests.
-                <br /> Your consent to receive SMS messages is not a condition
-                of purchasing any service. <br /> You may withdraw your consent
-                at any time by replying STOP.
-              </p>
-            </section>
-
-            {/* Questions */}
-            <section id="p-contact" className="scroll-mt-24">
-              <h2 className="font-['Fraunces'] text-2xl md:text-3xl font-semibold tracking-[-0.01em] mb-5 pb-3 border-b-2 border-[#E1261C] inline-block">
-                Questions
-              </h2>
-              <p className="text-base leading-relaxed text-[#4A4A4A]">
-                If anything here is unclear, or you want to know how a specific
-                piece of your information is being used, write to{' '}
-                <span className="text-black font-semibold">
-                  help@catchmycash.com
-                </span>{' '}
-                and we'll answer.
               </p>
             </section>
           </div>
