@@ -24,7 +24,7 @@ import { useSearchStore } from '../store/searchStore';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 
-const UserInformation = ({ onNext, onFieldFilled }) => {
+export default function PrivacyPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -732,6 +732,4 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
       </div>
     </div>
   );
-};
-
-export default UserInformation;
+}
