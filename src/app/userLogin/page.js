@@ -1,9 +1,9 @@
-"use client";
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useSearchStore } from "../store/searchStore";
-import axios from "axios";
-import { useRouter } from "next/navigation";
+'use client';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useSearchStore } from '../store/searchStore';
+import axios from 'axios';
+import { useRouter } from 'next/navigation';
 import {
   Search,
   Globe,
@@ -14,9 +14,9 @@ import {
   ArrowRight,
   AlertTriangle,
   DollarSign,
-} from "lucide-react";
-import { Button } from "../components/uicomponents/Button";
-import { InputField } from "../components/uicomponents/InputField";
+} from 'lucide-react';
+import { Button } from '../components/uicomponents/Button';
+import { InputField } from '../components/uicomponents/InputField';
 
 const ErrorPopup = ({ message, onClose }) => {
   return (
@@ -32,7 +32,7 @@ const ErrorPopup = ({ message, onClose }) => {
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.8, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 200, damping: 20 }}
+            transition={{ type: 'spring', stiffness: 200, damping: 20 }}
             className="bg-white border border-[#E8E6E3] shadow-xl rounded-2xl p-6 max-w-sm w-full text-center"
           >
             <AlertTriangle className="h-10 w-10 text-[#E1261C] mx-auto mb-3" />
@@ -54,37 +54,37 @@ const ErrorPopup = ({ message, onClose }) => {
 };
 
 const UserLogin = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [validationError, setValidationError] = useState("");
+  const [validationError, setValidationError] = useState('');
   const { setUserLogin } = useSearchStore();
-  const [popupMessage, setPopupMessage] = useState("");
+  const [popupMessage, setPopupMessage] = useState('');
   const router = useRouter();
 
   useEffect(() => {
     if (validationError && (email.trim() || password.trim())) {
-      setValidationError("");
+      setValidationError('');
     }
   }, [email, password, validationError]);
 
   const handleSearch = async () => {
-    setValidationError("");
+    setValidationError('');
 
     const missingFields = [];
-    if (!email.trim()) missingFields.push("Email-Id");
-    if (!password.trim()) missingFields.push("Password");
+    if (!email.trim()) missingFields.push('Email-Id');
+    if (!password.trim()) missingFields.push('Password');
 
     if (missingFields.length > 0) {
       if (missingFields.length === 1) {
         setValidationError(`Please enter your ${missingFields[0]}`);
       } else if (missingFields.length === 2) {
         setValidationError(
-          `Please enter your ${missingFields[0]} and ${missingFields[1]}`
+          `Please enter your ${missingFields[0]} and ${missingFields[1]}`,
         );
       } else {
         setValidationError(
-          `Please fill in all required fields: ${missingFields.join(", ")}`
+          `Please fill in all required fields: ${missingFields.join(', ')}`,
         );
       }
       return;
@@ -99,22 +99,22 @@ const UserLogin = () => {
     window.scrollTo(0, 0);
 
     try {
-      const { data } = await axios.post("/api/login", payload);
+      const { data } = await axios.post('/api/login', payload);
       setUserLogin(data);
-      localStorage.setItem("userLogin", JSON.stringify(data));
+      localStorage.setItem('userLogin', JSON.stringify(data));
       console.log(data?.user?.type);
-      if (data?.user?.type === "User") {
-        router.push("/?step=documents");
+      if (data?.user?.type === 'User') {
+        router.push('/?step=documents');
       } else {
-        router.push("/allUsers");
+        router.push('/allUsers');
       }
     } catch (error) {
       console.error(error);
-      let msg = "Invalid credentials. Please check your email or password.";
+      let msg = 'Invalid credentials. Please check your email or password.';
       if (error?.response?.data?.message) msg = error.response.data.message;
 
       setPopupMessage(msg);
-      setValidationError("");
+      setValidationError('');
       setIsSearching(false);
     }
   };
@@ -122,7 +122,10 @@ const UserLogin = () => {
   const isFormValid = email.trim().length > 0 && password.trim().length > 0;
 
   return (
-    <div className="min-h-screen bg-[#F7F5F2]" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div
+      className="min-h-screen bg-[#F7F5F2]"
+      style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+    >
       {/* Header */}
       {/* <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -165,9 +168,9 @@ const UserLogin = () => {
                 className="absolute inset-0 border-2 border-[#E1261C]/0 rounded-xl pointer-events-none"
                 animate={{
                   borderColor: [
-                    "rgba(225, 38, 28, 0)",
-                    "rgba(225, 38, 28, 0.15)",
-                    "rgba(225, 38, 28, 0)",
+                    'rgba(225, 38, 28, 0)',
+                    'rgba(225, 38, 28, 0.15)',
+                    'rgba(225, 38, 28, 0)',
                   ],
                 }}
                 transition={{ duration: 3, repeat: Infinity }}
@@ -189,7 +192,8 @@ const UserLogin = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
                 >
-                  Sign <span className="text-[#E1261C] italic font-normal">In</span>
+                  Sign{' '}
+                  <span className="text-[#E1261C] italic font-normal">In</span>
                 </motion.h2>
               </div>
 
@@ -242,11 +246,11 @@ const UserLogin = () => {
                       placeholder="Enter Email-Id"
                       className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${
                         email.trim()
-                          ? "border-[#E1261C]/50 focus:border-[#E1261C]"
-                          : "border-[#E8E6E3] focus:border-[#E1261C]"
+                          ? 'border-[#E1261C]/50 focus:border-[#E1261C]'
+                          : 'border-[#E8E6E3] focus:border-[#E1261C]'
                       }`}
                       onKeyPress={(e) =>
-                        e.key === "Enter" && isFormValid && handleSearch()
+                        e.key === 'Enter' && isFormValid && handleSearch()
                       }
                       disabled={isSearching}
                     />
@@ -273,11 +277,11 @@ const UserLogin = () => {
                       placeholder="Enter Password"
                       className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${
                         password.trim()
-                          ? "border-[#E1261C]/50 focus:border-[#E1261C]"
-                          : "border-[#E8E6E3] focus:border-[#E1261C]"
+                          ? 'border-[#E1261C]/50 focus:border-[#E1261C]'
+                          : 'border-[#E8E6E3] focus:border-[#E1261C]'
                       }`}
                       onKeyPress={(e) =>
-                        e.key === "Enter" && isFormValid && handleSearch()
+                        e.key === 'Enter' && isFormValid && handleSearch()
                       }
                       disabled={isSearching}
                     />
@@ -325,8 +329,8 @@ const UserLogin = () => {
                     onClick={handleSearch}
                     className={`w-full py-4 text-lg font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3 ${
                       isFormValid && !isSearching
-                        ? "bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg"
-                        : "bg-[#D4D4D4] text-[#888888] cursor-not-allowed"
+                        ? 'bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg'
+                        : 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
                     }`}
                     disabled={!isFormValid || isSearching}
                   >
@@ -338,7 +342,7 @@ const UserLogin = () => {
                             transition={{
                               duration: 1,
                               repeat: Infinity,
-                              ease: "linear",
+                              ease: 'linear',
                             }}
                             className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
                           />
@@ -358,6 +362,15 @@ const UserLogin = () => {
                     </span>
                   </button>
                 </motion.div>
+                <motion.div>
+                  Don&apos;t have an account?
+                  <a
+                    href="/register"
+                    className="ml-2 text-[#E1261C] hover:underline font-['JetBrains_Mono']"
+                  >
+                    Register here
+                  </a>
+                </motion.div>
               </motion.div>
             </motion.div>
 
@@ -366,20 +379,20 @@ const UserLogin = () => {
               {[
                 {
                   icon: Globe,
-                  title: "52+ Database Search",
-                  desc: "SCO, banks, insurance, utilities, address history",
+                  title: '52+ Database Search',
+                  desc: 'SCO, banks, insurance, utilities, address history',
                   delay: 0.8,
                 },
                 {
                   icon: Shield,
-                  title: "Bank-Level Security",
-                  desc: "256-bit encryption protects your data",
+                  title: 'Bank-Level Security',
+                  desc: '256-bit encryption protects your data',
                   delay: 1.0,
                 },
                 {
                   icon: Zap,
-                  title: "Lightning Fast",
-                  desc: "Complete search in under 5 seconds",
+                  title: 'Lightning Fast',
+                  desc: 'Complete search in under 5 seconds',
                   delay: 1.2,
                 },
               ].map((feature, index) => (
@@ -413,9 +426,9 @@ const UserLogin = () => {
         <ErrorPopup
           message={popupMessage}
           onClose={() => {
-            setPopupMessage("");
-            setEmail("");
-            setPassword("");
+            setPopupMessage('');
+            setEmail('');
+            setPassword('');
           }}
         />
       </div>
