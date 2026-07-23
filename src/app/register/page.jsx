@@ -22,9 +22,11 @@ import {
 import { InputField } from '../components/uicomponents/InputField';
 import { useSearchStore } from '../store/searchStore';
 import axios from 'axios';
+import { useRouter } from 'next/navigation';
 
 const UserInformation = ({ onNext, onFieldFilled }) => {
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -54,6 +56,8 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
   });
   const [apiError, setApiError] = useState('');
   const [agreeSMS, setAgreeSMS] = useState(false);
+  const [agreePrivacy, setAgreePrivacy] = useState(false);
+
   const addressInputRef = useRef(null);
   const autocompleteRef = useRef(null);
 
@@ -289,8 +293,10 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
       return;
     }
 
-    if (!agreeSMS) {
-      setApiError('You must agree to receive SMS updates before continuing.');
+    if (!agreePrivacy) {
+      setApiError(
+        'You must agree to the privacy policy and terms of service before continuing.',
+      );
       return;
     } else {
       setApiError('');
@@ -299,7 +305,6 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
     try {
       setLoading(true);
       const payload = {
-        user_id: userData._id,
         legal_name: formData.fullName,
         date_of_birth: formData.dateOfBirth,
         email_id: formData.email,
@@ -315,46 +320,17 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
       };
       const payloadData = {
         userEmail: formData.email,
-        user_id: userData._id,
+        user_id: '690d932ff286de3acbb2f69b',
         userType: 'User',
       };
 
       const { firstName, lastName } = getFirstAndLastName(formData.fullName);
       const [dobYear, dobMonth, dobDay] = formData.dateOfBirth.split('-');
 
-      const claimSubmissionPayloadData = {
-        userId: userData._id,
-        property_ids: ownPropertyIds,
-        form_data: {
-          firstName: firstName,
-          lastName: lastName,
-          email: 'help@mail.catchmycash.com',
-          phone1: formData.phone,
-          taxID: formData.ssn,
-          dobMonth: dobMonth,
-          dobDay: dobDay,
-          dobYear: dobYear,
-          address1: formData.address,
-          address2: '',
-          city: formData.city,
-          state: 'CA',
-          postalCode: formData.zipCode,
-          countryCode: 'USA',
-          taxIdentifierType: 'Individual',
-          sourceOfClaim: '1',
-          assistedByFinder: false,
-        },
-        max_concurrent: 1,
-        max_search_pages: 1,
-        post_click_wait_secs: 10,
-        enable_document_upload: false,
-        claim_id_override: '',
-        documents_to_upload: [],
-      };
-
       const res = await axios.post('/api/register', payloadData);
       setUserLogin(res.data);
       localStorage.setItem('userLogin', JSON.stringify(res.data));
+      router.push('/userLogin');
     } catch (err) {
       console.error('Error saving user properties:', err);
       if (err.response && err.response.data?.message) {
@@ -707,8 +683,8 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
               <label className="flex items-center space-x-2 text-sm text-[#0A0A0A] cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={agreeSMS}
-                  onChange={(e) => setAgreeSMS(e.target.checked)}
+                  checked={agreePrivacy}
+                  onChange={(e) => setAgreePrivacy(e.target.checked)}
                   className="h-4 w-4 text-[#E1261C] rounded border-[#E8E6E3] focus:ring-[#E1261C]"
                 />
                 <span>
