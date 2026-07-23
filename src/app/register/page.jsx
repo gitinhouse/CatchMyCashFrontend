@@ -245,7 +245,6 @@ export default function PrivacyPage() {
       formData.ssn,
     ];
     const count = requiredFields.filter((v) => v && v.trim()).length;
-    onFieldFilled?.(count);
   }, [formData]);
 
   const handleSubmit = async (e) => {
