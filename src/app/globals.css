@@ -1,24 +1,24 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
   --font-size: 16px;
-  
+
   /* Updated colors - matching HTML mockup */
-  --black: #0A0A0A;
-  --white: #FFFFFF;
-  --off-white: #F7F5F2;
-  --red: #E1261C;
-  --red-deep: #B11912;
-  --red-tint: #FCE9E7;
-  --gray-900: #1A1A1A;
-  --gray-700: #4A4A4A;
+  --black: #0a0a0a;
+  --white: #ffffff;
+  --off-white: #f7f5f2;
+  --red: #e1261c;
+  --red-deep: #b11912;
+  --red-tint: #fce9e7;
+  --gray-900: #1a1a1a;
+  --gray-700: #4a4a4a;
   --gray-500: #888888;
-  --gray-300: #D4D4D4;
-  --gray-200: #E8E6E3;
-  --gray-100: #F0EEEB;
-  
+  --gray-300: #d4d4d4;
+  --gray-200: #e8e6e3;
+  --gray-100: #f0eeeb;
+
   /* CSS Variables for consistent theming */
   --background: var(--white);
   --foreground: var(--black);
@@ -57,7 +57,7 @@
   --sidebar-accent-foreground: var(--black);
   --sidebar-border: var(--gray-200);
   --sidebar-ring: var(--red);
-  
+
   /* Font variables */
   --font-display: var(--font-fraunces), Georgia, serif;
   --font-body: var(--font-inter), system-ui, sans-serif;
@@ -156,7 +156,7 @@
  * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
  */
 @layer base {
-  :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) {
+  :where(:not(:has([class*=' text-']), :not(:has([class^='text-'])))) {
     h1 {
       font-size: var(--text-2xl);
       font-weight: var(--font-weight-medium);
@@ -237,7 +237,10 @@ button {
   font-family: var(--font-fraunces) !important;
 } */
 
-code, pre, kbd, samp,
+code,
+pre,
+kbd,
+samp,
 .font-mono {
   font-family: var(--font-mono) !important;
 }
@@ -274,8 +277,13 @@ html {
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 /* Red-themed pulse glow */
@@ -284,8 +292,13 @@ html {
 }
 
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 20px rgba(225, 38, 28, 0.3); }
-  50% { box-shadow: 0 0 40px rgba(225, 38, 28, 0.6); }
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(225, 38, 28, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(225, 38, 28, 0.6);
+  }
 }
 
 .success-celebration {
@@ -293,15 +306,24 @@ html {
 }
 
 @keyframes successPop {
-  0% { transform: scale(0.8) rotate(-5deg); opacity: 0; }
-  50% { transform: scale(1.1) rotate(2deg); }
-  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  0% {
+    transform: scale(0.8) rotate(-5deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1) rotate(2deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
 }
 
 .shimmer {
-  background: linear-gradient(90deg, 
-    transparent, 
-    rgba(225, 38, 28, 0.4), 
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(225, 38, 28, 0.4),
     transparent
   );
   background-size: 200% 100%;
@@ -309,16 +331,24 @@ html {
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 /* Enhanced button effects - Red themed */
 .glass-button {
-  background: linear-gradient(135deg, rgba(225, 38, 28, 0.3), rgba(225, 38, 28, 0.1));
+  background: linear-gradient(
+    135deg,
+    rgba(225, 38, 28, 0.3),
+    rgba(225, 38, 28, 0.1)
+  );
   backdrop-filter: blur(10px);
   border: 1px solid rgba(225, 38, 28, 0.2);
-  box-shadow: 
+  box-shadow:
     0 4px 32px 0 rgba(225, 38, 28, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.1),
     inset 0 -1px 0 rgba(0, 0, 0, 0.1);
@@ -334,7 +364,12 @@ html {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
   transition: left 0.6s;
 }
 
@@ -343,9 +378,13 @@ html {
 }
 
 .glass-button:hover {
-  background: linear-gradient(135deg, rgba(225, 38, 28, 0.5), rgba(225, 38, 28, 0.25));
+  background: linear-gradient(
+    135deg,
+    rgba(225, 38, 28, 0.5),
+    rgba(225, 38, 28, 0.25)
+  );
   transform: translateY(-4px) scale(1.02);
-  box-shadow: 
+  box-shadow:
     0 12px 50px 0 rgba(225, 38, 28, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.2),
     inset 0 -1px 0 rgba(0, 0, 0, 0.1);
@@ -353,7 +392,7 @@ html {
 
 .glass-button:active {
   transform: translateY(-1px) scale(0.98);
-  box-shadow: 
+  box-shadow:
     0 4px 20px 0 rgba(225, 38, 28, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.15),
     inset 0 -1px 0 rgba(0, 0, 0, 0.1);
@@ -402,13 +441,22 @@ html {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
   animation: progressShimmer 1.5s infinite;
 }
 
 @keyframes progressShimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 /* Loading spinner - Red themed */
@@ -420,8 +468,12 @@ html {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Smooth scroll */
@@ -430,10 +482,14 @@ html {
 }
 
 /* Enhanced input focus - Red themed */
-input:focus, textarea:focus, select:focus {
+input:focus,
+textarea:focus,
+select:focus {
   outline: none;
   border-color: var(--red);
-  box-shadow: 0 0 0 3px rgba(225, 38, 28, 0.1), 0 0 20px rgba(225, 38, 28, 0.15);
+  box-shadow:
+    0 0 0 3px rgba(225, 38, 28, 0.1),
+    0 0 20px rgba(225, 38, 28, 0.15);
   transform: scale(1.02);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -441,13 +497,13 @@ input:focus, textarea:focus, select:focus {
 /* Remove number input arrows */
 .remove-arrow::-webkit-inner-spin-button,
 .remove-arrow::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
 
-input[type="date"]::-webkit-calendar-picker-indicator {
+input[type='date']::-webkit-calendar-picker-indicator {
   filter: brightness(0) invert(0);
   cursor: pointer;
 }
@@ -482,7 +538,7 @@ input[type='number'] {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--red);
 }
-button,a{
+button,
+a {
   cursor: pointer;
-
 }

@@ -428,6 +428,9 @@ export default function PrivacyPage() {
                 <br /> Your consent to receive SMS messages is not a condition
                 of purchasing any service. <br /> You may withdraw your consent
                 at any time by replying STOP.
+                <br />
+                "No mobile information will be shared with third
+                party/affiliates for marketing or promotional purpose."
               </p>
             </section>
 
