@@ -116,10 +116,11 @@ export async function POST(req) {
       filledPdfBytes?.fileName,
     );
     if (!fs.existsSync(pdfPath)) throw new Error('PDF file not found');
+
     const pdfBytes = fs.readFileSync(pdfPath);
     const pdfDoc = await PDFDocument.load(pdfBytes);
     const numberOfPages = pdfDoc.getPageCount();
-
+    console.log(numberOfPages, '--123--', pdfPath);
     const pdfBase64 = pdfBytes.toString('base64');
     // Create envelope definition
     const envelopeDefinition = new docusign.EnvelopeDefinition();
