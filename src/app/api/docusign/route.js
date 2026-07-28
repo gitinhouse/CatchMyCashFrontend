@@ -1,29 +1,29 @@
-export const runtime = "nodejs";
+export const runtime = 'nodejs';
 
-import fs from "fs";
-import path from "path";
-import docusign from "docusign-esign";
-import { PDFDocument } from "pdf-lib";
-import { NextResponse } from "next/server";
-import { fillInvestigatorAgreement } from "../../../utils/fillPDF";
+import fs from 'fs';
+import path from 'path';
+import docusign from 'docusign-esign';
+import { PDFDocument } from 'pdf-lib';
+import { NextResponse } from 'next/server';
+import { fillInvestigatorAgreement } from '../../../utils/fillPDF';
 import {
   createAuthenticatedDocuSignClient,
   docuSignErrorResponse,
   getAppBaseUrl,
-} from "../../lib/docusignClient";
+} from '../../lib/docusignClient';
 
 function splitLegalName(legalName) {
-  const name = String(legalName || "").trim();
-  if (!name) return { firstName: "", lastName: "" };
+  const name = String(legalName || '').trim();
+  if (!name) return { firstName: '', lastName: '' };
 
   const parts = name.split(/\s+/);
   if (parts.length === 1) {
-    return { firstName: "", lastName: parts[0] };
+    return { firstName: '', lastName: parts[0] };
   }
 
   return {
     firstName: parts[parts.length - 1],
-    lastName: parts.slice(0, -1).join(" "),
+    lastName: parts.slice(0, -1).join(' '),
   };
 }
 
@@ -40,34 +40,40 @@ export async function POST(req) {
     let searchResults;
     let userAgreement;
     try {
-      if (typeof rawResults === "string") {
+      if (typeof rawResults === 'string') {
         const onceParsed = JSON.parse(rawResults);
         searchResults =
-          typeof onceParsed === "string" ? JSON.parse(onceParsed) : onceParsed;
+          typeof onceParsed === 'string' ? JSON.parse(onceParsed) : onceParsed;
       } else {
         searchResults = rawResults;
       }
 
-      if (typeof rawData === "string") {
+      if (typeof rawData === 'string') {
         const onceParsed = JSON.parse(rawData);
         userAgreement =
-          typeof onceParsed === "string" ? JSON.parse(onceParsed) : onceParsed;
+          typeof onceParsed === 'string' ? JSON.parse(onceParsed) : onceParsed;
       } else {
         userAgreement = rawData;
       }
     } catch (err) {
-      console.error("Failed to parse searchResults:", err);
+      console.error('Failed to parse searchResults:', err);
       searchResults = [];
     }
 
     const fallbackName = splitLegalName(userAgreement?.legal_name);
     const firstName = rawFirstName || fallbackName.firstName;
     const lastName = rawLastName || fallbackName.lastName;
-
+    console.log('----', {
+      firstName,
+      lastName,
+      email,
+      searchResults,
+      userAgreement,
+    });
     if (!firstName || !lastName || !email) {
       return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
+        { error: 'Missing required fields' },
+        { status: 400 },
       );
     }
     const allProperty = searchResults;
@@ -79,18 +85,18 @@ export async function POST(req) {
       property?.owner_zip,
     ]
       .filter(Boolean)
-      .join(" ");
+      .join(' ');
 
     const filledPdfBytes = await fillInvestigatorAgreement({
       claimantName: `${firstName} ${lastName}`,
       claimantNameInitial: `${firstName.charAt(0).toUpperCase()}${lastName
         .charAt(0)
         .toUpperCase()}*`,
-      investigatorNameInitial: "EC",
-      investigatorName: "Platform Builders LLC",
+      investigatorNameInitial: 'EC',
+      investigatorName: 'Platform Builders LLC',
       claimantEmail: email,
       claimantAddress,
-      percentage: "10%",
+      percentage: '10%',
       propertyId: property?.property_id,
       propertyType: property?.property_type,
       date: new Date().toLocaleDateString(),
@@ -98,66 +104,67 @@ export async function POST(req) {
       ssnId: userAgreement?.ssn_id,
       allProperty: allProperty,
     });
-    const { envelopesApi, accountId } = await createAuthenticatedDocuSignClient();
-
+    const { envelopesApi, accountId } =
+      await createAuthenticatedDocuSignClient();
+    console.log('--109--');
     // Load PDF and determine last page
     const pdfPath = path.join(
       process.cwd(),
-      "src",
-      "app",
-      "pdf",
-      filledPdfBytes?.fileName
+      'src',
+      'app',
+      'pdf',
+      filledPdfBytes?.fileName,
     );
-    if (!fs.existsSync(pdfPath)) throw new Error("PDF file not found");
+    if (!fs.existsSync(pdfPath)) throw new Error('PDF file not found');
     const pdfBytes = fs.readFileSync(pdfPath);
     const pdfDoc = await PDFDocument.load(pdfBytes);
     const numberOfPages = pdfDoc.getPageCount();
 
-    const pdfBase64 = pdfBytes.toString("base64");
+    const pdfBase64 = pdfBytes.toString('base64');
     // Create envelope definition
     const envelopeDefinition = new docusign.EnvelopeDefinition();
-    envelopeDefinition.emailSubject = "Please sign this document";
+    envelopeDefinition.emailSubject = 'Please sign this document';
     envelopeDefinition.documents = [
       {
         documentBase64: pdfBase64,
-        name: "Agreement",
-        fileExtension: "pdf",
-        documentId: "1",
+        name: 'Agreement',
+        fileExtension: 'pdf',
+        documentId: '1',
       },
     ];
 
     const signer = new docusign.Signer();
     signer.email = email;
     signer.name = `${firstName} ${lastName}`;
-    signer.recipientId = "1";
-    signer.routingOrder = "1";
-    signer.clientUserId = "1234";
+    signer.recipientId = '1';
+    signer.routingOrder = '1';
+    signer.clientUserId = '1234';
 
     const signHere = new docusign.SignHere();
-    signHere.documentId = "1";
-    signHere.pageNumber = "1"; //numberOfPages.toString();
-    signHere.xPosition = "180";
-    signHere.yPosition = "520";
+    signHere.documentId = '1';
+    signHere.pageNumber = '1'; //numberOfPages.toString();
+    signHere.xPosition = '180';
+    signHere.yPosition = '520';
 
     const initialHere1 = new docusign.InitialHere();
-    initialHere1.documentId = "1";
-    initialHere1.pageNumber = "1";
-    initialHere1.xPosition = "80";
-    initialHere1.yPosition = "270";
+    initialHere1.documentId = '1';
+    initialHere1.pageNumber = '1';
+    initialHere1.xPosition = '80';
+    initialHere1.yPosition = '270';
 
     const initialHere2 = new docusign.InitialHere();
-    initialHere2.documentId = "1";
-    initialHere2.pageNumber = "1";
-    initialHere2.xPosition = "330";
-    initialHere2.yPosition = "370";
+    initialHere2.documentId = '1';
+    initialHere2.pageNumber = '1';
+    initialHere2.xPosition = '330';
+    initialHere2.yPosition = '370';
 
     const dynamicInitialTabs = [];
     if (numberOfPages >= 2) {
       allProperty?.forEach((property, index) => {
         const initialHere = new docusign.InitialHere();
-        initialHere.documentId = "1";
-        initialHere.pageNumber = "2";
-        initialHere.xPosition = "80";
+        initialHere.documentId = '1';
+        initialHere.pageNumber = '2';
+        initialHere.xPosition = '80';
         initialHere.yPosition = String(180 + index * 170);
         dynamicInitialTabs.push(initialHere);
       });
@@ -169,8 +176,8 @@ export async function POST(req) {
     signer.tabs = tabs;
 
     envelopeDefinition.recipients = { signers: [signer] };
-    envelopeDefinition.status = "sent";
-    
+    envelopeDefinition.status = 'sent';
+
     // Create envelope
     const envelopeResponse = await envelopesApi.createEnvelope(accountId, {
       envelopeDefinition,
@@ -182,17 +189,17 @@ export async function POST(req) {
     // Create recipient view (embedded signing)
     const viewRequest = new docusign.RecipientViewRequest();
     viewRequest.returnUrl = returnUrl;
-    viewRequest.authenticationMethod = "none";
+    viewRequest.authenticationMethod = 'none';
     viewRequest.email = email;
     viewRequest.userName = `${firstName} ${lastName}`;
-    viewRequest.clientUserId = "1234";
+    viewRequest.clientUserId = '1234';
 
     const recipientView = await envelopesApi.createRecipientView(
       accountId,
       envelopeId,
       {
         recipientViewRequest: viewRequest,
-      }
+      },
     );
     return NextResponse.json({
       success: true,
@@ -200,6 +207,6 @@ export async function POST(req) {
       envelopeId,
     });
   } catch (err) {
-    return docuSignErrorResponse(err, "Failed to create envelope");
+    return docuSignErrorResponse(err, 'Failed to create envelope');
   }
 }
