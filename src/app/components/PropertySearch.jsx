@@ -53,6 +53,7 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
   const [currentSearchStep, setCurrentSearchStep] = useState('');
   const [validationError, setValidationError] = useState('');
   const { setUserData, setSearchResults } = useSearchStore();
+  const [addressError, setAddressError] = useState('');
 
   const setAddressRef = useRef(setAddress);
   const setCityRef = useRef(setCity);
@@ -186,6 +187,13 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
     };
   }, []);
 
+  const isAddressUrl = (value) => {
+    const urlRegex =
+      /^(https?:\/\/|www\.|[a-zA-Z0-9-]+\.(com|net|org|io|co|gov|edu|info|biz|me|us|uk|ca|au)(\/.*)?$)/i;
+
+    return urlRegex.test(value.trim());
+  };
+
   // ─── Form submit ──────────────────────────────────────────────────────────
   const handleSearch = async () => {
     const missingFields = [];
@@ -193,6 +201,7 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
     if (!lastName.trim()) missingFields.push('last name');
     if (!address.trim()) missingFields.push('address');
     if (!city.trim()) missingFields.push('city');
+
     if (!zipCode.trim()) missingFields.push('ZIP code');
 
     if (missingFields.length > 0) {
@@ -205,7 +214,12 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
       );
       return;
     }
-
+    if (isAddressUrl(address)) {
+      setAddressError(
+        'Please enter a valid street address, not a website URL.',
+      );
+      return;
+    }
     const zipPattern = /^\d{5}(-\d{4})?$/;
     if (!zipPattern.test(zipCode.trim())) {
       setValidationError(
@@ -309,7 +323,8 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
     lastName.trim().length > 0 &&
     address.trim().length > 0 &&
     city.trim().length > 0 &&
-    zipCode.trim().length > 0;
+    zipCode.trim().length > 0 &&
+    !addressError;
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
@@ -553,9 +568,29 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
                       type="text"
                       placeholder="Enter address…"
                       disabled={isSearching}
-                      onChange={(e) => setAddressRef.current(e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+
+                        setAddressRef.current(value);
+
+                        if (value.trim() && isAddressUrl(value)) {
+                          setAddressError(
+                            'Please enter a valid street address, not a website URL.',
+                          );
+                        } else {
+                          setAddressError('');
+                        }
+
+                        setValidationError('');
+                      }}
                       autoComplete="new-password"
-                      className={`w-full rounded-lg border-2 transition-all duration-300 text-[#0A0A0A] placeholder-[#888888] text-sm bg-white px-4 py-[0.65rem] leading-6 focus:outline-none focus:ring-0 ${address.trim() ? 'border-[#E1261C]/50 focus:border-[#E1261C]' : 'border-[#E8E6E3] focus:border-[#E1261C]'}`}
+                      className={`w-full rounded-lg border-2 transition-all duration-300 text-[#0A0A0A] placeholder-[#888888] text-sm bg-white px-4 py-[0.65rem] leading-6 focus:outline-none focus:ring-0 ${
+                        addressError
+                          ? 'border-[#E1261C]'
+                          : address.trim()
+                            ? 'border-[#E1261C]/50 focus:border-[#E1261C]'
+                            : 'border-[#E8E6E3] focus:border-[#E1261C]'
+                      }`}
                       style={{ caretColor: '#E1261C', fontFamily: 'inherit' }}
                     />
                     {address.trim() && (
@@ -566,6 +601,11 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
                       >
                         ✓
                       </motion.div>
+                    )}
+                    {addressError && (
+                      <p className="text-[#E1261C] text-xs mt-2">
+                        {addressError}
+                      </p>
                     )}
                   </motion.div>
 
