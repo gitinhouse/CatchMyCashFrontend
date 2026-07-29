@@ -54,6 +54,11 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
   const [agreeSMS, setAgreeSMS] = useState(false);
   const addressInputRef = useRef(null);
   const autocompleteRef = useRef(null);
+  const [today, setToday] = useState('');
+
+  useEffect(() => {
+    setToday(new Date().toISOString().split('T')[0]);
+  }, []);
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -515,6 +520,7 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
                   onChange={(e) =>
                     handleInputChange('dateOfBirth', e.target.value)
                   }
+                  max={today}
                   className="w-full text-[#0A0A0A] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
                   required
                 />

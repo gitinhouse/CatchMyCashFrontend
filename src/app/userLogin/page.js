@@ -362,15 +362,6 @@ const UserLogin = () => {
                     </span>
                   </button>
                 </motion.div>
-                <motion.div>
-                  Don&apos;t have an account?
-                  <a
-                    href="/register"
-                    className="ml-2 text-[#E1261C] hover:underline font-['JetBrains_Mono']"
-                  >
-                    Register here
-                  </a>
-                </motion.div>
               </motion.div>
             </motion.div>
 

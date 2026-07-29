@@ -58,20 +58,38 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [animatedAmount, setAnimatedAmount] = useState(0);
   const [selectedProperties, setSelectedProperties] = useState([]);
+  const [selectedTotalAmount, setSelectedTotalAmount] = useState(0);
+  const [showSelectionLimitPopup, setShowSelectionLimitPopup] = useState(false);
 
-  const uniqueProperties = getUniquePropertiesWithTotals(propertyData.properties);
+  const uniqueProperties = React.useMemo(
+    () => getUniquePropertiesWithTotals(propertyData.properties),
+    [propertyData.properties],
+  );
+
   const totalAmount = getTotalPropertyAmount(propertyData.properties);
-  const commission = (totalAmount * 0.1).toFixed(2);
-  const netAmount = (totalAmount * 0.9).toFixed(2);
+  const commission = (selectedTotalAmount * 0.1).toFixed(2);
+  const netAmount = (selectedTotalAmount * 0.9).toFixed(2);
   const { userData, ownPropertyIds, setOwnPropertyIds } = useSearchStore();
 
   const handleCheckboxChange = (propertyId) => {
-    setSelectedProperties((prev) =>
-      prev.includes(propertyId)
-        ? prev.filter((id) => id !== propertyId)
-        : [...prev, propertyId],
-    );
+    setSelectedProperties((prev) => {
+      if (prev.includes(propertyId)) {
+        return prev.filter((id) => id !== propertyId);
+      }
+      if (prev.length < 3) {
+        return [...prev, propertyId];
+      }
+      setShowSelectionLimitPopup(true);
+      return prev;
+    });
   };
+
+  useEffect(() => {
+    const newTotal = uniqueProperties
+      .filter((p) => selectedProperties.includes(p.id))
+      .reduce((sum, p) => sum + parsePropertyAmount(p.amount), 0);
+    setSelectedTotalAmount(newTotal);
+  }, [selectedProperties, uniqueProperties]);
 
   useEffect(() => {
     console.log('---user data--', userData);
@@ -103,15 +121,21 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
         selectedProperties.includes(property.id),
       );
       setOwnPropertyIds(selectedProperties);
-      localStorage.setItem('ownPropertyIds', JSON.stringify(selectedProperties));
+      localStorage.setItem(
+        'ownPropertyIds',
+        JSON.stringify(selectedProperties),
+      );
       console.log('Selected Property IDs:', selectedProperties);
       console.log('Selected Properties:', selectedPropertyObjects);
 
       setShowCelebration(true);
       const userId = userData?._id;
+      const selectedRawProperties = propertyData.properties.filter((p) =>
+        selectedProperties.includes(p.id),
+      );
       const response = await axios.post('/api/property', {
         user_id: userId,
-        properties: propertyData.properties,
+        properties: selectedRawProperties,
       });
       onNext(response.data);
     } catch (err) {
@@ -119,10 +143,7 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
     }
   };
 
-  const totalAmountValue = totalAmount;
-
-  const isButtonDisabled =
-    totalAmountValue <= 0 || selectedProperties.length === 0;
+  const isButtonDisabled = selectedTotalAmount <= 0;
 
   const propertyCount = uniqueProperties?.length || 0;
   const isJackpot = propertyCount > 0;
@@ -491,20 +512,7 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <button
               onClick={handleClaim}
-              // disabled={
-              //   selectedProperties.length === 0 ||
-              //   parseFloat(
-              //     propertyData.totalAmount.replace('$', '').replace(',', ''),
-              //   ) === 0.0
-              // }
               disabled={isButtonDisabled}
-              // className={`px-6 sm:px-16 py-6 text-xl font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3 mx-auto ${
-              //   parseFloat(
-              //     propertyData.totalAmount.replace('$', '').replace(',', ''),
-              //   ) > 0
-              //     ? 'bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg'
-              //     : 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
-              // }`}
               className={`px-6 sm:px-16 py-6 text-xl font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3 mx-auto ${
                 !isButtonDisabled
                   ? 'bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg'
@@ -513,7 +521,7 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
             >
               <span className="relative z-10 flex items-center gap-3">
                 Claim My $
-                {totalAmountValue.toLocaleString('en-US', {
+                {selectedTotalAmount.toLocaleString('en-US', {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}{' '}
@@ -537,6 +545,35 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
           </motion.div>
         </motion.div>
       </div>
+
+      {showSelectionLimitPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <motion.div
+            className="w-full max-w-md rounded-2xl bg-white border border-[#E8E6E3] shadow-xl p-6"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+          >
+            <div className="text-center">
+              <div className="w-14 h-14 bg-[#FCE9E7] rounded-full flex items-center justify-center mx-auto mb-3">
+                <AlertTriangle className="h-7 w-7 text-[#E1261C]" />
+              </div>
+              <h2 className="text-2xl font-bold text-[#0A0A0A] mb-2 font-['Fraunces']">
+                Selection Limit Reached
+              </h2>
+              <p className="text-[#4A4A4A] mb-6">
+                You can select a maximum of 3 properties to claim at once.
+              </p>
+              <button
+                onClick={() => setShowSelectionLimitPopup(false)}
+                className="bg-[#E1261C] hover:bg-[#B11912] text-white px-8 py-2.5 rounded-lg transition-all shadow-md hover:shadow-lg"
+              >
+                Close
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };
