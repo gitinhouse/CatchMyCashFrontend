@@ -46,9 +46,14 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
     ownPropertyIds,
   } = useSearchStore();
   const [errors, setErrors] = useState({
+    fullName: '',
+    email: '',
     phone: '',
-    ssn: '',
+    address: '',
+    city: '',
     zipCode: '',
+    dateOfBirth: '',
+    ssn: '',
   });
   const [apiError, setApiError] = useState('');
   const [agreeSMS, setAgreeSMS] = useState(false);
@@ -59,10 +64,30 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
   useEffect(() => {
     setToday(new Date().toISOString().split('T')[0]);
   }, []);
-
   const handleInputChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    setErrors((prev) => ({ ...prev, [field]: '' }));
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+
+    setErrors((prev) => {
+      const updated = {
+        ...prev,
+        [field]: '',
+      };
+
+      if (field === 'address') {
+        const urlRegex =
+          /^(https?:\/\/|www\.|[a-zA-Z0-9-]+\.(com|net|org|io|co|gov|edu|info|biz|me|us|uk|ca|au)(\/.*)?$)/i;
+
+        if (value.trim() && urlRegex.test(value.trim())) {
+          updated.address =
+            'Please enter a valid street address, not a website URL.';
+        }
+      }
+
+      return updated;
+    });
   };
   const setCityRef = useRef(null);
   const setAddressRef = useRef(null);
@@ -251,26 +276,24 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
     e.preventDefault();
     if (loading) return;
 
-    const requiredFields = [
-      'fullName',
-      'email',
-      'phone',
-      'address',
-      'city',
-      'zipCode',
-      'dateOfBirth',
-      'ssn',
-    ];
-    const missingFields = requiredFields.filter((field) => !formData[field]);
-
-    if (missingFields.length > 0) {
-      setApiError(
-        `Please fill in all required fields: ${missingFields.join(', ')}`,
-      );
-      return;
-    }
-
     let newErrors = {};
+
+    const requiredFields = {
+      fullName: 'Full name is required.',
+      email: 'Email is required.',
+      phone: 'Phone number is required.',
+      address: 'Address is required.',
+      city: 'City is required.',
+      zipCode: 'ZIP code is required.',
+      dateOfBirth: 'Date of birth is required.',
+      ssn: 'SSN is required.',
+    };
+
+    Object.entries(requiredFields).forEach(([field, message]) => {
+      if (!formData[field]?.trim()) {
+        newErrors[field] = message;
+      }
+    });
 
     const phoneDigits = formData.phone.replace(/\D/g, '');
     if (phoneDigits.length !== 10) {
@@ -505,9 +528,16 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
                     handleInputChange('fullName', e.target.value)
                   }
                   placeholder="As it appears on government documents"
-                  className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
+                  className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${
+                    errors.fullName ? 'border-[#E1261C]' : 'border-[#E8E6E3]'
+                  }`}
                   required
                 />
+                {errors.fullName && (
+                  <p className="text-[#E1261C] text-xs mt-1">
+                    {errors.fullName}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -521,9 +551,16 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
                     handleInputChange('dateOfBirth', e.target.value)
                   }
                   max={today}
-                  className="w-full text-[#0A0A0A] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
+                  className={`w-full text-[#0A0A0A] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${
+                    errors.dateOfBirth ? 'border-[#E1261C]' : 'border-[#E8E6E3]'
+                  }`}
                   required
                 />
+                {errors.dateOfBirth && (
+                  <p className="text-[#E1261C] text-xs mt-1">
+                    {errors.dateOfBirth}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -535,9 +572,14 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
                   placeholder="your@email.com"
-                  className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
+                  className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${
+                    errors.email ? 'border-[#E1261C]' : 'border-[#E8E6E3]'
+                  }`}
                   required
                 />
+                {errors.email && (
+                  <p className="text-[#E1261C] text-xs mt-1">{errors.email}</p>
+                )}
               </div>
 
               <div>
@@ -621,9 +663,15 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
                   autoComplete="new-password"
                   onChange={(e) => handleInputChange('address', e.target.value)}
                   required
-                  className="w-full rounded-lg border-2 border-[#E8E6E3] bg-white px-4 py-2.5 text-sm text-[#0A0A0A] placeholder-[#888888] leading-6 focus:outline-none focus:border-[#E1261C] transition-all duration-300"
-                  style={{ caretColor: '#E1261C', fontFamily: 'inherit' }}
+                  className={`w-full rounded-lg border-2 bg-white px-4 py-2.5 text-sm text-[#0A0A0A] placeholder-[#888888] leading-6 focus:outline-none focus:border-[#E1261C] transition-all duration-300 ${
+                    errors.address ? 'border-[#E1261C]' : 'border-[#E8E6E3]'
+                  }`}
                 />
+                {errors.address && (
+                  <p className="text-[#E1261C] text-xs mt-1">
+                    {errors.address}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -635,9 +683,14 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
                   value={formData.city}
                   onChange={(e) => handleInputChange('city', e.target.value)}
                   placeholder="Los Angeles"
-                  className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
+                  className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${
+                    errors.city ? 'border-[#E1261C]' : 'border-[#E8E6E3]'
+                  }`}
                   required
                 />
+                {errors.city && (
+                  <p className="text-[#E1261C] text-xs mt-1">{errors.city}</p>
+                )}
               </div>
 
               <div>
