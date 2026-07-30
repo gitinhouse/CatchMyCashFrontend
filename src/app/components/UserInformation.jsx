@@ -448,7 +448,8 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
       {/* Header */}
       <div className="bg-white border-b border-[#E8E6E3] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <h1 className="text-3xl font-bold text-[#0A0A0A] font-['Fraunces']">
+          <h1 className="flex items-center gap-2 text-3xl font-bold text-[#0A0A0A] font-['Fraunces']">
+            <span className="h-2.5 w-2.5 rounded-full bg-[#E1261C]"></span>
             CatchMyCash
           </h1>
           <p className="text-[#4A4A4A] mt-1">

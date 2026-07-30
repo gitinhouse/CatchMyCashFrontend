@@ -67,8 +67,12 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
   );
 
   const totalAmount = getTotalPropertyAmount(propertyData.properties);
-  const commission = (selectedTotalAmount * 0.1).toFixed(2);
-  const netAmount = (selectedTotalAmount * 0.9).toFixed(2);
+  // Calculate commission first and round it to the nearest cent.
+  // Then, derive the net amount from the rounded commission to avoid floating point inaccuracies.
+  const commissionValue = Math.round(selectedTotalAmount * 10) / 100;
+  const netAmountValue = selectedTotalAmount - commissionValue;
+  const commission = commissionValue.toFixed(2);
+  const netAmount = netAmountValue.toFixed(2);
   const { userData, ownPropertyIds, setOwnPropertyIds } = useSearchStore();
 
   const handleCheckboxChange = (propertyId) => {

@@ -3,7 +3,7 @@ export default function AboutPage() {
     <>
       <section className="about-hero py-12.5 lg:py-25 bg-white">
         <div className="max-w-[1240px] mx-auto px-6 sm:px-8">
-          <div className="font-['JetBrains_Mono'] text-xs tracking-[0.15em] uppercase text-[#E1261C] mb-6">
+          <div className="font-['JetBrains_Mono'] text-[13px] tracking-[0.15em] uppercase text-[#E1261C] mb-6">
             About CatchMyCash
           </div>
           <h1 className="font-['Fraunces'] text-[clamp(40px,6vw,78px)] font-semibold tracking-[-0.02em] leading-[1.02] max-w-[14ch] mb-8">
@@ -28,7 +28,7 @@ export default function AboutPage() {
           <div className="font-['Fraunces'] text-4xl md:text-5xl font-semibold tracking-[-0.02em] leading-tight mb-2">
             $15.5<span className="text-[#E1261C]">B</span>
           </div>
-          <div className="font-['JetBrains_Mono'] text-xs tracking-[0.05em] text-[#4A4A4A]">
+          <div className="font-['JetBrains_Mono'] text-[13px] tracking-[0.05em] text-[#4A4A4A]">
             held by California
           </div>
         </div>
@@ -36,7 +36,7 @@ export default function AboutPage() {
           <div className="font-['Fraunces'] text-4xl md:text-5xl font-semibold tracking-[-0.02em] leading-tight mb-2">
             76<span className="text-[#E1261C]">M</span>
           </div>
-          <div className="font-['JetBrains_Mono'] text-xs tracking-[0.05em] text-[#4A4A4A]">
+          <div className="font-['JetBrains_Mono'] text-[13px] tracking-[0.05em] text-[#4A4A4A]">
             unclaimed properties
           </div>
         </div>
@@ -44,7 +44,7 @@ export default function AboutPage() {
           <div className="font-['Fraunces'] text-4xl md:text-5xl font-semibold tracking-[-0.02em] leading-tight mb-2">
             1 in 7
           </div>
-          <div className="font-['JetBrains_Mono'] text-xs tracking-[0.05em] text-[#4A4A4A]">
+          <div className="font-['JetBrains_Mono'] text-[13px] tracking-[0.05em] text-[#4A4A4A]">
             Americans have unclaimed funds
           </div>
         </div>
@@ -52,7 +52,7 @@ export default function AboutPage() {
           <div className="font-['Fraunces'] text-4xl md:text-5xl font-semibold tracking-[-0.02em] leading-tight mb-2">
             100<span className="text-[#E1261C]">%</span>
           </div>
-          <div className="font-['JetBrains_Mono'] text-xs tracking-[0.05em] text-[#4A4A4A]">
+          <div className="font-['JetBrains_Mono'] text-[13px] tracking-[0.05em] text-[#4A4A4A]">
             contingency — no recovery, no fee
           </div>
         </div>
@@ -62,7 +62,7 @@ export default function AboutPage() {
         <div className="max-w-[1240px] mx-auto px-6 sm:px-8">
           <div className="grid md:grid-cols-2 gap-12 md:gap-20">
             <div>
-              <div className="font-['JetBrains_Mono'] text-xs tracking-[0.15em] uppercase text-[#E1261C] mb-4">
+              <div className="font-['JetBrains_Mono'] text-[13px] tracking-[0.15em] uppercase text-[#E1261C] mb-4">
                 Why we exist
               </div>
               <h2 className="font-['Fraunces'] text-3xl md:text-5xl font-semibold tracking-[-0.01em] leading-tight">
@@ -161,7 +161,7 @@ export default function AboutPage() {
                 <h4 className="font-['Fraunces'] text-xl md:text-2xl font-semibold mb-1">
                   Brett Carlson
                 </h4>
-                <div className="font-['JetBrains_Mono'] text-xs text-[#E1261C] uppercase tracking-[0.05em] mb-3">
+                <div className="font-['JetBrains_Mono'] text-[13px] text-[#E1261C] uppercase tracking-[0.05em] mb-3">
                   Co-Founder
                 </div>
                 <p className="text-sm leading-relaxed text-[#4A4A4A]">
@@ -182,7 +182,7 @@ export default function AboutPage() {
                 <h4 className="font-['Fraunces'] text-xl md:text-2xl font-semibold mb-1">
                   Evan Carter
                 </h4>
-                <div className="font-['JetBrains_Mono'] text-xs text-[#E1261C] uppercase tracking-[0.05em] mb-3">
+                <div className="font-['JetBrains_Mono'] text-[13px] text-[#E1261C] uppercase tracking-[0.05em] mb-3">
                   Co-Founder
                 </div>
                 <p className="text-sm leading-relaxed text-[#4A4A4A]">
