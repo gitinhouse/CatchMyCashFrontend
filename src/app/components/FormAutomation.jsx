@@ -135,7 +135,10 @@ const FormAutomation = ({ userData, onNext }) => {
           </div>
           <h2 className="text-3xl font-bold text-[#0A0A0A] mb-4 font-['Fraunces']">
             Automating Your
-            <span className="text-[#E1261C] italic font-normal">Paperwork</span>
+            <span className="text-[#E1261C] italic font-normal">
+              {' '}
+              Paperwork
+            </span>
           </h2>
           <p className="text-[#4A4A4A] mb-6">
             Our AI system is preparing all required forms and documentation
@@ -373,7 +376,7 @@ const FormAutomation = ({ userData, onNext }) => {
                 </div>
                 <div>
                   <p className="font-medium text-[#0A0A0A]">
-                    Catch My Cash Login Details
+                    CatchMyCash Login Details
                   </p>
                   <p className="text-sm text-[#4A4A4A]">
                     You will receive an Email with your Login details.
