@@ -20,10 +20,14 @@ export async function POST(req) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-
+    console.log('--payload--', body);
     const data = await response.json().catch(() => ({}));
-
+    console.log('--data--', data);
     if (!response.ok) {
+      console.error('Error from 3rd party API:', {
+        payload: body,
+        error: data,
+      });
       return NextResponse.json(
         data?.message
           ? { message: data.message, ...data }
