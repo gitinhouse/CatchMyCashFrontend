@@ -25,11 +25,8 @@ export async function POST(req) {
       );
     }
 
-    const mongooseUserId = new mongoose.Types.ObjectId(user_id);
-
-    const existingUser = await UserLogin.findOne({
-      $or: [{ userEmail }, { user_id: mongooseUserId }],
-    });
+    // Check if a user with the given email already exists
+    const existingUser = await UserLogin.findOne({ userEmail });
 
     if (existingUser) {
       return NextResponse.json(
