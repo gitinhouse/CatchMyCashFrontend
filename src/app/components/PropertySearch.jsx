@@ -41,12 +41,12 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
   const [captchaToken, setCaptchaToken] = useState(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('California');
-  const addressInputRef = useRef(null);
-  const autocompleteRef = useRef(null);
-  const [zipCode, setZipCode] = useState('');
+  // const [address, setAddress] = useState('');
+  // const [city, setCity] = useState('');
+  // const [state, setState] = useState('California');
+  // const addressInputRef = useRef(null);
+  // const autocompleteRef = useRef(null);
+  // const [zipCode, setZipCode] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [showBrowser, setShowBrowser] = useState(false);
   const [searchProgress, setSearchProgress] = useState(0);
@@ -54,16 +54,17 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
   const [validationError, setValidationError] = useState('');
   const { setUserData, setSearchResults } = useSearchStore();
   const [addressError, setAddressError] = useState('');
-
-  const setAddressRef = useRef(setAddress);
-  const setCityRef = useRef(setCity);
-  const setZipRef = useRef(setZipCode);
-
+  //
+  // const setAddressRef = useRef(setAddress);
+  // const setCityRef = useRef(setCity);
+  // const setZipRef = useRef(setZipCode);
+  //
   useEffect(() => {
-    setAddressRef.current = setAddress;
-    setCityRef.current = setCity;
-    setZipRef.current = setZipCode;
-  });
+    //   setAddressRef.current = setAddress;
+    //   setCityRef.current = setCity;
+    //   setZipRef.current = setZipCode;
+    //
+  }, []);
 
   const searchSteps = [
     'Initializing secure connection...',
@@ -98,94 +99,94 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
     const count = [
       firstName.trim(),
       lastName.trim(),
-      address.trim(),
-      city.trim(),
-      zipCode.trim(),
-    ].filter(Boolean).length;
-    onFieldFilled?.(count);
-  }, [firstName, lastName, address, city, zipCode]);
+      // address.trim(),
+      // city.trim(), // Commented out for testing
+      // zipCode.trim(), // Commented out for testing
+    ].filter(Boolean).length; // Filter out empty strings
+    onFieldFilled?.(count); // Call onFieldFilled with the count of filled fields
+  }, [firstName, lastName]); // Removed address, city, zipCode from dependencies
 
-  // ─── Google Maps PlaceAutocompleteElement ─────────────────────────────────
-  useEffect(() => {
-    function initAutocomplete() {
-      if (!addressInputRef.current) return;
-      if (autocompleteRef.current) return;
-      if (!window.google?.maps?.places?.Autocomplete) return;
-
-      const ac = new window.google.maps.places.Autocomplete(
-        addressInputRef.current,
-        {
-          types: ['address'],
-          componentRestrictions: { country: 'us' },
-          fields: ['formatted_address', 'address_components'],
-        },
-      );
-      autocompleteRef.current = ac;
-
-      ac.addListener('place_changed', () => {
-        const place = ac.getPlace();
-        if (!place.address_components) return;
-
-        let streetNum = '',
-          route = '',
-          cityName = '',
-          zip = '';
-
-        place.address_components.forEach((c) => {
-          const t = c.types ?? [];
-          if (t.includes('street_number')) streetNum = c.long_name ?? '';
-          if (t.includes('route')) route = c.long_name ?? '';
-          if (t.includes('locality')) cityName = c.long_name ?? '';
-          if (!cityName && t.includes('sublocality_level_1'))
-            cityName = c.long_name ?? '';
-          if (!cityName && t.includes('administrative_area_level_3'))
-            cityName = c.long_name ?? '';
-          if (!cityName && t.includes('administrative_area_level_2'))
-            cityName = c.long_name ?? '';
-          if (t.includes('postal_code')) zip = c.long_name ?? '';
-        });
-
-        const street =
-          [streetNum, route].filter(Boolean).join(' ') ||
-          place.formatted_address ||
-          '';
-
-        setAddressRef.current(street);
-        setCityRef.current(cityName);
-        setZipRef.current(zip);
-      });
-    }
-
-    function onScriptReady() {
-      initAutocomplete();
-    }
-
-    function loadScript() {
-      if (document.getElementById('google-maps-script')) return;
-      const s = document.createElement('script');
-      s.id = 'google-maps-script';
-      s.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&v=weekly`;
-      s.async = true;
-      s.defer = true;
-      s.onload = onScriptReady;
-      s.onerror = () => console.error('Google Maps failed to load');
-      document.head.appendChild(s);
-    }
-
-    const existing = document.getElementById('google-maps-script');
-    if (!existing) loadScript();
-    else if (window.google?.maps?.places) initAutocomplete();
-    else existing.addEventListener('load', onScriptReady);
-
-    return () => {
-      if (autocompleteRef.current) {
-        window.google?.maps?.event?.clearInstanceListeners(
-          autocompleteRef.current,
-        );
-        autocompleteRef.current = null;
-      }
-    };
-  }, []);
+  // // ─── Google Maps PlaceAutocompleteElement ─────────────────────────────────
+  // useEffect(() => {
+  //   function initAutocomplete() {
+  //     if (!addressInputRef.current) return;
+  //     if (autocompleteRef.current) return;
+  //     if (!window.google?.maps?.places?.Autocomplete) return;
+  //
+  //     const ac = new window.google.maps.places.Autocomplete(
+  //       addressInputRef.current,
+  //       {
+  //         types: ['address'],
+  //         componentRestrictions: { country: 'us' },
+  //         fields: ['formatted_address', 'address_components'],
+  //       },
+  //     );
+  //     autocompleteRef.current = ac;
+  //
+  //     ac.addListener('place_changed', () => {
+  //       const place = ac.getPlace();
+  //       if (!place.address_components) return;
+  //
+  //       let streetNum = '',
+  //         route = '',
+  //         cityName = '',
+  //         zip = '';
+  //
+  //       place.address_components.forEach((c) => {
+  //         const t = c.types ?? [];
+  //         if (t.includes('street_number')) streetNum = c.long_name ?? '';
+  //         if (t.includes('route')) route = c.long_name ?? '';
+  //         if (t.includes('locality')) cityName = c.long_name ?? '';
+  //         if (!cityName && t.includes('sublocality_level_1'))
+  //           cityName = c.long_name ?? '';
+  //         if (!cityName && t.includes('administrative_area_level_3'))
+  //           cityName = c.long_name ?? '';
+  //         if (!cityName && t.includes('administrative_area_level_2'))
+  //           cityName = c.long_name ?? '';
+  //         if (t.includes('postal_code')) zip = c.long_name ?? '';
+  //       });
+  //
+  //       const street =
+  //         [streetNum, route].filter(Boolean).join(' ') ||
+  //         place.formatted_address ||
+  //         '';
+  //
+  //       setAddressRef.current(street);
+  //       setCityRef.current(cityName);
+  //       setZipRef.current(zip);
+  //     });
+  //   }
+  //
+  //   function onScriptReady() {
+  //     initAutocomplete();
+  //   }
+  //
+  //   function loadScript() {
+  //     if (document.getElementById('google-maps-script')) return;
+  //     const s = document.createElement('script');
+  //     s.id = 'google-maps-script';
+  //     s.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&v=weekly`;
+  //     s.async = true;
+  //     s.defer = true;
+  //     s.onload = onScriptReady;
+  //     s.onerror = () => console.error('Google Maps failed to load');
+  //     document.head.appendChild(s);
+  //   }
+  //
+  //   const existing = document.getElementById('google-maps-script');
+  //   if (!existing) loadScript();
+  //   else if (window.google?.maps?.places) initAutocomplete();
+  //   else existing.addEventListener('load', onScriptReady);
+  //
+  //   return () => {
+  //     if (autocompleteRef.current) {
+  //       window.google?.maps?.event?.clearInstanceListeners(
+  //         autocompleteRef.current,
+  //       );
+  //       autocompleteRef.current = null;
+  //     }
+  //   };
+  // }, []);
 
   const isAddressUrl = (value) => {
     const urlRegex =
@@ -199,10 +200,10 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
     const missingFields = [];
     if (!firstName.trim()) missingFields.push('first name');
     if (!lastName.trim()) missingFields.push('last name');
-    if (!address.trim()) missingFields.push('address');
-    if (!city.trim()) missingFields.push('city');
-
-    if (!zipCode.trim()) missingFields.push('ZIP code');
+    // if (!address.trim()) missingFields.push('address');
+    // if (!city.trim()) missingFields.push('city');
+    //
+    // if (!zipCode.trim()) missingFields.push('ZIP code');
 
     if (missingFields.length > 0) {
       setValidationError(
@@ -214,19 +215,19 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
       );
       return;
     }
-    if (isAddressUrl(address)) {
-      setAddressError(
-        'Please enter a valid street address, not a website URL.',
-      );
-      return;
-    }
-    const zipPattern = /^\d{5}(-\d{4})?$/;
-    if (!zipPattern.test(zipCode.trim())) {
-      setValidationError(
-        'Please enter a valid ZIP code (e.g., 90210 or 90210-1234)',
-      );
-      return;
-    }
+    // if (isAddressUrl(address)) {
+    //   setAddressError(
+    //     'Please enter a valid street address, not a website URL.',
+    //   );
+    //   return;
+    // }
+    // const zipPattern = /^\d{5}(-\d{4})?$/;
+    // if (!zipPattern.test(zipCode.trim())) {
+    //   setValidationError(
+    //     'Please enter a valid ZIP code (e.g., 90210 or 90210-1234)',
+    //   );
+    //   return;
+    // }
 
     if (!captchaToken) {
       setValidationError('Please confirm you are not a robot.');
@@ -236,10 +237,10 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
     const payload = {
       first_name: firstName.trim(),
       last_name: lastName.trim(),
-      address: address.trim(),
-      city: city.trim(),
+      address: 'test', //address.trim(),
+      city: 'test', //city.trim(),
       state: 'CA',
-      zip_code: zipCode.trim(),
+      zip_code: '16005', //zipCode.trim(),
     };
 
     setIsSearching(true);
@@ -259,10 +260,10 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
       const propertyPayload = {
         first_name: firstName.trim().toUpperCase(),
         last_name: lastName.trim().toUpperCase(),
-        address: address.trim().toUpperCase(),
-        city: city.trim().toUpperCase(),
-        state: 'CA',
-        zip_code: zipCode.trim(),
+        // address: address.trim().toUpperCase(),
+        // city: city.trim().toUpperCase(),
+        // state: 'CA',
+        // zip_code: zipCode.trim(),
       };
 
       const { totalMatched, matchedProperties } = await axios
@@ -295,10 +296,10 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
         onNext({
           name: `${firstName.trim()} ${lastName.trim()}`,
           address: {
-            street: address.trim(),
-            city: city.trim(),
-            state,
-            zipCode: zipCode.trim(),
+            // street: address.trim(),
+            // city: city.trim(),
+            // state,
+            // zipCode: zipCode.trim(),
           },
           properties: transformedProperties,
           totalAmount: transformedProperties
@@ -318,13 +319,11 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
     }
   };
 
-  const isFormValid =
-    firstName.trim().length > 0 &&
-    lastName.trim().length > 0 &&
-    address.trim().length > 0 &&
-    city.trim().length > 0 &&
-    zipCode.trim().length > 0 &&
-    !addressError;
+  const isFormValid = firstName.trim().length > 0 && lastName.trim().length > 0;
+  // address.trim().length > 0 &&
+  // city.trim().length > 0 &&
+  // zipCode.trim().length > 0 &&
+  // !addressError;
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
@@ -542,148 +541,150 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
                     </motion.div>
                   </div>
 
-                  {/* Address divider */}
-                  <motion.div
-                    className="flex items-center gap-3 py-2"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 1.0 }}
-                  >
-                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#E1261C] to-transparent" />
-                    <span className="text-sm text-[#4A4A4A] flex items-center gap-2 font-['JetBrains_Mono']">
-                      <MapPin className="h-4 w-4 text-[#E1261C]" />
-                      Address Information
-                    </span>
-                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#E1261C] to-transparent" />
-                  </motion.div>
-
-                  {/* Street Address - Google Places Autocomplete */}
-                  <motion.div className="relative">
-                    <label className="text-sm font-medium text-[#0A0A0A] mb-2 flex items-center gap-2 font-['JetBrains_Mono']">
-                      <Home className="h-4 w-4 text-[#E1261C]" />
-                      Street Address *
-                    </label>
-                    <input
-                      ref={addressInputRef}
-                      type="text"
-                      placeholder="Enter address…"
-                      disabled={isSearching}
-                      onChange={(e) => {
-                        const value = e.target.value;
-
-                        setAddressRef.current(value);
-
-                        if (value.trim() && isAddressUrl(value)) {
-                          setAddressError(
-                            'Please enter a valid street address, not a website URL.',
-                          );
-                        } else {
-                          setAddressError('');
-                        }
-
-                        setValidationError('');
-                      }}
-                      autoComplete="new-password"
-                      className={`w-full rounded-lg border-2 transition-all duration-300 text-[#0A0A0A] placeholder-[#888888] text-sm bg-white px-4 py-[0.65rem] leading-6 focus:outline-none focus:ring-0 ${
-                        addressError
-                          ? 'border-[#E1261C]'
-                          : address.trim()
-                            ? 'border-[#E1261C]/50 focus:border-[#E1261C]'
-                            : 'border-[#E8E6E3] focus:border-[#E1261C]'
-                      }`}
-                      style={{ caretColor: '#E1261C', fontFamily: 'inherit' }}
-                    />
-                    {address.trim() && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="absolute right-3 top-9 text-[#E1261C] pointer-events-none"
-                      >
-                        ✓
-                      </motion.div>
-                    )}
-                    {addressError && (
-                      <p className="text-[#E1261C] text-xs mt-2">
-                        {addressError}
-                      </p>
-                    )}
-                  </motion.div>
-
-                  {/* City / ZIP */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <motion.div className="relative">
-                      <label className="block text-sm font-medium text-[#0A0A0A] mb-2 font-['JetBrains_Mono']">
-                        City *
-                      </label>
-                      <InputField
-                        type="text"
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        placeholder="Auto-filled from address"
-                        className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${city.trim() ? 'border-[#E1261C]/50 focus:border-[#E1261C]' : 'border-[#E8E6E3] focus:border-[#E1261C]'}`}
-                        onKeyPress={(e) =>
-                          e.key === 'Enter' && isFormValid && handleSearch()
-                        }
-                        disabled={isSearching}
-                      />
-                      {city.trim() && (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="absolute right-3 top-9 text-[#E1261C]"
-                        >
-                          ✓
-                        </motion.div>
-                      )}
-                    </motion.div>
-
-                    <motion.div className="relative">
-                      <label className="block text-sm font-medium text-[#0A0A0A] mb-2 font-['JetBrains_Mono']">
-                        ZIP Code *
-                      </label>
-                      <InputField
-                        type="text"
-                        value={zipCode}
-                        onChange={(e) => setZipCode(e.target.value)}
-                        placeholder="Auto-filled from address"
-                        maxLength={10}
-                        className={`remove-arrow w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${zipCode.trim() ? 'border-[#E1261C]/50 focus:border-[#E1261C]' : 'border-[#E8E6E3] focus:border-[#E1261C]'}`}
-                        onKeyPress={(e) =>
-                          e.key === 'Enter' && isFormValid && handleSearch()
-                        }
-                        disabled={isSearching}
-                      />
-                      {zipCode.trim() && (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="absolute right-3 top-9 text-[#E1261C]"
-                        >
-                          ✓
-                        </motion.div>
-                      )}
-                    </motion.div>
-                  </div>
-
-                  {/* State (read-only) */}
-                  <motion.div
-                    className="relative opacity-75"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 0.75 }}
-                    transition={{ delay: 1.2 }}
-                  >
-                    <label className="text-sm font-medium text-[#0A0A0A] mb-2 flex items-center gap-2 font-['JetBrains_Mono']">
-                      <Globe className="h-4 w-4 text-[#E1261C]" />
-                      State (California Only)
-                    </label>
-                    <InputField
-                      type="text"
-                      value={state}
-                      readOnly
-                      className="w-full text-[#0A0A0A] bg-[#F0EEEB] border-2 border-[#E8E6E3] rounded-lg cursor-not-allowed"
-                      disabled
-                    />
-                  </motion.div>
+                  {/*
+                  // Address divider
+                  // <motion.div
+                  //   className="flex items-center gap-3 py-2"
+                  //   initial={{ opacity: 0 }}
+                  //   animate={{ opacity: 1 }}
+                  //   transition={{ delay: 1.0 }}
+                  // >
+                  //   <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#E1261C] to-transparent" />
+                  //   <span className="text-sm text-[#4A4A4A] flex items-center gap-2 font-['JetBrains_Mono']">
+                  //     <MapPin className="h-4 w-4 text-[#E1261C]" />
+                  //     Address Information
+                  //   </span>
+                  //   <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#E1261C] to-transparent" />
+                  // </motion.div>
+                  //
+                  // // Street Address - Google Places Autocomplete
+                  // <motion.div className="relative">
+                  //   <label className="text-sm font-medium text-[#0A0A0A] mb-2 flex items-center gap-2 font-['JetBrains_Mono']">
+                  //     <Home className="h-4 w-4 text-[#E1261C]" />
+                  //     Street Address *
+                  //   </label>
+                  //   <input
+                  //     ref={addressInputRef}
+                  //     type="text"
+                  //     placeholder="Enter address…"
+                  //     disabled={isSearching}
+                  //     onChange={(e) => {
+                  //       const value = e.target.value;
+                  //
+                  //       setAddressRef.current(value);
+                  //
+                  //       if (value.trim() && isAddressUrl(value)) {
+                  //         setAddressError(
+                  //           'Please enter a valid street address, not a website URL.',
+                  //         );
+                  //       } else {
+                  //         setAddressError('');
+                  //       }
+                  //
+                  //       setValidationError('');
+                  //     }}
+                  //     autoComplete="new-password"
+                  //     className={`w-full rounded-lg border-2 transition-all duration-300 text-[#0A0A0A] placeholder-[#888888] text-sm bg-white px-4 py-[0.65rem] leading-6 focus:outline-none focus:ring-0 ${
+                  //       addressError
+                  //         ? 'border-[#E1261C]'
+                  //         : address.trim()
+                  //           ? 'border-[#E1261C]/50 focus:border-[#E1261C]'
+                  //           : 'border-[#E8E6E3] focus:border-[#E1261C]'
+                  //     }`}
+                  //     style={{ caretColor: '#E1261C', fontFamily: 'inherit' }}
+                  //   />
+                  //   {address.trim() && (
+                  //     <motion.div
+                  //       initial={{ scale: 0 }}
+                  //       animate={{ scale: 1 }}
+                  //       className="absolute right-3 top-9 text-[#E1261C] pointer-events-none"
+                  //     >
+                  //       ✓
+                  //     </motion.div>
+                  //   )}
+                  //   {addressError && (
+                  //     <p className="text-[#E1261C] text-xs mt-2">
+                  //       {addressError}
+                  //     </p>
+                  //   )}
+                  // </motion.div>
+                  //
+                  // // City / ZIP
+                  // <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  //   <motion.div className="relative">
+                  //     <label className="block text-sm font-medium text-[#0A0A0A] mb-2 font-['JetBrains_Mono']">
+                  //       City *
+                  //     </label>
+                  //     <InputField
+                  //       type="text"
+                  //       value={city}
+                  //       onChange={(e) => setCity(e.target.value)}
+                  //       placeholder="Auto-filled from address"
+                  //       className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${city.trim() ? 'border-[#E1261C]/50 focus:border-[#E1261C]' : 'border-[#E8E6E3] focus:border-[#E1261C]'}`}
+                  //       onKeyPress={(e) =>
+                  //         e.key === 'Enter' && isFormValid && handleSearch()
+                  //       }
+                  //       disabled={isSearching}
+                  //     />
+                  //     {city.trim() && (
+                  //       <motion.div
+                  //         initial={{ scale: 0 }}
+                  //         animate={{ scale: 1 }}
+                  //         className="absolute right-3 top-9 text-[#E1261C]"
+                  //       >
+                  //         ✓
+                  //       </motion.div>
+                  //     )}
+                  //   </motion.div>
+                  //
+                  //   <motion.div className="relative">
+                  //     <label className="block text-sm font-medium text-[#0A0A0A] mb-2 font-['JetBrains_Mono']">
+                  //       ZIP Code *
+                  //     </label>
+                  //     <InputField
+                  //       type="text"
+                  //       value={zipCode}
+                  //       onChange={(e) => setZipCode(e.target.value)}
+                  //       placeholder="Auto-filled from address"
+                  //       maxLength={10}
+                  //       className={`remove-arrow w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${zipCode.trim() ? 'border-[#E1261C]/50 focus:border-[#E1261C]' : 'border-[#E8E6E3] focus:border-[#E1261C]'}`}
+                  //       onKeyPress={(e) =>
+                  //         e.key === 'Enter' && isFormValid && handleSearch()
+                  //       }
+                  //       disabled={isSearching}
+                  //     />
+                  //     {zipCode.trim() && (
+                  //       <motion.div
+                  //         initial={{ scale: 0 }}
+                  //         animate={{ scale: 1 }}
+                  //         className="absolute right-3 top-9 text-[#E1261C]"
+                  //       >
+                  //         ✓
+                  //       </motion.div>
+                  //     )}
+                  //   </motion.div>
+                  // </div>
+                  //
+                  // // State (read-only)
+                  // <motion.div
+                  //   className="relative opacity-75"
+                  //   initial={{ opacity: 0 }}
+                  //   animate={{ opacity: 0.75 }}
+                  //   transition={{ delay: 1.2 }}
+                  // >
+                  //   <label className="text-sm font-medium text-[#0A0A0A] mb-2 flex items-center gap-2 font-['JetBrains_Mono']">
+                  //     <Globe className="h-4 w-4 text-[#E1261C]" />
+                  //     State (California Only)
+                  //   </label>
+                  //   <InputField
+                  //     type="text"
+                  //     value={state}
+                  //     readOnly
+                  //     className="w-full text-[#0A0A0A] bg-[#F0EEEB] border-2 border-[#E8E6E3] rounded-lg cursor-not-allowed"
+                  //     disabled
+                  //   />
+                  // </motion.div>
+                  */}
 
                   {/* Form status */}
                   <motion.div
@@ -896,7 +897,7 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
                       transition={{ delay: 1 }}
                     >
                       <span>
-                        Searching: {firstName} {lastName} @ {city}, CA
+                        Searching: {firstName} {lastName} @ {'city'}, CA
                       </span>
                       <span>{Math.round(searchProgress)}%</span>
                     </motion.div>
