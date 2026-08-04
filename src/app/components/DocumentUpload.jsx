@@ -5,6 +5,7 @@ import { Card } from './uicomponents/Card';
 import { Badge } from './uicomponents/Badge';
 import { useWebSocket } from '../hooks/useWebSocket';
 import axios from 'axios';
+import { useRouter } from 'next/navigation';
 import {
   Upload,
   FileText,
@@ -37,6 +38,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const hasRun = useRef(false);
+  const router = useRouter();
   const {
     userData,
     userAgreement,
@@ -51,6 +53,12 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     searchResults,
     setSearchResults,
   } = useSearchStore();
+
+  const [errorModal, setErrorModal] = useState({
+    show: false,
+    title: '',
+    message: '',
+  });
   const requiredDocuments = [
     {
       id: 'agreement',
@@ -283,6 +291,8 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
         _id: caseData?._id,
         case_id: caseData?.case_id,
         status: caseData?.status,
+        claim_status: caseData?.claim_status,
+        claim_process_task_status: caseData?.claim_process_task_status,
         createdAt: caseData?.createdAt,
       };
       localStorage.setItem('userCase', JSON.stringify(filteredCase));
@@ -291,7 +301,18 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
         'userAllDocs',
         JSON.stringify(data?.data?.[0]?.user_docs?.[0]),
       );
-
+      if (
+        caseData?.claim_process_task_status === '' ||
+        caseData?.claim_process_task_status === null ||
+        caseData?.claim_process_task_status === 'queued'
+      ) {
+        setErrorModal({
+          show: true,
+          title: 'Claim Process Pending',
+          message:
+            ' Your claim is currently being processed. Please check back later for updates.',
+        });
+      }
       const uploadedIds = [];
 
       if (userDocs.proof_id) uploadedIds.push('id');
@@ -386,7 +407,9 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     const email = userAgreement?.email_id;
 
     if (!firstName || !lastName || !email) {
-      setError('Missing name or email. Please complete the previous steps first.');
+      setError(
+        'Missing name or email. Please complete the previous steps first.',
+      );
       setIsDocuSignLoading(false);
       return;
     }
@@ -423,7 +446,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   };
 
   const handleAgreementDocuSign = async () => {
-   // const userId = '6a4c9c5454b07b5a9055838d'; //userData?._id;
+    // const userId = '6a4c9c5454b07b5a9055838d'; //userData?._id;
     const userId = userData?._id;
     if (!userId) {
       setError('User ID missing. Please complete the previous steps first.');
@@ -925,6 +948,46 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
           </div>
         </div>
       )}
+      <ErrorModal
+        show={errorModal.show}
+        title={errorModal.title}
+        message={errorModal.message}
+        onClose={() => {
+          setErrorModal({
+            show: false,
+            title: '',
+            message: '',
+          });
+
+          router.push('/userLogin');
+        }}
+      />
+    </div>
+  );
+};
+
+const ErrorModal = ({ show, title, message, onClose }) => {
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-4">
+      <div className="bg-white border border-[#E8E6E3] rounded-xl shadow-lg max-w-md w-full p-6 relative animate-in fade-in zoom-in duration-200">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 bg-[#FCE9E7] rounded-full flex items-center justify-center shrink-0">
+            <Shield className="h-5 w-5 text-[#E1261C]" />
+          </div>
+          <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
+            {title}
+          </h3>
+        </div>
+        <p className="text-sm text-[#4A4A4A] mb-6">{message}</p>
+        <button
+          onClick={onClose}
+          className="w-full px-4 py-2.5 bg-[#E1261C] hover:bg-[#B11912] text-white font-semibold rounded-lg transition-all duration-300"
+        >
+          Close
+        </button>
+      </div>
     </div>
   );
 };

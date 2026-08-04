@@ -30,7 +30,7 @@ export const SiteHeader = () => {
   };
 
   const handleSearchNow = () => {
-    goToSearch();
+    router.push('/?step=search');
   };
 
   const navItems = [

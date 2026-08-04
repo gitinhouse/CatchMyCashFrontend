@@ -37,6 +37,12 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
     formerEmployers: '',
     previousAddresses: '',
   });
+  const [errorModal, setErrorModal] = useState({
+    show: false,
+    title: '',
+    message: '',
+  });
+  const [nextPageData, setNextPageData] = useState(null);
   const {
     userData,
     setUserAgreement,
@@ -86,6 +92,21 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
         }
       }
 
+      if (field === 'fullName') {
+        const nameRegex = /^[A-Za-z\s]*$/;
+
+        if (value && !nameRegex.test(value)) {
+          updated.fullName = 'Full name can only contain letters and spaces.';
+        }
+      }
+
+      if (field === 'email') {
+        const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+
+        if (value.trim() && !emailRegex.test(value.trim())) {
+          updated.email = 'Please enter a valid email address.';
+        }
+      }
       return updated;
     });
   };
@@ -182,8 +203,12 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
 
   useEffect(() => {
     const savedProperty = localStorage.getItem('propertyData');
-    if (savedProperty) {
-      setSearchResults(JSON.parse(savedProperty));
+    if (savedProperty && savedProperty !== 'undefined') {
+      try {
+        setSearchResults(JSON.parse(savedProperty));
+      } catch (e) {
+        console.error('Failed to parse propertyData from localStorage', e);
+      }
     }
   }, []);
 
@@ -310,6 +335,18 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
       newErrors.zipCode = 'ZIP code must be exactly 5 digits.';
     }
 
+    const nameRegex = /^[A-Za-z\s]+$/;
+
+    if (!nameRegex.test(formData.fullName.trim())) {
+      newErrors.fullName = 'Full name can only contain letters and spaces.';
+    }
+
+    const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+
+    if (!emailRegex.test(formData.email.trim())) {
+      newErrors.email = 'Please enter a valid email address.';
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -378,30 +415,92 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
         documents_to_upload: [],
       };
 
-      const res = await axios.post('/api/register', payloadData);
-      setUserLogin(res.data);
-      localStorage.setItem('userLogin', JSON.stringify(res.data));
-
-      const { data: claimSubmission } = await axios.post(
-        '/api/claim-submission',
-        claimSubmissionPayloadData,
-      );
-
-      const { data } = await axios.post('/api/legalDetails', {
-        ...payload,
-        claimSubmission: {
-          ...claimSubmission,
-          property_ids: ownPropertyIds,
-        },
-      });
-      setUserAgreement(data);
-      localStorage.setItem('userAgreement', JSON.stringify(data));
-
-      if (data.userCase) {
-        localStorage.setItem('userCase', JSON.stringify(data.userCase));
+      let userLoginRes;
+      try {
+        userLoginRes = await axios.post('/api/register', payloadData);
+        setUserLogin(userLoginRes.data);
+        localStorage.setItem('userLogin', JSON.stringify(userLoginRes.data));
+      } catch (err) {
+        const msg =
+          err.response?.data?.message ||
+          'This email is already registered. Please use a different email or log in.';
+        setErrorModal({
+          show: true,
+          title: 'Registration Failed',
+          message: msg,
+        });
+        setLoading(false);
+        return;
       }
 
-      onNext(data);
+      let claimSubmission;
+      try {
+        const res = await axios.post(
+          '/api/claim-submission',
+          claimSubmissionPayloadData,
+        );
+        claimSubmission = res.data;
+        console.log('--claimSubmission--', claimSubmission);
+
+        if (claimSubmission.failed > 0 && claimSubmission.succeeded === 0) {
+          const failedMessages = claimSubmission.results
+            ?.filter((r) => !r.success)
+            .map((r) => r.message)
+            .join(' ');
+
+          setErrorModal({
+            show: true,
+            title: 'Claim Submission Failed',
+            message:
+              failedMessages ||
+              'We were unable to submit your claim. Please try again.',
+          });
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        setErrorModal({
+          show: true,
+          title: 'Claim Submission Failed',
+          message:
+            err.response?.data?.message ||
+            'An unexpected error occurred while submitting your claim.',
+        });
+        setLoading(false);
+        return;
+      }
+      try {
+        const { data } = await axios.post('/api/legalDetails', {
+          ...payload,
+          claimSubmission: {
+            ...claimSubmission,
+            property_ids: ownPropertyIds,
+          },
+        });
+        setUserAgreement(data);
+        localStorage.setItem('userAgreement', JSON.stringify(data));
+
+        if (data.userCase) {
+          localStorage.setItem('userCase', JSON.stringify(data.userCase));
+        }
+
+        setNextPageData(data);
+
+        setErrorModal({
+          show: true,
+          title: 'Claim is in Process',
+          message:
+            'We have sent an email with your login details, and your claim is currently being processed. Please wait. We will send updates to your email.',
+        });
+      } catch (err) {
+        setErrorModal({
+          show: true,
+          title: 'Something Went Wrong',
+          message:
+            err.response?.data?.message ||
+            'We could not save your legal details. Please try again.',
+        });
+      }
     } catch (err) {
       console.error('Error saving user properties:', err);
       if (err.response && err.response.data?.message) {
@@ -501,352 +600,411 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 md:p-8 shadow-md">
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Personal Information Section */}
-              <div className="md:col-span-2">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 bg-[#FCE9E7] rounded-full flex items-center justify-center">
-                    <User className="h-4 w-4 text-[#E1261C]" />
+          <fieldset
+            disabled={loading}
+            className={loading ? 'opacity-70 pointer-events-none' : ''}
+          >
+            <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 md:p-8 shadow-md">
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Personal Information Section */}
+                <div className="md:col-span-2">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 bg-[#FCE9E7] rounded-full flex items-center justify-center">
+                      <User className="h-4 w-4 text-[#E1261C]" />
+                    </div>
+                    <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
+                      Personal{' '}
+                      <span className="text-[#E1261C] italic font-normal">
+                        Information
+                      </span>
+                    </h3>
                   </div>
-                  <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
-                    Personal{' '}
-                    <span className="text-[#E1261C] italic font-normal">
-                      Information
-                    </span>
-                  </h3>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
+                    Full Legal Name *
+                  </label>
+                  <InputField
+                    type="text"
+                    value={formData.fullName}
+                    onChange={(e) =>
+                      handleInputChange('fullName', e.target.value)
+                    }
+                    placeholder="As it appears on government documents"
+                    className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${
+                      errors.fullName ? 'border-[#E1261C]' : 'border-[#E8E6E3]'
+                    }`}
+                    required
+                  />
+                  {errors.fullName && (
+                    <p className="text-[#E1261C] text-xs mt-1">
+                      {errors.fullName}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
+                    Date of Birth *
+                  </label>
+                  <InputField
+                    type="date"
+                    value={formData.dateOfBirth}
+                    onChange={(e) =>
+                      handleInputChange('dateOfBirth', e.target.value)
+                    }
+                    max={today}
+                    className={`w-full text-[#0A0A0A] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${
+                      errors.dateOfBirth
+                        ? 'border-[#E1261C]'
+                        : 'border-[#E8E6E3]'
+                    }`}
+                    required
+                  />
+                  {errors.dateOfBirth && (
+                    <p className="text-[#E1261C] text-xs mt-1">
+                      {errors.dateOfBirth}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
+                    Email Address *
+                  </label>
+                  <InputField
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    placeholder="your@email.com"
+                    className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${
+                      errors.email ? 'border-[#E1261C]' : 'border-[#E8E6E3]'
+                    }`}
+                    required
+                  />
+                  {errors.email && (
+                    <p className="text-[#E1261C] text-xs mt-1">
+                      {errors.email}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
+                    Phone Number *
+                  </label>
+                  <InputField
+                    type="text"
+                    value={formData.phone}
+                    onChange={(e) => handlePhoneChange(e.target.value)}
+                    placeholder="(555) 123-4567"
+                    onBlur={handlePhoneBlur}
+                    className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
+                    required
+                  />
+                  {errors.phone && (
+                    <p className="text-[#E1261C] text-xs mt-1">
+                      {errors.phone}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
+                    Social Security Number *
+                  </label>
+                  <InputField
+                    type="text"
+                    value={formData.ssn}
+                    onChange={(e) => handleSSNChange(e.target.value)}
+                    onBlur={handleSSNBlur}
+                    placeholder="XXX-XX-XXXX"
+                    className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
+                    required
+                  />
+                  <p className="text-xs text-[#888888] mt-1">
+                    Required for identity verification
+                  </p>
+                  {errors.ssn && (
+                    <p className="text-[#E1261C] text-xs mt-1">{errors.ssn}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
+                    Current Employer
+                  </label>
+                  <InputField
+                    type="text"
+                    value={formData.currentEmployer}
+                    onChange={(e) =>
+                      handleInputChange('currentEmployer', e.target.value)
+                    }
+                    placeholder="Company name"
+                    className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
+                  />
+                </div>
+
+                {/* Address Information Section */}
+                <div className="md:col-span-2 mt-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 bg-[#FCE9E7] rounded-full flex items-center justify-center">
+                      <MapPin className="h-4 w-4 text-[#E1261C]" />
+                    </div>
+                    <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
+                      Current{' '}
+                      <span className="text-[#E1261C] italic font-normal">
+                        Address
+                      </span>
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
+                    Street Address *
+                  </label>
+                  <input
+                    ref={addressInputRef}
+                    type="text"
+                    value={formData.address}
+                    placeholder="Enter address…"
+                    autoComplete="new-password"
+                    onChange={(e) =>
+                      handleInputChange('address', e.target.value)
+                    }
+                    required
+                    className={`w-full rounded-lg border-2 bg-white px-4 py-2.5 text-sm text-[#0A0A0A] placeholder-[#888888] leading-6 focus:outline-none focus:border-[#E1261C] transition-all duration-300 ${
+                      errors.address ? 'border-[#E1261C]' : 'border-[#E8E6E3]'
+                    }`}
+                  />
+                  {errors.address && (
+                    <p className="text-[#E1261C] text-xs mt-1">
+                      {errors.address}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
+                    City *
+                  </label>
+                  <InputField
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => handleInputChange('city', e.target.value)}
+                    placeholder="Los Angeles"
+                    className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${
+                      errors.city ? 'border-[#E1261C]' : 'border-[#E8E6E3]'
+                    }`}
+                    required
+                  />
+                  {errors.city && (
+                    <p className="text-[#E1261C] text-xs mt-1">{errors.city}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
+                    ZIP Code *
+                  </label>
+                  <InputField
+                    type="text"
+                    value={formData.zipCode}
+                    onChange={(e) =>
+                      handleInputChange('zipCode', e.target.value)
+                    }
+                    onBlur={handleZipBlur}
+                    placeholder="90210"
+                    className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
+                    required
+                  />
+                  {errors.zipCode && (
+                    <p className="text-[#E1261C] text-xs mt-1">
+                      {errors.zipCode}
+                    </p>
+                  )}
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
+                    State
+                  </label>
+                  <InputField
+                    type="text"
+                    value={formData.state}
+                    readOnly
+                    className="w-full text-[#0A0A0A] bg-[#F0EEEB] border-2 border-[#E8E6E3] rounded-lg cursor-not-allowed"
+                    disabled
+                  />
+                </div>
+
+                {/* Additional Information Section */}
+                <div className="md:col-span-2 mt-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 bg-[#FCE9E7] rounded-full flex items-center justify-center">
+                      <Building className="h-4 w-4 text-[#E1261C]" />
+                    </div>
+                    <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
+                      Additional{' '}
+                      <span className="text-[#E1261C] italic font-normal">
+                        Information
+                      </span>
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
+                    Former Employers (if applicable)
+                  </label>
+                  <Textarea
+                    value={formData.formerEmployers}
+                    onChange={(e) =>
+                      handleInputChange('formerEmployers', e.target.value)
+                    }
+                    placeholder="List any companies you've worked for that might have unclaimed property..."
+                    rows={3}
+                    className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
+                    Previous Addresses (if applicable)
+                  </label>
+                  <Textarea
+                    value={formData.previousAddresses}
+                    onChange={(e) =>
+                      handleInputChange('previousAddresses', e.target.value)
+                    }
+                    placeholder="List any previous addresses where you might have lived..."
+                    rows={3}
+                    className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
+                  />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
-                  Full Legal Name *
+              {/* Agreement Terms - Red Themed */}
+              <div className="mt-8 p-4 bg-[#FCE9E7] rounded-lg border border-[#E8E6E3]">
+                <h4 className="font-bold text-[#0A0A0A] mb-2 font-['Fraunces']">
+                  Agreement{' '}
+                  <span className="text-[#E1261C] italic font-normal">
+                    Terms
+                  </span>
+                </h4>
+                <ul className="text-sm text-[#4A4A4A] space-y-1">
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-[#E1261C] rounded-full"></span>
+                    CatchMyCash will act as your authorized investigator
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-[#E1261C] rounded-full"></span>
+                    Our fee is 10% of any successfully recovered property
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-[#E1261C] rounded-full"></span>
+                    No upfront costs or fees
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-[#E1261C] rounded-full"></span>
+                    You only pay if we successfully recover your money
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-[#E1261C] rounded-full"></span>
+                    All information provided is confidential and secure
+                  </li>
+                </ul>
+              </div>
+
+              {/* SMS Agreement */}
+              <div className="mt-4">
+                <label className="flex items-center space-x-2 text-sm text-[#0A0A0A] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={agreeSMS}
+                    onChange={(e) => setAgreeSMS(e.target.checked)}
+                    className="h-4 w-4 text-[#E1261C] rounded border-[#E8E6E3] focus:ring-[#E1261C]"
+                  />
+                  <span>
+                    I agree to receive SMS updates from CatchMyCash about my
+                    claim.
+                  </span>
                 </label>
-                <InputField
-                  type="text"
-                  value={formData.fullName}
-                  onChange={(e) =>
-                    handleInputChange('fullName', e.target.value)
-                  }
-                  placeholder="As it appears on government documents"
-                  className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${
-                    errors.fullName ? 'border-[#E1261C]' : 'border-[#E8E6E3]'
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8">
+                <div className="flex items-center text-[#E1261C]">
+                  <Clock className="h-5 w-5 mr-2" />
+                  <span className="text-sm font-['JetBrains_Mono']">
+                    Next: Automatic form preparation
+                  </span>
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={`px-8 py-3 text-white font-semibold rounded-xl transition-all duration-300 ${
+                    loading
+                      ? 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
+                      : 'bg-[#E1261C] hover:bg-[#B11912] shadow-md hover:shadow-lg'
                   }`}
-                  required
-                />
-                {errors.fullName && (
-                  <p className="text-[#E1261C] text-xs mt-1">
-                    {errors.fullName}
-                  </p>
-                )}
+                >
+                  {loading ? 'Submitting...' : 'Continue to Form Automation'}
+                </button>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
-                  Date of Birth *
-                </label>
-                <InputField
-                  type="date"
-                  value={formData.dateOfBirth}
-                  onChange={(e) =>
-                    handleInputChange('dateOfBirth', e.target.value)
-                  }
-                  max={today}
-                  className={`w-full text-[#0A0A0A] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${
-                    errors.dateOfBirth ? 'border-[#E1261C]' : 'border-[#E8E6E3]'
-                  }`}
-                  required
-                />
-                {errors.dateOfBirth && (
-                  <p className="text-[#E1261C] text-xs mt-1">
-                    {errors.dateOfBirth}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
-                  Email Address *
-                </label>
-                <InputField
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  placeholder="your@email.com"
-                  className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${
-                    errors.email ? 'border-[#E1261C]' : 'border-[#E8E6E3]'
-                  }`}
-                  required
-                />
-                {errors.email && (
-                  <p className="text-[#E1261C] text-xs mt-1">{errors.email}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
-                  Phone Number *
-                </label>
-                <InputField
-                  type="text"
-                  value={formData.phone}
-                  onChange={(e) => handlePhoneChange(e.target.value)}
-                  placeholder="(555) 123-4567"
-                  onBlur={handlePhoneBlur}
-                  className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
-                  required
-                />
-                {errors.phone && (
-                  <p className="text-[#E1261C] text-xs mt-1">{errors.phone}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
-                  Social Security Number *
-                </label>
-                <InputField
-                  type="text"
-                  value={formData.ssn}
-                  onChange={(e) => handleSSNChange(e.target.value)}
-                  onBlur={handleSSNBlur}
-                  placeholder="XXX-XX-XXXX"
-                  className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
-                  required
-                />
-                <p className="text-xs text-[#888888] mt-1">
-                  Required for identity verification
+              {apiError && (
+                <p className="text-[#E1261C] text-sm mt-3 text-center w-full">
+                  {apiError}
                 </p>
-                {errors.ssn && (
-                  <p className="text-[#E1261C] text-xs mt-1">{errors.ssn}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
-                  Current Employer
-                </label>
-                <InputField
-                  type="text"
-                  value={formData.currentEmployer}
-                  onChange={(e) =>
-                    handleInputChange('currentEmployer', e.target.value)
-                  }
-                  placeholder="Company name"
-                  className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
-                />
-              </div>
-
-              {/* Address Information Section */}
-              <div className="md:col-span-2 mt-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 bg-[#FCE9E7] rounded-full flex items-center justify-center">
-                    <MapPin className="h-4 w-4 text-[#E1261C]" />
-                  </div>
-                  <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
-                    Current{' '}
-                    <span className="text-[#E1261C] italic font-normal">
-                      Address
-                    </span>
-                  </h3>
-                </div>
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
-                  Street Address *
-                </label>
-                <input
-                  ref={addressInputRef}
-                  type="text"
-                  value={formData.address}
-                  placeholder="Enter address…"
-                  autoComplete="new-password"
-                  onChange={(e) => handleInputChange('address', e.target.value)}
-                  required
-                  className={`w-full rounded-lg border-2 bg-white px-4 py-2.5 text-sm text-[#0A0A0A] placeholder-[#888888] leading-6 focus:outline-none focus:border-[#E1261C] transition-all duration-300 ${
-                    errors.address ? 'border-[#E1261C]' : 'border-[#E8E6E3]'
-                  }`}
-                />
-                {errors.address && (
-                  <p className="text-[#E1261C] text-xs mt-1">
-                    {errors.address}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
-                  City *
-                </label>
-                <InputField
-                  type="text"
-                  value={formData.city}
-                  onChange={(e) => handleInputChange('city', e.target.value)}
-                  placeholder="Los Angeles"
-                  className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${
-                    errors.city ? 'border-[#E1261C]' : 'border-[#E8E6E3]'
-                  }`}
-                  required
-                />
-                {errors.city && (
-                  <p className="text-[#E1261C] text-xs mt-1">{errors.city}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
-                  ZIP Code *
-                </label>
-                <InputField
-                  type="text"
-                  value={formData.zipCode}
-                  onChange={(e) => handleInputChange('zipCode', e.target.value)}
-                  onBlur={handleZipBlur}
-                  placeholder="90210"
-                  className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
-                  required
-                />
-                {errors.zipCode && (
-                  <p className="text-[#E1261C] text-xs mt-1">
-                    {errors.zipCode}
-                  </p>
-                )}
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
-                  State
-                </label>
-                <InputField
-                  type="text"
-                  value={formData.state}
-                  readOnly
-                  className="w-full text-[#0A0A0A] bg-[#F0EEEB] border-2 border-[#E8E6E3] rounded-lg cursor-not-allowed"
-                  disabled
-                />
-              </div>
-
-              {/* Additional Information Section */}
-              <div className="md:col-span-2 mt-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 bg-[#FCE9E7] rounded-full flex items-center justify-center">
-                    <Building className="h-4 w-4 text-[#E1261C]" />
-                  </div>
-                  <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
-                    Additional{' '}
-                    <span className="text-[#E1261C] italic font-normal">
-                      Information
-                    </span>
-                  </h3>
-                </div>
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
-                  Former Employers (if applicable)
-                </label>
-                <Textarea
-                  value={formData.formerEmployers}
-                  onChange={(e) =>
-                    handleInputChange('formerEmployers', e.target.value)
-                  }
-                  placeholder="List any companies you've worked for that might have unclaimed property..."
-                  rows={3}
-                  className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
-                  Previous Addresses (if applicable)
-                </label>
-                <Textarea
-                  value={formData.previousAddresses}
-                  onChange={(e) =>
-                    handleInputChange('previousAddresses', e.target.value)
-                  }
-                  placeholder="List any previous addresses where you might have lived..."
-                  rows={3}
-                  className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
-                />
-              </div>
+              )}
             </div>
-
-            {/* Agreement Terms - Red Themed */}
-            <div className="mt-8 p-4 bg-[#FCE9E7] rounded-lg border border-[#E8E6E3]">
-              <h4 className="font-bold text-[#0A0A0A] mb-2 font-['Fraunces']">
-                Agreement{' '}
-                <span className="text-[#E1261C] italic font-normal">Terms</span>
-              </h4>
-              <ul className="text-sm text-[#4A4A4A] space-y-1">
-                <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-[#E1261C] rounded-full"></span>
-                  CatchMyCash will act as your authorized investigator
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-[#E1261C] rounded-full"></span>
-                  Our fee is 10% of any successfully recovered property
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-[#E1261C] rounded-full"></span>
-                  No upfront costs or fees
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-[#E1261C] rounded-full"></span>
-                  You only pay if we successfully recover your money
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-[#E1261C] rounded-full"></span>
-                  All information provided is confidential and secure
-                </li>
-              </ul>
-            </div>
-
-            {/* SMS Agreement */}
-            <div className="mt-4">
-              <label className="flex items-center space-x-2 text-sm text-[#0A0A0A] cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={agreeSMS}
-                  onChange={(e) => setAgreeSMS(e.target.checked)}
-                  className="h-4 w-4 text-[#E1261C] rounded border-[#E8E6E3] focus:ring-[#E1261C]"
-                />
-                <span>
-                  I agree to receive SMS updates from CatchMyCash about my
-                  claim.
-                </span>
-              </label>
-            </div>
-
-            {/* Submit Button */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8">
-              <div className="flex items-center text-[#E1261C]">
-                <Clock className="h-5 w-5 mr-2" />
-                <span className="text-sm font-['JetBrains_Mono']">
-                  Next: Automatic form preparation
-                </span>
-              </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className={`px-8 py-3 text-white font-semibold rounded-xl transition-all duration-300 ${
-                  loading
-                    ? 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
-                    : 'bg-[#E1261C] hover:bg-[#B11912] shadow-md hover:shadow-lg'
-                }`}
-              >
-                {loading ? 'Submitting...' : 'Continue to Form Automation'}
-              </button>
-            </div>
-
-            {apiError && (
-              <p className="text-[#E1261C] text-sm mt-3 text-center w-full">
-                {apiError}
-              </p>
-            )}
-          </div>
+          </fieldset>
         </form>
+        <ErrorModal
+          show={errorModal.show}
+          title={errorModal.title}
+          message={errorModal.message}
+          onClose={() => {
+            setErrorModal({
+              show: false,
+              title: '',
+              message: '',
+            });
+
+            if (nextPageData) {
+              onNext(nextPageData);
+            }
+          }}
+        />
+      </div>
+    </div>
+  );
+};
+
+const ErrorModal = ({ show, title, message, onClose }) => {
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-4">
+      <div className="bg-white border border-[#E8E6E3] rounded-xl shadow-lg max-w-md w-full p-6 relative animate-in fade-in zoom-in duration-200">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 bg-[#FCE9E7] rounded-full flex items-center justify-center shrink-0">
+            <Shield className="h-5 w-5 text-[#E1261C]" />
+          </div>
+          <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
+            {title}
+          </h3>
+        </div>
+        <p className="text-sm text-[#4A4A4A] mb-6">{message}</p>
+        <button
+          onClick={onClose}
+          className="w-full px-4 py-2.5 bg-[#E1261C] hover:bg-[#B11912] text-white font-semibold rounded-lg transition-all duration-300"
+        >
+          Close
+        </button>
       </div>
     </div>
   );

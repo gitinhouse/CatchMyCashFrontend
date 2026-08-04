@@ -99,7 +99,7 @@ export default function AboutPage() {
 
       <section className="bg-[#F7F5F2] py-12.5 lg:py-25">
         <div className="max-w-[1240px] mx-auto px-6 sm:px-8">
-          <h3 className="font-['Fraunces'] text-3xl md:text-4xl font-semibold tracking-[-0.01em] mb-12 max-w-[20ch]">
+          <h3 className="font-['Fraunces'] text-[28px] md:text-[32px] font-semibold tracking-[-0.01em] mb-12 max-w-[20ch]">
             Why people trust us with their information.
           </h3>
           <div className="grid md:grid-cols-3 gap-6">
@@ -107,7 +107,7 @@ export default function AboutPage() {
               <div className="w-10 h-10 bg-[#E1261C] text-white rounded flex items-center justify-center mb-5 font-bold">
                 ✓
               </div>
-              <h4 className="font-['Fraunces'] text-xl md:text-2xl font-semibold mb-2">
+              <h4 className="font-['Fraunces'] text-[22px] leading-[30px] font-semibold mb-2">
                 Contingency only
               </h4>
               <p className="text-[#4A4A4A] leading-relaxed">
@@ -120,7 +120,7 @@ export default function AboutPage() {
               <div className="w-10 h-10 bg-[#E1261C] text-white rounded flex items-center justify-center mb-5 font-bold">
                 ✓
               </div>
-              <h4 className="font-['Fraunces'] text-xl md:text-2xl font-semibold mb-2">
+              <h4 className="font-['Fraunces'] text-[22px] leading-[30px] font-semibold mb-2">
                 Bank-grade security
               </h4>
               <p className="text-[#4A4A4A] leading-relaxed">
@@ -133,7 +133,7 @@ export default function AboutPage() {
               <div className="w-10 h-10 bg-[#E1261C] text-white rounded flex items-center justify-center mb-5 font-bold">
                 ✓
               </div>
-              <h4 className="font-['Fraunces'] text-xl md:text-2xl font-semibold mb-2">
+              <h4 className="font-['Fraunces'] text-[22px] leading-[30px] font-semibold mb-2">
                 California-compliant process
               </h4>
               <p className="text-[#4A4A4A] leading-relaxed">
@@ -158,10 +158,10 @@ export default function AboutPage() {
                 BC
               </div>
               <div>
-                <h4 className="font-['Fraunces'] text-xl md:text-2xl font-semibold mb-1">
+                <h4 className="font-['Fraunces'] text-[22px]  font-semibold mb-1">
                   Brett Carlson
                 </h4>
-                <div className="font-['JetBrains_Mono'] text-[13px] text-[#E1261C] uppercase tracking-[0.05em] mb-3">
+                <div className="font-['JetBrains_Mono'] text-[12px] text-[#E1261C] uppercase tracking-[0.05em] mb-3">
                   Co-Founder
                 </div>
                 <p className="text-sm leading-relaxed text-[#4A4A4A]">
@@ -179,10 +179,10 @@ export default function AboutPage() {
                 EC
               </div>
               <div>
-                <h4 className="font-['Fraunces'] text-xl md:text-2xl font-semibold mb-1">
+                <h4 className="font-['Fraunces'] text-[22px] font-semibold mb-1">
                   Evan Carter
                 </h4>
-                <div className="font-['JetBrains_Mono'] text-[13px] text-[#E1261C] uppercase tracking-[0.05em] mb-3">
+                <div className="font-['JetBrains_Mono'] text-[12px] text-[#E1261C] uppercase tracking-[0.05em] mb-3">
                   Co-Founder
                 </div>
                 <p className="text-sm leading-relaxed text-[#4A4A4A]">
