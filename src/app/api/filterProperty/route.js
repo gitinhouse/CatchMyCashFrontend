@@ -210,10 +210,10 @@ export async function POST(req) {
     await connectToDatabase();
     const query = {
       ...buildNameQuery(first_name, last_name),
-      ...buildAddressQuery(address),
-      owner_city: { $regex: escapeRegex(city.trim()), $options: 'i' },
-      owner_state: state.toUpperCase(),
-      owner_zip: zip_code,
+      // ...buildAddressQuery(address), // Commented out for testing
+      // owner_city: { $regex: escapeRegex(city.trim()), $options: 'i' }, // Commented out for testing
+      // owner_state: state.toUpperCase(), // Commented out for testing
+      // owner_zip: zip_code, // Commented out for testing
     };
 
     const normalizedPropertyId = normalizePropertyIdExpression();
