@@ -18,7 +18,8 @@ export default function Footer() {
               CatchMyCash
             </div>
             <p className="text-[#888888] text-sm max-w-[280px] mx-auto sm:mx-0">
-              Helping Californians recover unclaimed property held by the State Controller's Office. Not affiliated with the State of California.
+              Helping Californians recover unclaimed property held by the State
+              Controller's Office. Not affiliated with the State of California.
             </p>
           </div>
 
@@ -29,17 +30,27 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2">
               <li>
-                <Link href="#" onClick={() => goToSearch()} className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors">
+                <Link
+                  href="#"
+                  onClick={() => goToSearch()}
+                  className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
+                >
                   Search now
                 </Link>
               </li>
               <li>
-                <Link href="/how-it-works" className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors">
+                <Link
+                  href="/how-it-works"
+                  className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
+                >
                   How it works
                 </Link>
               </li>
               <li>
-                <Link href="/pricing" className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors">
+                <Link
+                  href="/pricing"
+                  className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
+                >
                   Pricing
                 </Link>
               </li>
@@ -53,17 +64,26 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2">
               <li>
-                <Link href="/about" className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors">
+                <Link
+                  href="/about"
+                  className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
+                >
                   About
                 </Link>
               </li>
               <li>
-                <Link href="/faq" className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors">
+                <Link
+                  href="/faq"
+                  className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
+                >
                   FAQ
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors">
+                <Link
+                  href="/contact"
+                  className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
+                >
                   Contact
                 </Link>
               </li>
@@ -77,17 +97,26 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2">
               <li>
-                <Link href="/privacy" className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors">
+                <Link
+                  href="/privacy"
+                  className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
+                >
                   Privacy
                 </Link>
               </li>
               <li>
-                <Link href="/terms" className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors">
+                <Link
+                  href="/terms"
+                  className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
+                >
                   Terms
                 </Link>
               </li>
               <li>
-                <Link href="/cookies" className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors">
+                <Link
+                  href="/cookies"
+                  className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
+                >
                   Cookies
                 </Link>
               </li>
@@ -100,32 +129,32 @@ export default function Footer() {
           <span className="font-['JetBrains_Mono'] text-xs text-[#888888] text-center sm:text-left">
             © 2026 CatchMyCash · All rights reserved
           </span>
-          
+
           {/* Social Links */}
           <div className="flex gap-4">
             <a
-              href="#"
+              href="https://x.com/"
               className="w-9 h-9 border border-[#1A1A1A] rounded flex items-center justify-center text-[#D4D4D4] hover:border-[#E1261C] hover:text-[#E1261C] transition-all duration-200"
               aria-label="Twitter"
             >
               𝕏
             </a>
             <a
-              href="#"
+              href="https://www.linkedin.com/feed/"
               className="w-9 h-9 border border-[#1A1A1A] rounded flex items-center justify-center text-[#D4D4D4] hover:border-[#E1261C] hover:text-[#E1261C] transition-all duration-200"
               aria-label="LinkedIn"
             >
               in
             </a>
             <a
-              href="#"
+              href="https://www.instagram.com/accounts/log_in/"
               className="w-9 h-9 border border-[#1A1A1A] rounded flex items-center justify-center text-[#D4D4D4] hover:border-[#E1261C] hover:text-[#E1261C] transition-all duration-200"
               aria-label="Instagram"
             >
               ◉
             </a>
             <a
-              href="#"
+              href="https://workspace.google.com/intl/en-US/gmail/"
               className="w-9 h-9 border border-[#1A1A1A] rounded flex items-center justify-center text-[#D4D4D4] hover:border-[#E1261C] hover:text-[#E1261C] transition-all duration-200"
               aria-label="Email"
             >
