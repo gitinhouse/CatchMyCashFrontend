@@ -304,7 +304,9 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       if (
         caseData?.claim_process_task_status === '' ||
         caseData?.claim_process_task_status === null ||
-        caseData?.claim_process_task_status === 'queued'
+        caseData?.claim_process_task_status === 'queued' ||
+        caseData?.claim_process_task_status === 'failed' ||
+        caseData?.claim_process_task_status === 'Failed'
       ) {
         setErrorModal({
           show: true,
