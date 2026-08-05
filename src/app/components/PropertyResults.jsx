@@ -372,6 +372,9 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
                     <div className="flex-1">
                       <div className="flex items-center flex-wrap gap-3 mb-2">
                         <span className="bg-[#FCE9E7] text-[#E1261C] text-xs font-semibold px-3 py-1 rounded-full border border-[#E8E6E3]">
+                          {property.id}
+                        </span>
+                        <span className="bg-[#FCE9E7] text-[#E1261C] text-xs font-semibold px-3 py-1 rounded-full border border-[#E8E6E3]">
                           {property.type}
                         </span>
                         <motion.span
