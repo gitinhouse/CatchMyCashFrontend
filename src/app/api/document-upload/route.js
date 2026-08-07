@@ -4,6 +4,7 @@ import connectToDatabase from '../../lib/mongodb.js';
 import UserDocs from '../../models/userDocs.js';
 import UserCases from '../../models/userCases.js';
 import UserDetails from '../../models/userDetails.js';
+import AWS from 'aws-sdk';
 
 export const runtime = 'nodejs';
 
@@ -83,7 +84,15 @@ async function resolveClaimIdFromUserCase({ userId, caseIdParam }) {
     .collection('usercases')
     .findOne(
       { _id: caseObjectId },
-      { projection: { _id: 1, user_id: 1, case_id: 1, claim_id: 1, claim_message: 1 } },
+      {
+        projection: {
+          _id: 1,
+          user_id: 1,
+          case_id: 1,
+          claim_id: 1,
+          claim_message: 1,
+        },
+      },
     );
 
   console.log(`${LOG_PREFIX} raw usercases collection lookup`, {
@@ -100,10 +109,14 @@ async function resolveClaimIdFromUserCase({ userId, caseIdParam }) {
     };
   }
 
-  const claimMessage = userCase?.claim_message || rawUserCase?.claim_message || '';
+  const claimMessage =
+    userCase?.claim_message || rawUserCase?.claim_message || '';
   const claimMatch = claimMessage.match(/Claim\s+(\d+)\s+filed/i);
   if (claimMatch?.[1]) {
-    console.log(`${LOG_PREFIX} claim_id parsed from claim_message`, claimMatch[1]);
+    console.log(
+      `${LOG_PREFIX} claim_id parsed from claim_message`,
+      claimMatch[1],
+    );
     return {
       claimId: claimMatch[1],
       userCase: userCase || rawUserCase,
@@ -132,7 +145,11 @@ async function resolveClaimIdFromUserCase({ userId, caseIdParam }) {
     }
   }
 
-  return { claimId: null, userCase: userCase || rawUserCase, lookupMethod: 'not_found' };
+  return {
+    claimId: null,
+    userCase: userCase || rawUserCase,
+    lookupMethod: 'not_found',
+  };
 }
 
 async function findUserDocs({ userId, caseIdParam }) {
@@ -159,15 +176,38 @@ function filenameFromS3Key(key) {
   return match ? match[1] : base;
 }
 
-function buildPublicS3Url(bucket, region, s3Key) {
-  const normalizedKey = s3Key.startsWith('/') ? s3Key.slice(1) : s3Key;
-  return `https://${bucket}.s3.${region}.amazonaws.com/${normalizedKey}`;
+async function getSignedS3Url(bucket, region, key) {
+  const s3 = new AWS.S3({ region });
+  const normalizedKey = key.startsWith('/') ? key.slice(1) : key;
+  const params = {
+    Bucket: bucket,
+    Key: normalizedKey,
+    Expires: 86400, // 1 day validity
+  };
+
+  try {
+    const url = await s3.getSignedUrlPromise('getObject', params);
+    console.log(
+      `${LOG_PREFIX} Generated signed URL for s3://${bucket}/${normalizedKey} in region ${region}`,
+    );
+    console.log(`${LOG_PREFIX} URL: ${url}`);
+    return url;
+  } catch (error) {
+    console.error(
+      `${LOG_PREFIX} Error generating signed URL for s3://${bucket}/${normalizedKey} in region ${region}:`,
+      error,
+    );
+    return null;
+  }
 }
 
-function resolveDocumentUrl(field, rawValue, mainBucket, mainRegion) {
+async function resolveDocumentUrl(field, rawValue, mainBucket, mainRegion) {
   const s3Key = rawValue.startsWith('/') ? rawValue.slice(1) : rawValue;
 
   if (s3Key.startsWith('http://') || s3Key.startsWith('https://')) {
+    console.log(
+      `${LOG_PREFIX} Value is already a URL, not generating new one: ${s3Key}`,
+    );
     return s3Key;
   }
 
@@ -178,19 +218,25 @@ function resolveDocumentUrl(field, rawValue, mainBucket, mainRegion) {
     const agreementBucket = process.env.AGREEMENT_BUCKET_NAME;
     const agreementRegion = process.env.AGREEMENT_AWS_REGION || 'eu-central-1';
     if (agreementBucket) {
-      return buildPublicS3Url(agreementBucket, agreementRegion, s3Key);
+      console.log(`${LOG_PREFIX} Generating signed URL for agreement bucket`);
+      return getSignedS3Url(agreementBucket, agreementRegion, s3Key);
     }
 
     const extensionUrl = process.env.EXTENSION_URL?.replace(/\/$/, '');
     if (extensionUrl) {
-      return `${extensionUrl}/${s3Key}`;
+      const url = `${extensionUrl}/${s3Key}`;
+      console.log(
+        `${LOG_PREFIX} Using fallback extension URL for agreement doc: ${url}`,
+      );
+      return url;
     }
   }
 
-  return buildPublicS3Url(mainBucket, mainRegion, s3Key);
+  console.log(`${LOG_PREFIX} Generating signed URL for main bucket`);
+  return getSignedS3Url(mainBucket, mainRegion, s3Key);
 }
 
-function buildDocumentsFromUserDocs(userDocs, bucket, region) {
+async function buildDocumentsFromUserDocs(userDocs, bucket, region) {
   const documents = [];
   const plain =
     typeof userDocs?.toObject === 'function' ? userDocs.toObject() : userDocs;
@@ -199,12 +245,15 @@ function buildDocumentsFromUserDocs(userDocs, bucket, region) {
     const value = plain[field];
     if (typeof value !== 'string' || value.trim() === '') continue;
 
-    documents.push({
-      key: field,
-      url: resolveDocumentUrl(field, value, bucket, region),
-      filename: filenameFromS3Key(value),
-      type: DOCUMENT_TYPE_MAP[field] || field,
-    });
+    const url = await resolveDocumentUrl(field, value, bucket, region);
+    if (url) {
+      documents.push({
+        key: field,
+        url: url,
+        filename: filenameFromS3Key(value),
+        type: DOCUMENT_TYPE_MAP[field] || field,
+      });
+    }
   }
 
   return documents;
@@ -239,13 +288,19 @@ export async function POST(req) {
     console.log(`${LOG_PREFIX} request body`, { user_id, case_id });
 
     if (!user_id) {
-      return NextResponse.json({ message: 'user_id is required' }, { status: 400 });
+      return NextResponse.json(
+        { message: 'user_id is required' },
+        { status: 400 },
+      );
     }
 
     if (!case_id) {
       console.log(`${LOG_PREFIX} case_id missing in request body`);
       return NextResponse.json(
-        { message: 'case_id is required (must match usercases._id)', success: false },
+        {
+          message: 'case_id is required (must match usercases._id)',
+          success: false,
+        },
         { status: 400 },
       );
     }
@@ -256,10 +311,11 @@ export async function POST(req) {
       host: mongoose.connection.host,
     });
 
-    const { claimId, userCase, lookupMethod } = await resolveClaimIdFromUserCase({
-      userId: user_id,
-      caseIdParam: case_id,
-    });
+    const { claimId, userCase, lookupMethod } =
+      await resolveClaimIdFromUserCase({
+        userId: user_id,
+        caseIdParam: case_id,
+      });
 
     console.log(`${LOG_PREFIX} claim_id resolution`, {
       lookupMethod,
@@ -290,7 +346,10 @@ export async function POST(req) {
       );
     }
 
-    const userDocs = await findUserDocs({ userId: user_id, caseIdParam: case_id });
+    const userDocs = await findUserDocs({
+      userId: user_id,
+      caseIdParam: case_id,
+    });
 
     console.log(`${LOG_PREFIX} userDocs lookup`, {
       found: !!userDocs,
@@ -309,7 +368,9 @@ export async function POST(req) {
       );
     }
 
-    const userDetails = await UserDetails.findOne({ user_id: toObjectId(user_id) })
+    const userDetails = await UserDetails.findOne({
+      user_id: toObjectId(user_id),
+    })
       .sort({ createdAt: -1 })
       .select('email_id');
 
@@ -317,7 +378,11 @@ export async function POST(req) {
       email: userDetails?.email_id || null,
     });
 
-    const documents = buildDocumentsFromUserDocs(userDocs, bucket, region);
+    const documents = await buildDocumentsFromUserDocs(
+      userDocs,
+      bucket,
+      region,
+    );
     console.log(`${LOG_PREFIX} documents prepared`, {
       count: documents.length,
       documents: documents.map((doc) => ({
@@ -375,7 +440,11 @@ export async function POST(req) {
       return NextResponse.json(
         data?.message
           ? { message: data.message, ...data, source: 'third_party' }
-          : { message: 'Document upload to third party failed', ...data, source: 'third_party' },
+          : {
+              message: 'Document upload to third party failed',
+              ...data,
+              source: 'third_party',
+            },
         { status: response.status },
       );
     }
