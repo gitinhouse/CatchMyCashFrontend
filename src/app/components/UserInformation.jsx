@@ -4,6 +4,7 @@ import { Button } from './uicomponents/Button';
 import { Card } from './uicomponents/Card';
 import { Textarea } from './uicomponents/Textarea';
 import {
+  ArrowLeft,
   Shield,
   FileText,
   Clock,
@@ -21,7 +22,7 @@ import { InputField } from './uicomponents/InputField';
 import { useSearchStore } from '../store/searchStore';
 import axios from 'axios';
 
-const UserInformation = ({ onNext, onFieldFilled }) => {
+const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
@@ -70,6 +71,15 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
   useEffect(() => {
     setToday(new Date().toISOString().split('T')[0]);
   }, []);
+
+  useEffect(() => {
+    if (userData?.first_name && userData?.last_name) {
+      setFormData((prev) => ({
+        ...prev,
+        fullName: `${userData.first_name} ${userData.last_name}`,
+      }));
+    }
+  }, [userData]);
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
       ...prev,
@@ -514,7 +524,27 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F5F2] pt-5">
+    <div className="min-h-screen bg-[#F7F5F2] pt-5 relative">
+      {loading && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center z-50"
+        >
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            className="w-12 h-12 border-4 border-[#E1261C]/30 border-t-[#E1261C] rounded-full"
+          />
+          <p className="mt-4 text-lg font-semibold text-[#0A0A0A]">
+            Submitting Information...
+          </p>
+          <p className="text-[#4A4A4A]">
+            Please wait while we process your request.
+          </p>
+        </motion.div>
+      )}
       <style>{`
         .pac-container {
           z-index: 99999 !important;
@@ -558,6 +588,22 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <motion.div
+          className="mb-8"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 text-sm text-[#4A4A4A] hover:text-[#E1261C] transition-colors font-semibold"
+          >
+            <div className="relative flex items-center justify-center">
+              <div className="absolute w-8 h-8 rounded-full bg-[#E1261C]/10"></div>
+              <ArrowLeft className="h-4 w-4 relative z-10 text-[#E1261C]" />
+            </div>
+          </button>
+        </motion.div>
         {/* Info Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-[#FCE9E7] rounded-full flex items-center justify-center mx-auto mb-4">
@@ -600,10 +646,7 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <fieldset
-            disabled={loading}
-            className={loading ? 'opacity-70 pointer-events-none' : ''}
-          >
+          <fieldset disabled={loading}>
             <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 md:p-8 shadow-md">
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Personal Information Section */}
@@ -628,14 +671,12 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
                   <InputField
                     type="text"
                     value={formData.fullName}
-                    onChange={(e) =>
-                      handleInputChange('fullName', e.target.value)
-                    }
                     placeholder="As it appears on government documents"
                     className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${
                       errors.fullName ? 'border-[#E1261C]' : 'border-[#E8E6E3]'
-                    }`}
+                    } bg-[#F0EEEB] cursor-not-allowed`}
                     required
+                    disabled
                   />
                   {errors.fullName && (
                     <p className="text-[#E1261C] text-xs mt-1">
@@ -945,13 +986,28 @@ const UserInformation = ({ onNext, onFieldFilled }) => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`px-8 py-3 text-white font-semibold rounded-xl transition-all duration-300 ${
+                  className={`px-8 py-3 text-white font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3 w-auto min-w-[300px] ${
                     loading
                       ? 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
                       : 'bg-[#E1261C] hover:bg-[#B11912] shadow-md hover:shadow-lg'
                   }`}
                 >
-                  {loading ? 'Submitting...' : 'Continue to Form Automation'}
+                  {loading ? (
+                    <>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{
+                          duration: 1,
+                          repeat: Infinity,
+                          ease: 'linear',
+                        }}
+                        className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                      />
+                      Submitting...
+                    </>
+                  ) : (
+                    'Continue to Form Automation'
+                  )}
                 </button>
               </div>
 

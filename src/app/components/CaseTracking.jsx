@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Button } from "./uicomponents/Button";
-import { Card } from "./uicomponents/Card";
-import { Badge } from "./uicomponents/Badge";
-import { Progress } from "./uicomponents/Progress";
+import React, { useState, useRef, useEffect } from 'react';
+import { Button } from './uicomponents/Button';
+import { Card } from './uicomponents/Card';
+import { Badge } from './uicomponents/Badge';
+import { Progress } from './uicomponents/Progress';
 import {
   CheckCircle,
   Clock,
@@ -12,18 +12,18 @@ import {
   Share2,
   Bell,
   Shield,
-} from "lucide-react";
-import { useSearchStore } from "../store/searchStore";
-import axios from "axios";
+} from 'lucide-react';
+import { useSearchStore } from '../store/searchStore';
+import axios from 'axios';
 
 const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   const [notifications, setNotifications] = useState(false);
   const [allNotifications, setAllNotifications] = useState([]);
-  const [shareAmount, setShareAmount] = useState("");
+  const [shareAmount, setShareAmount] = useState('');
   const [hasShared, setHasShared] = useState(false);
   const dropdownRef = useRef(null);
   const [estimatedPayout, setEstimatedPayout] = useState(0);
-  const [estimatedFee, setEstimatedFee] = useState(0.1);
+  const [estimatedFee, setEstimatedFee] = useState(0);
   const [estimatedNet, setEstimatedNet] = useState(0);
   const [milestones, setMilestones] = useState([]);
   const [smsEnabled, setSmsEnabled] = useState(false);
@@ -35,29 +35,89 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
     userAgreement,
     userSignedAgreement,
     userCase,
+    setUserCase,
     searchResults,
     setSearchResults,
+    ownPropertyIds,
+    setOwnPropertyIds,
   } = useSearchStore();
+
+  const parsePropertyAmount = (property) => {
+    const value = parseFloat(
+      property?.amount ??
+        property?.current_cash_balance ??
+        property?.cash_reported ??
+        0,
+    );
+    return Number.isFinite(value) ? value : 0;
+  };
+
+  const getPropertyId = (property) =>
+    String(property?.id ?? property?.property_id ?? '');
 
   useEffect(() => {
     if (!searchResults) {
-      const savedProperty = localStorage.getItem("propertyData");
+      const savedProperty = localStorage.getItem('propertyData');
       if (savedProperty) setSearchResults(JSON.parse(savedProperty));
     }
-  }, [searchResults, setSearchResults]);
+
+    if (!ownPropertyIds) {
+      const savedOwnPropertyIds = localStorage.getItem('ownPropertyIds');
+      if (savedOwnPropertyIds) {
+        try {
+          const parsed = JSON.parse(savedOwnPropertyIds);
+          if (Array.isArray(parsed)) setOwnPropertyIds(parsed.map(String));
+        } catch {
+          // ignore invalid localStorage value
+        }
+      }
+    }
+
+    if (!userCase) {
+      const savedUserCase = localStorage.getItem('userCase');
+      if (savedUserCase) {
+        try {
+          setUserCase(JSON.parse(savedUserCase));
+        } catch {
+          // ignore invalid localStorage value
+        }
+      }
+    }
+  }, [
+    searchResults,
+    setSearchResults,
+    ownPropertyIds,
+    setOwnPropertyIds,
+    userCase,
+    setUserCase,
+  ]);
 
   useEffect(() => {
-    if (searchResults && Array.isArray(searchResults)) {
-      const total = searchResults.reduce((sum, item) => {
-        const value = parseFloat(item.current_cash_balance || 0);
-        return sum + (isNaN(value) ? 0 : value);
-      }, 0);
-      setEstimatedPayout(total);
-      const fee = total * 0.1;
-      setEstimatedFee(fee);
-      setEstimatedNet(total - fee);
-    }
-  }, [searchResults]);
+    if (!searchResults || !Array.isArray(searchResults)) return;
+
+    const claimedIds = Array.isArray(ownPropertyIds)
+      ? ownPropertyIds.map(String)
+      : [];
+
+    const claimedProperties =
+      claimedIds.length > 0
+        ? searchResults.filter((property) =>
+            claimedIds.includes(getPropertyId(property)),
+          )
+        : searchResults;
+
+    const total = claimedProperties.reduce(
+      (sum, property) => sum + parsePropertyAmount(property),
+      0,
+    );
+    // Round fee to nearest cent first, then derive net (same as PropertyResults)
+    const fee = Math.round(total * 10) / 100;
+    const net = total - fee;
+
+    setEstimatedPayout(total);
+    setEstimatedFee(fee);
+    setEstimatedNet(net);
+  }, [searchResults, ownPropertyIds]);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -67,34 +127,72 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
         const res = await axios.get(`/api/notification?userId=${userData._id}`);
 
         if (res.data.success) {
-          console.log("User notifications:", res.data.data);
+          console.log('User notifications:', res.data.data);
           setAllNotifications(res.data.data);
           setNotifications(res.data.data.length > 0);
         } else {
-          console.error("Failed to fetch notifications:", res.data.error);
+          console.error('Failed to fetch notifications:', res.data.error);
         }
       } catch (error) {
-        console.error("Error fetching notifications:", error);
+        console.error('Error fetching notifications:', error);
       }
     };
 
     fetchNotifications();
   }, [userData]);
 
-  const formatDate = (date) => date.toISOString().split("T")[0];
+  const formatDate = (date) => date.toISOString().split('T')[0];
   const addDays = (date, days) => {
     const result = new Date(date);
     result.setDate(result.getDate() + days);
     return result;
   };
 
+  const formatDisplayDate = (date) =>
+    new Date(date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+
+  // State processing base date → Recent Updates schedule
+  const stateProcessingDate = new Date(
+    userCase?.submitted_at || userCase?.createdAt || Date.now(),
+  );
+  const documentationVerifiedDate = addDays(stateProcessingDate, 15);
+  const stateProcessingQueueDate = addDays(documentationVerifiedDate, 7);
+  const initialReviewCompletedDate = addDays(stateProcessingQueueDate, 30);
+
+  const recentUpdates = [
+    {
+      title: 'Documentation Verified',
+      date: documentationVerifiedDate,
+      description: 'All your documents have been validated by the state',
+      active: true,
+    },
+    {
+      title: 'Case Entered State Processing Queue',
+      date: stateProcessingQueueDate,
+      description:
+        'Your case is now in the official state processing system',
+      active: false,
+    },
+    {
+      title: 'Initial Review Completed',
+      date: initialReviewCompletedDate,
+      description:
+        "State Controller's office has begun processing your claim",
+      active: false,
+    },
+  ];
+
   const baseMilestones = [
-    "Case Submitted",
-    "Initial Review",
-    "Documentation Verified",
-    "State Processing",
-    "Payment Authorization",
-    "Funds Distributed",
+    'Case Submitted',
+    'Initial Review',
+    'Documentation Verified',
+    'State Processing',
+    'Payment Authorization',
+    'Funds Distributed',
   ];
 
   useEffect(() => {
@@ -125,8 +223,8 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleNotificationClick = async (notificationId) => {
@@ -137,17 +235,17 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
 
       if (res.data.success) {
         const updated = await axios.get(
-          `/api/notification?userId=${userData._id}`
+          `/api/notification?userId=${userData._id}`,
         );
         if (updated.data.success) {
           setAllNotifications(updated.data.data);
           setNotifications(updated.data.data.length > 0);
         }
       } else {
-        console.error("Failed to update notification:", res.data.error);
+        console.error('Failed to update notification:', res.data.error);
       }
     } catch (error) {
-      console.error("Error updating notification:", error);
+      console.error('Error updating notification:', error);
     }
   };
 
@@ -163,27 +261,31 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   };
 
   const shareToSocial = (platform) => {
-    let url = "";
+    let url = '';
     switch (platform) {
-      case "email":
+      case 'email':
         url = `mailto:test@gmail.com`;
         break;
-      case "call":
+      case 'call':
         url = `tel:5551234567`;
         break;
     }
-    if (url) window.open(url, "_blank");
+    if (url) window.open(url, '_blank');
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F5F2] pt-4"  >
+    <div className="min-h-screen bg-[#F7F5F2] pt-4">
       {/* Header */}
       <div className="bg-white border-b border-[#E8E6E3] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-[#0A0A0A] font-['Fraunces']">CatchMyCash</h1>
-              <p className="text-[#4A4A4A] mt-1 font-['JetBrains_Mono'] text-sm">Case #CM-2024-001234</p>
+              <h1 className="text-3xl font-bold text-[#0A0A0A] font-['Fraunces']">
+                CatchMyCash
+              </h1>
+              <p className="text-[#4A4A4A] mt-1 font-['JetBrains_Mono'] text-sm">
+                Case #CM-2024-001234
+              </p>
             </div>
             <div className="flex items-center space-x-3 flex-wrap gap-2">
               <button
@@ -195,7 +297,9 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                 }`}
               >
                 <span className="text-base">📱</span>
-                <span className="hidden sm:inline">SMS {smsEnabled ? "On" : "Off"}</span>
+                <span className="hidden sm:inline">
+                  SMS {smsEnabled ? 'On' : 'Off'}
+                </span>
               </button>
               <button
                 onClick={onViewLeaderboard}
@@ -238,7 +342,9 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                             <p className="text-sm text-[#0A0A0A] font-medium">
                               {n.title}
                             </p>
-                            <p className="text-xs text-[#4A4A4A]">{n.message}</p>
+                            <p className="text-xs text-[#4A4A4A]">
+                              {n.message}
+                            </p>
                           </li>
                         ))}
                       </ul>
@@ -261,9 +367,14 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-[#0A0A0A] font-['Fraunces']">
-              Your Case <span className="text-[#E1261C] italic font-normal">Progress</span>
+              Your Case{' '}
+              <span className="text-[#E1261C] italic font-normal">
+                Progress
+              </span>
             </h2>
-            <Badge className="bg-[#E1261C] text-white border-none">In Progress</Badge>
+            <Badge className="bg-[#E1261C] text-white border-none">
+              In Progress
+            </Badge>
           </div>
 
           <div className="mb-6">
@@ -276,7 +387,7 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
               </span>
             </div>
             <div className="w-full h-2 bg-[#E8E6E3] rounded-full overflow-hidden mb-4">
-              <div 
+              <div
                 className="h-full bg-gradient-to-r from-[#E1261C] to-[#B11912] transition-all duration-300 rounded-full"
                 style={{ width: `${caseProgress}%` }}
               />
@@ -289,23 +400,35 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
           <div className="grid md:grid-cols-3 gap-4">
             <div className="bg-[#FCE9E7] p-4 rounded-lg">
               <DollarSign className="h-8 w-8 text-[#E1261C] mb-2" />
-              <h3 className="font-bold text-[#0A0A0A]">Estimated Payout</h3>
+              <h3 className="font-bold text-[#0A0A0A]">Total Property Amount</h3>
               <p className="text-2xl font-bold text-[#E1261C] font-['Fraunces']">
-                ${estimatedPayout.toFixed(2)}
+                $
+                {estimatedPayout.toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </p>
             </div>
             <div className="bg-[#F0EEEB] p-4 rounded-lg">
               <FileText className="h-8 w-8 text-[#4A4A4A] mb-2" />
               <h3 className="font-bold text-[#0A0A0A]">Service Fee (10%)</h3>
               <p className="text-2xl font-bold text-[#4A4A4A] font-['Fraunces']">
-                ${estimatedFee.toFixed(2)}
+                $
+                {estimatedFee.toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </p>
             </div>
             <div className="bg-[#FCE9E7] p-4 rounded-lg border-2 border-[#E1261C]/30">
               <CheckCircle className="h-8 w-8 text-[#E1261C] mb-2" />
-              <h3 className="font-bold text-[#0A0A0A]">Your Net Amount</h3>
+              <h3 className="font-bold text-[#0A0A0A]">Net Amount (You Get)</h3>
               <p className="text-2xl font-bold text-[#E1261C] font-['Fraunces']">
-                ${estimatedNet.toFixed(2)}
+                $
+                {estimatedNet.toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </p>
             </div>
           </div>
@@ -315,7 +438,8 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
         <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 mb-8 shadow-md relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
           <h3 className="text-lg font-bold text-[#0A0A0A] mb-6 font-['Fraunces']">
-            Case <span className="text-[#E1261C] italic font-normal">Timeline</span>
+            Case{' '}
+            <span className="text-[#E1261C] italic font-normal">Timeline</span>
           </h3>
           <div className="space-y-4">
             {milestones.map((milestone, index) => (
@@ -323,10 +447,10 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 flex-shrink-0 ${
                     milestone.completed
-                      ? "bg-[#003f2f]"
+                      ? 'bg-[#003f2f]'
                       : milestone.current
-                      ? "bg-[#E1261C] animate-pulse"
-                      : "bg-[#D4D4D4]"
+                        ? 'bg-[#E1261C] animate-pulse'
+                        : 'bg-[#D4D4D4]'
                   }`}
                 >
                   {milestone.completed ? (
@@ -334,17 +458,19 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                   ) : milestone.current ? (
                     <Clock className="h-5 w-5 text-white" />
                   ) : (
-                    <span className="text-white font-bold font-['JetBrains_Mono'] text-sm">{index + 1}</span>
+                    <span className="text-white font-bold font-['JetBrains_Mono'] text-sm">
+                      {index + 1}
+                    </span>
                   )}
                 </div>
                 <div className="flex-1">
                   <h4
                     className={`font-medium ${
                       milestone.completed
-                        ? "text-[#0A0A0A]"
+                        ? 'text-[#0A0A0A]'
                         : milestone.current
-                        ? "text-[#E1261C]"
-                        : "text-[#888888]"
+                          ? 'text-[#E1261C]'
+                          : 'text-[#888888]'
                     }`}
                   >
                     {milestone.name}
@@ -353,12 +479,14 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                     {milestone.completed
                       ? `Completed ${milestone.date}`
                       : milestone.current
-                      ? `In progress - Est. ${milestone.estimated}`
-                      : `Estimated ${milestone.estimated}`}
+                        ? `In progress - Est. ${milestone.estimated}`
+                        : `Estimated ${milestone.estimated}`}
                   </p>
                 </div>
                 {milestone.current && (
-                  <Badge className="bg-[#E1261C] text-white border-none ml-2">Current</Badge>
+                  <Badge className="bg-[#E1261C] text-white border-none ml-2">
+                    Current
+                  </Badge>
                 )}
               </div>
             ))}
@@ -373,7 +501,10 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
               <Share2 className="h-5 w-5 text-[#E1261C]" />
             </div>
             <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
-              Share Your <span className="text-[#E1261C] italic font-normal">Success & Earn More!</span>
+              Share Your{' '}
+              <span className="text-[#E1261C] italic font-normal">
+                Success & Earn More!
+              </span>
             </h3>
           </div>
 
@@ -443,38 +574,25 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
         <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 shadow-md relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
           <h3 className="text-lg font-bold text-[#0A0A0A] mb-4 font-['Fraunces']">
-            Recent <span className="text-[#E1261C] italic font-normal">Updates</span>
+            Recent{' '}
+            <span className="text-[#E1261C] italic font-normal">Updates</span>
           </h3>
           <div className="space-y-3">
-            <div className="flex items-start">
-              <div className="w-2 h-2 bg-[#E1261C] rounded-full mt-2 mr-3"></div>
-              <div className="w-[90%]">
-                <p className="font-medium text-[#0A0A0A]">Documentation Verified</p>
-                <p className="text-sm text-[#4A4A4A]">
-                  Jan 28, 2024 - All your documents have been validated by the state
-                </p>
+            {recentUpdates.map((update) => (
+              <div key={update.title} className="flex items-start">
+                <div
+                  className={`w-2 h-2 rounded-full mt-2 mr-3 ${
+                    update.active ? 'bg-[#E1261C]' : 'bg-[#003f2f]'
+                  }`}
+                ></div>
+                <div className="w-[90%]">
+                  <p className="font-medium text-[#0A0A0A]">{update.title}</p>
+                  <p className="text-sm text-[#4A4A4A]">
+                    {formatDisplayDate(update.date)} - {update.description}
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-start">
-              <div className="w-2 h-2 bg-[#003f2f] rounded-full mt-2 mr-3"></div>
-              <div className="w-[90%]">
-                <p className="font-medium text-[#0A0A0A]">
-                  Case Entered State Processing Queue
-                </p>
-                <p className="text-sm text-[#4A4A4A]">
-                  Jan 25, 2024 - Your case is now in the official state processing system
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start">
-              <div className="w-2 h-2 bg-[#003f2f] rounded-full mt-2 mr-3"></div>
-              <div className="w-[90%]">
-                <p className="font-medium text-[#0A0A0A]">Initial Review Completed</p>
-                <p className="text-sm text-[#4A4A4A]">
-                  Jan 22, 2024 - State Controller's office has begun processing your claim
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
@@ -485,13 +603,13 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
           </p>
           <div className="flex justify-center flex-wrap gap-3">
             <button
-              onClick={() => shareToSocial("email")}
+              onClick={() => shareToSocial('email')}
               className="inline-flex items-center gap-2 px-4 py-2 border border-[#E8E6E3] rounded-lg text-[#0A0A0A] hover:bg-[#FCE9E7] transition-all"
             >
               📧 Email Support
             </button>
             <button
-              onClick={() => shareToSocial("call")}
+              onClick={() => shareToSocial('call')}
               className="inline-flex items-center gap-2 px-4 py-2 border border-[#E8E6E3] rounded-lg text-[#0A0A0A] hover:bg-[#FCE9E7] transition-all"
             >
               📞 Call (555) 123-4567
