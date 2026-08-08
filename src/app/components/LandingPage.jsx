@@ -160,7 +160,7 @@ const LandingPage = ({ onNext }) => {
           >
             <button
               onClick={onNext}
-              className="inline-flex items-center justify-center gap-3 px-12 py-4 bg-[#E1261C] text-white text-[16px] sm:text-[20px] font-semibold rounded-xl hover:bg-[#B11912] transition-all shadow-md hover:shadow-lg"
+              className="inline-flex items-center justify-center gap-3 px-12 py-6 bg-[#E1261C] text-white text-[16px] sm:text-[20px] font-semibold rounded-xl hover:bg-[#B11912] transition-all shadow-md hover:shadow-lg"
             >
               Catch My Cash Now
               <motion.span
@@ -264,7 +264,7 @@ const LandingPage = ({ onNext }) => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6, delay: 1.6 }}
-              className="hidden md:block"
+              className="hidden md:block w-[537px] h-[192px]"
             >
               <ImageWithFallback
                 src="https://images.unsplash.com/photo-1590966550724-e041c146b85f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb25leSUyMGNhc2glMjBwcm9wZXJ0eSUyMGRvY3VtZW50cyUyMGxlZ2FsfGVufDF8fHx8MTc1NzA0MjE1Mnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
@@ -388,7 +388,11 @@ const LandingPage = ({ onNext }) => {
             className="flex items-center justify-center mb-4"
             whileHover={{ scale: 1.1 }}
           >
-            <motion.div className="w-10 h-10 bg-[#FCE9E7] rounded-full flex items-center justify-center">
+            <motion.div
+              className="w-10 h-10 bg-[#FCE9E7] rounded-full flex items-center justify-center"
+              animate={{ rotate: [0, 360] }} // ✅ ADDED: continuous rotation, matching Figma
+              transition={{ duration: 8, repeat: Infinity, ease: 'linear' }} // ✅ ADDED: slow, smooth, infinite spin
+            >
               <DollarSign className="h-5 w-5 text-[#E1261C]" />
             </motion.div>
             <h3 className="sm:text-[24px] text-[20px] font-bold text-[#0A0A0A] ml-2 font-['Fraunces']">

@@ -13,7 +13,7 @@ const LoadingOverlay = ({isTransitioning}) => {
           >
             <div className="glass-card p-8 rounded-xl flex flex-col items-center gap-4">
               <div className="loading-spinner w-12 h-12"></div>
-              <p className="text-lg font-semibold text-white">Securing your next step...</p>
+              <p className="text-lg font-semibold text-[#b89b9b]">Securing your next step...</p>
             </div>
           </motion.div>
         )}

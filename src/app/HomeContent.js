@@ -233,6 +233,7 @@ export default function Home() {
       search: (
         <PropertySearch
           onNext={(data) => handleStepChange('results', data)}
+          onBack={() => handleStepChange('landing')}
           onFieldFilled={setFilledFields}
         />
       ),
