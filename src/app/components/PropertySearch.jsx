@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   MapPin,
   Home,
+  ArrowLeft,
 } from 'lucide-react';
 import { Button } from './uicomponents/Button';
 import { InputField } from './uicomponents/InputField';
@@ -37,7 +38,7 @@ const colors = {
   gray100: '#F0EEEB',
 };
 
-const PropertySearch = ({ onNext, onFieldFilled }) => {
+const PropertySearch = ({ onNext, onBack, onFieldFilled }) => {
   const [captchaToken, setCaptchaToken] = useState(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -56,6 +57,7 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
   const [lastNameError, setLastNameError] = useState('');
   const { setUserData, setSearchResults } = useSearchStore();
   const [addressError, setAddressError] = useState('');
+  const progressIntervalRef = useRef(null); 
   //
   // const setAddressRef = useRef(setAddress);
   // const setCityRef = useRef(setCity);
@@ -82,20 +84,20 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
     'Generating detailed report...',
   ];
 
-  useEffect(() => {
-    if (!isSearching) return;
-    let step = 0;
-    const interval = setInterval(() => {
-      if (step < searchSteps.length) {
-        setCurrentSearchStep(searchSteps[step]);
-        setSearchProgress(((step + 1) / searchSteps.length) * 100);
-        step++;
-      } else {
-        clearInterval(interval);
-      }
-    }, 450);
-    return () => clearInterval(interval);
-  }, [isSearching]);
+  // useEffect(() => {
+  //   if (!isSearching) return;
+  //   let step = 0;
+  //   const interval = setInterval(() => {
+  //     if (step < searchSteps.length) {
+  //       setCurrentSearchStep(searchSteps[step]);
+  //       setSearchProgress(((step + 1) / searchSteps.length) * 100);
+  //       step++;
+  //     } else {
+  //       clearInterval(interval);
+  //     }
+  //   }, 450);
+  //   return () => clearInterval(interval);
+  // }, [isSearching]);
 
   useEffect(() => {
     const count = [
@@ -259,38 +261,59 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
       zip_code: '16005', //zipCode.trim(),
     };
 
-    setIsSearching(true);
+   setIsSearching(true);
     window.scrollTo(0, 0);
     setShowBrowser(true);
     setSearchProgress(0);
 
-    try {
-      const progressInterval = setInterval(() => {
-        setSearchProgress((prev) => {
-          if (prev < 90) return prev + 5;
-          clearInterval(progressInterval);
-          return prev;
-        });
-      }, 200);
+    // ✅ CHANGED: fixed 20% increments (20 → 40 → 60 → 80), capped before 100
+    const progressStops = [20, 40, 60, 80];
+    let stopIndex = 0;
+    let stepTextIndex = 0;
 
+    progressIntervalRef.current = setInterval(() => {
+      if (stopIndex < progressStops.length) {
+        setSearchProgress(progressStops[stopIndex]);
+        stopIndex++;
+      }
+      // cycle the step text independently so it keeps changing even if progress stops climbing
+      if (stepTextIndex < searchSteps.length) {
+        setCurrentSearchStep(searchSteps[stepTextIndex]);
+        stepTextIndex++;
+      }
+    }, 900); // 900ms per stop → 20%,40%,60%,80% land at 900/1800/2700/3600ms
+
+    try {
       const propertyPayload = {
         first_name: firstName.trim().toUpperCase(),
         last_name: lastName.trim().toUpperCase(),
-        // address: address.trim().toUpperCase(),
-        // city: city.trim().toUpperCase(),
-        // state: 'CA',
-        // zip_code: zipCode.trim(),
       };
 
-      const { totalMatched, matchedProperties } = await axios
+      // ✅ ADDED: minimum duration so a fast API response can't skip stops
+      const MIN_SEARCH_DURATION = 3600; // ms — matches time to reach 80% above
+
+      const apiCallPromise = axios
         .post('/api/filterProperty', propertyPayload, {
           headers: { 'x-captcha-token': captchaToken },
         })
         .then((res) => res.data);
 
+      const minDurationPromise = new Promise((resolve) =>
+        setTimeout(resolve, MIN_SEARCH_DURATION),
+      );
+
+      const [{ totalMatched, matchedProperties }] = await Promise.all([
+        apiCallPromise,
+        minDurationPromise,
+      ]);
+
+      // ✅ stop the interval, then land on 100% as the final stop
+      clearInterval(progressIntervalRef.current);
+      setCurrentSearchStep(searchSteps[searchSteps.length - 1]);
+      setSearchProgress(100);
+
       setSearchResults(matchedProperties);
       localStorage.setItem('propertyData', JSON.stringify(matchedProperties));
-      setSearchProgress(100);
 
       if (matchedProperties.length > 0) {
         const { data } = await axios.post('/api/users', payload);
@@ -311,12 +334,7 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
 
         onNext({
           name: `${firstName.trim()} ${lastName.trim()}`,
-          address: {
-            // street: address.trim(),
-            // city: city.trim(),
-            // state,
-            // zipCode: zipCode.trim(),
-          },
+          address: {},
           properties: transformedProperties,
           totalAmount: transformedProperties
             .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
@@ -325,8 +343,9 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
           databasesSearched: 52,
           addressMatches: totalMatched,
         });
-      }, 4800);
+      }, 800); 
     } catch (error) {
+      clearInterval(progressIntervalRef.current); 
       console.error(error);
       setValidationError(
         'There was a problem submitting your search. Please try again.',
@@ -334,6 +353,7 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
       setIsSearching(false);
     }
   };
+
 
   const isFormValid =
     firstName.trim().length > 0 &&
@@ -406,6 +426,25 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+        {!showBrowser && (
+          <motion.div
+            className="mb-8"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <button
+              onClick={onBack}
+              className="flex items-center gap-2 text-sm text-[#4A4A4A] hover:text-[#E1261C] transition-colors font-semibold"
+            >
+              <div className="relative flex items-center justify-center">
+                <div className="absolute w-8 h-8 rounded-full bg-[#E1261C]/10"></div>
+                <ArrowLeft className="h-4 w-4 relative z-10 text-[#E1261C]" />
+              </div>
+            </button>
+          </motion.div>
+        )}
         <AnimatePresence mode="wait">
           {!showBrowser ? (
             <motion.div
@@ -520,13 +559,12 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
                           )
                         }
                         placeholder="Enter first name"
-                        className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${
-                          firstNameError
-                            ? 'border-red-500'
-                            : firstName.trim()
-                              ? 'border-[#E1261C]/50 focus:border-[#E1261C]'
-                              : 'border-[#E8E6E3] focus:border-[#E1261C]'
-                        }`}
+                        className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${firstNameError
+                          ? 'border-red-500'
+                          : firstName.trim()
+                            ? 'border-[#E1261C]/50 focus:border-[#E1261C]'
+                            : 'border-[#E8E6E3] focus:border-[#E1261C]'
+                          }`}
                         onKeyPress={(e) =>
                           e.key === 'Enter' && isFormValid && handleSearch()
                         }
@@ -563,13 +601,12 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
                           )
                         }
                         placeholder="Enter last name"
-                        className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${
-                          lastNameError
-                            ? 'border-red-500'
-                            : lastName.trim()
-                              ? 'border-[#E1261C]/50 focus:border-[#E1261C]'
-                              : 'border-[#E8E6E3] focus:border-[#E1261C]'
-                        }`}
+                        className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${lastNameError
+                          ? 'border-red-500'
+                          : lastName.trim()
+                            ? 'border-[#E1261C]/50 focus:border-[#E1261C]'
+                            : 'border-[#E8E6E3] focus:border-[#E1261C]'
+                          }`}
                         onKeyPress={(e) =>
                           e.key === 'Enter' && isFormValid && handleSearch()
                         }
@@ -785,11 +822,10 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
                   >
                     <button
                       onClick={handleSearch}
-                      className={`w-full py-4 text-lg font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3 ${
-                        isFormValid && !isSearching && captchaToken
-                          ? 'bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg'
-                          : 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
-                      }`}
+                      className={`w-full py-4 text-lg font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3 ${isFormValid && !isSearching && captchaToken
+                        ? 'bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg'
+                        : 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
+                        }`}
                       disabled={!isFormValid || !captchaToken || isSearching}
                     >
                       <span className="relative z-10 flex items-center justify-center gap-3">
@@ -1003,11 +1039,10 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
                         className="flex items-center gap-2 font-['JetBrains_Mono']"
                       >
                         <motion.div
-                          className={`w-2 h-2 rounded-full ${
-                            searchProgress > index * 15
-                              ? 'bg-[#E1261C]'
-                              : 'bg-[#D4D4D4]'
-                          }`}
+                          className={`w-2 h-2 rounded-full ${searchProgress > index * 15
+                            ? 'bg-[#E1261C]'
+                            : 'bg-[#D4D4D4]'
+                            }`}
                           animate={
                             searchProgress > index * 15
                               ? { scale: [1, 1.3, 1], opacity: [1, 0.7, 1] }

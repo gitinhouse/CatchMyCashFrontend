@@ -124,7 +124,7 @@ const ProgressHeader = ({ currentStep, filledFields = 0 }) => {
             </div>
             <div className="w-full h-2 bg-[#E8E6E3] rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-gradient-to-r from-[#E1261C] to-[#B11912]"
+                className="progress-bar h-full bg-gradient-to-r from-[#E1261C] to-[#B11912]" // ✅ ADDED: progress-bar class enables the shimmer ::after animation from globals.css
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
                 transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
