@@ -6,6 +6,7 @@ import { Badge } from './uicomponents/Badge';
 import { useWebSocket } from '../hooks/useWebSocket';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import {
   Upload,
   FileText,
@@ -14,6 +15,7 @@ import {
   AlertCircle,
   Scan,
   Shield,
+  Trash2,
 } from 'lucide-react';
 import { useSearchStore } from '../store/searchStore';
 import { QRCodeSVG } from 'qrcode.react';
@@ -490,6 +492,18 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     if (fileInputRef.current) fileInputRef.current.click();
   };
 
+  const handleRemoveDocument = (docId) => {
+    if (docId === 'agreement') return;
+
+    setUploadedDocs((prev) => prev.filter((id) => id !== docId));
+    setUploadedFiles((prev) => {
+      const next = { ...prev };
+      delete next[docId];
+      return next;
+    });
+    setError(null);
+  };
+
   const handleFileChange = async (event) => {
     const file = event.target.files[0];
     if (!file || !selectedDocId) return;
@@ -574,20 +588,26 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     if (!userData?._id) return console.error('User ID missing');
     try {
       setIsSubmitted(true);
-      if (message?.type !== 'documents_submitted') {
+
+      const docKeyMap = {
+        id: 'proof_id',
+        ssn: 'ssn_id',
+        address: 'adress_proof',
+        birth: 'brith_proof',
+        employment: 'employee_proof',
+        claim: 'claim_doc',
+      };
+
+      const filesToUpload = Object.entries(docKeyMap).filter(
+        ([frontendKey]) => uploadedFiles[frontendKey],
+      );
+
+      // Upload any newly selected/replaced files (including re-uploads)
+      if (filesToUpload.length > 0) {
         const formData = new FormData();
         formData.append('case_id', userCase?._id);
-        const docKeyMap = {
-          id: 'proof_id',
-          ssn: 'ssn_id',
-          address: 'adress_proof',
-          birth: 'brith_proof',
-          employment: 'employee_proof',
-          claim: 'claim_doc',
-        };
-        Object.entries(docKeyMap).forEach(([frontendKey, backendKey]) => {
-          const file = uploadedFiles[frontendKey];
-          if (file) formData.append(backendKey, file);
+        filesToUpload.forEach(([frontendKey, backendKey]) => {
+          formData.append(backendKey, uploadedFiles[frontendKey]);
         });
 
         const res = await fetch('/api/docs', {
@@ -595,6 +615,9 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
           body: formData,
         });
         const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data?.error || 'Failed to upload documents');
+        }
         localStorage.setItem('userAllDocs', JSON.stringify(data));
         await axios.get(`/api/docs?user_id=${userData?._id}`);
       }
@@ -608,11 +631,42 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       onNext();
     } catch (err) {
       console.error('Upload failed:', err);
+      setError(err.message || 'Failed to submit documents');
+      setIsSubmitted(false);
     }
   };
 
+  const isLoading =
+    isDocuSignLoading || isAgreementDocuSignLoading || isSubmitted;
+  let loadingText = '';
+  if (isDocuSignLoading) {
+    loadingText = 'Redirecting you to DocuSign...';
+  } else if (isAgreementDocuSignLoading) {
+    loadingText = 'Preparing your agreement for signing...';
+  } else if (isSubmitted) {
+    loadingText = 'Submitting your case documents...';
+  }
+
   return (
-    <div className="min-h-screen bg-[#F7F5F2] pt-4">
+    <div className="min-h-screen bg-[#F7F5F2] pt-4 relative">
+      {isLoading && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center z-50"
+        >
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            className="w-12 h-12 border-4 border-[#E1261C]/30 border-t-[#E1261C] rounded-full"
+          />
+          <p className="mt-4 text-lg font-semibold text-[#0A0A0A]">
+            {loadingText}
+          </p>
+          <p className="text-[#4A4A4A]">Please wait, this may take a moment.</p>
+        </motion.div>
+      )}
       {/* Header */}
       <div className="bg-white border-b border-[#E8E6E3] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -687,12 +741,25 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
               </div>
               <button
                 onClick={handleDocuSign}
-                className="bg-[#E1261C] hover:bg-[#B11912] text-white px-4 py-3 rounded-lg transition-all shadow-md hover:shadow-lg"
+                className="bg-[#E1261C] hover:bg-[#B11912] text-white px-4 py-3 rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 disabled={isDocuSignLoading}
               >
-                {isDocuSignLoading
-                  ? 'Processing for DocuSign...'
-                  : 'Open DocuSign to Sign Documents'}
+                {isDocuSignLoading ? (
+                  <>
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{
+                        duration: 1,
+                        repeat: Infinity,
+                        ease: 'linear',
+                      }}
+                      className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                    />
+                    Processing...
+                  </>
+                ) : (
+                  'Open DocuSign to Sign Documents'
+                )}
               </button>
             </div>
           ) : (
@@ -767,40 +834,67 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
                     </div>
                   </div>
 
-                  {!isDocComplete(doc.id) && (
+                  {isDocComplete(doc.id) && doc.id !== 'agreement' ? (
                     <div className="flex space-x-2 flex-wrap gap-2">
-                      {doc.id === 'agreement' && (
-                        <button
-                          onClick={handleAgreementDocuSign}
-                          disabled={isAgreementDocuSignLoading}
-                          className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium bg-[#E1261C] text-white rounded-lg hover:bg-[#B11912] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                          {isAgreementDocuSignLoading
-                            ? 'Opening DocuSign...'
-                            : 'Open DocuSign to Sign Document'}
-                        </button>
-                      )}
-                      {doc.id !== 'agreement' && (
-                        <>
-                          <button
-                            onClick={() => handleUploadClick(doc.id)}
-                            disabled={isScanning}
-                            className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium border border-[#E8E6E3] rounded-lg text-[#0A0A0A] hover:bg-[#FCE9E7] hover:border-[#E1261C]/50 transition-all"
-                          >
-                            <Upload className="h-4 w-4" />
-                            Upload
-                          </button>
-                          <button
-                            onClick={() => handleScanDocument(doc.id)}
-                            disabled={isScanning}
-                            className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium border border-[#E8E6E3] rounded-lg text-[#0A0A0A] hover:bg-[#FCE9E7] hover:border-[#E1261C]/50 transition-all"
-                          >
-                            <Camera className="h-4 w-4" />
-                            Scan
-                          </button>
-                        </>
-                      )}
+                      <button
+                        onClick={() => handleRemoveDocument(doc.id)}
+                        disabled={isSubmitted}
+                        title="Remove and re-upload"
+                        className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium border border-[#E1261C]/40 rounded-lg text-[#E1261C] hover:bg-[#FCE9E7] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Remove
+                      </button>
                     </div>
+                  ) : (
+                    !isDocComplete(doc.id) && (
+                      <div className="flex space-x-2 flex-wrap gap-2">
+                        {doc.id === 'agreement' && (
+                          <button
+                            onClick={handleAgreementDocuSign}
+                            disabled={isAgreementDocuSignLoading}
+                            className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium bg-[#E1261C] text-white rounded-lg hover:bg-[#B11912] transition-all disabled:opacity-60 disabled:cursor-not-allowed min-w-[250px]"
+                          >
+                            {isAgreementDocuSignLoading ? (
+                              <>
+                                <motion.div
+                                  animate={{ rotate: 360 }}
+                                  transition={{
+                                    duration: 1,
+                                    repeat: Infinity,
+                                    ease: 'linear',
+                                  }}
+                                  className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                                />
+                                Opening DocuSign...
+                              </>
+                            ) : (
+                              'Open DocuSign to Sign Document'
+                            )}
+                          </button>
+                        )}
+                        {doc.id !== 'agreement' && (
+                          <>
+                            <button
+                              onClick={() => handleUploadClick(doc.id)}
+                              disabled={isScanning}
+                              className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium border border-[#E8E6E3] rounded-lg text-[#0A0A0A] hover:bg-[#FCE9E7] hover:border-[#E1261C]/50 transition-all"
+                            >
+                              <Upload className="h-4 w-4" />
+                              Upload
+                            </button>
+                            <button
+                              onClick={() => handleScanDocument(doc.id)}
+                              disabled={isScanning}
+                              className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium border border-[#E8E6E3] rounded-lg text-[#0A0A0A] hover:bg-[#FCE9E7] hover:border-[#E1261C]/50 transition-all"
+                            >
+                              <Camera className="h-4 w-4" />
+                              Scan
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )
                   )}
                 </div>
               </div>
@@ -871,9 +965,25 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
               </div>
               <button
                 onClick={handleSubmitCase}
-                className="bg-[#E1261C] hover:bg-[#B11912] text-white px-12 py-4 text-xl font-semibold rounded-xl transition-all shadow-md hover:shadow-lg"
+                disabled={isSubmitted}
+                className="bg-[#E1261C] hover:bg-[#B11912] text-white px-12 py-4 text-xl font-semibold rounded-xl transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {isSubmitted ? 'Submitting...' : 'Submit My Case'}
+                {isSubmitted ? (
+                  <>
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{
+                        duration: 1,
+                        repeat: Infinity,
+                        ease: 'linear',
+                      }}
+                      className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                    />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit My Case'
+                )}
               </button>
             </div>
           ) : (

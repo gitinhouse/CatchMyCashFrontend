@@ -58,15 +58,62 @@ const UserLogin = () => {
   const [password, setPassword] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [validationError, setValidationError] = useState('');
-  const { setUserLogin } = useSearchStore();
+  const { setUserLogin, resetAll } = useSearchStore();
   const [popupMessage, setPopupMessage] = useState('');
   const router = useRouter();
+
+  const clearPreviousSession = () => {
+    // Clear Zustand so previous user details are not reused
+    resetAll();
+
+    // Clear persisted session keys before storing fresh login data
+    const sessionKeys = [
+      'userLogin',
+      'userData',
+      'userAgreement',
+      'userCase',
+      'userAllDocs',
+      'propertyData',
+      'ownPropertyIds',
+      'signedDoc',
+      'filledAgreementDoc',
+    ];
+
+    sessionKeys.forEach((key) => localStorage.removeItem(key));
+  };
 
   useEffect(() => {
     if (validationError && (email.trim() || password.trim())) {
       setValidationError('');
     }
   }, [email, password, validationError]);
+
+  // If already logged in, skip login form and go to the right page
+  useEffect(() => {
+    try {
+      const savedLoginRaw = localStorage.getItem('userLogin');
+      if (!savedLoginRaw) return;
+
+      const savedLogin = JSON.parse(savedLoginRaw);
+      if (!savedLogin?.token || !savedLogin?.user) return;
+
+      setUserLogin(savedLogin);
+
+      if (
+        savedLogin.user.type === 'User' &&
+        savedLogin.user.user_type === 'Old'
+      ) {
+        router.replace('/?step=documents');
+        return;
+      }
+
+      if (savedLogin.user.type !== 'User') {
+        router.replace('/allUsers');
+      }
+    } catch (error) {
+      console.error('Failed to restore login session:', error);
+    }
+  }, [router, setUserLogin]);
 
   const handleSearch = async () => {
     setValidationError('');
@@ -97,6 +144,9 @@ const UserLogin = () => {
 
     setIsSearching(true);
     window.scrollTo(0, 0);
+
+    // Clear old session before fetching/storing new login details
+    clearPreviousSession();
 
     try {
       const { data } = await axios.post('/api/login', payload);

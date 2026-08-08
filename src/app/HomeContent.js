@@ -131,21 +131,64 @@ export const SiteHeader = () => {
 
 export default function Home() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const {
     currentStep,
     propertyData,
     isTransitioning,
     setCurrentStep,
+    setUserLogin,
     navigateToStep,
     goToResults,
     goToAutomation,
   } = useSearchStore();
 
   const [filledFields, setFilledFields] = React.useState(0);
+  const hasRestoredSession = React.useRef(false);
 
   useEffect(() => {
     setFilledFields(0);
   }, [currentStep]);
+
+  // Restore login session after browser reload and send returning users to documents
+  useEffect(() => {
+    if (hasRestoredSession.current) return;
+    hasRestoredSession.current = true;
+
+    try {
+      const savedLoginRaw = localStorage.getItem('userLogin');
+      if (!savedLoginRaw) return;
+
+      const savedLogin = JSON.parse(savedLoginRaw);
+      if (!savedLogin?.token || !savedLogin?.user) return;
+
+      setUserLogin(savedLogin);
+
+      // Returning end-users (logged in via /userLogin) skip re-login
+      const isReturningUser =
+        savedLogin.user.type === 'User' &&
+        savedLogin.user.user_type === 'Old';
+
+      if (!isReturningUser) return;
+
+      const stepParam = searchParams.get('step');
+      const allowedSteps = [
+        'documents',
+        'tracking',
+        'leaderboard',
+        'referral',
+      ];
+
+      if (!stepParam || !allowedSteps.includes(stepParam)) {
+        router.replace('/?step=documents');
+        return;
+      }
+
+      setCurrentStep(stepParam);
+    } catch (error) {
+      console.error('Failed to restore login session:', error);
+    }
+  }, [router, searchParams, setCurrentStep, setUserLogin]);
 
   useEffect(() => {
     const stepParam = searchParams.get('step');
@@ -204,6 +247,7 @@ export default function Home() {
         <UserInformation
           onNext={(data) => handleStepChange('automation', data)}
           onFieldFilled={setFilledFields}
+          onBack={() => handleStepChange('results')}
         />
       ),
       automation: (

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import {
+  ArrowLeft,
   CheckCircle,
   DollarSign,
   Calendar,
@@ -60,6 +61,7 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
   const [selectedProperties, setSelectedProperties] = useState([]);
   const [selectedTotalAmount, setSelectedTotalAmount] = useState(0);
   const [showSelectionLimitPopup, setShowSelectionLimitPopup] = useState(false);
+  const [isClaiming, setIsClaiming] = useState(false);
 
   const uniqueProperties = React.useMemo(
     () => getUniquePropertiesWithTotals(propertyData.properties),
@@ -118,9 +120,9 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
   }, [totalAmount]);
 
   const handleClaim = async () => {
+    if (isButtonDisabled || isClaiming) return;
+    setIsClaiming(true);
     try {
-      if (isButtonDisabled) return;
-
       const selectedPropertyObjects = uniqueProperties.filter((property) =>
         selectedProperties.includes(property.id),
       );
@@ -144,10 +146,12 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
       onNext(response.data);
     } catch (err) {
       console.error('Error saving user properties:', err);
+    } finally {
+      setIsClaiming(false);
     }
   };
 
-  const isButtonDisabled = selectedTotalAmount <= 0;
+  const isButtonDisabled = selectedTotalAmount <= 0 || isClaiming;
 
   const propertyCount = uniqueProperties?.length || 0;
   const isJackpot = propertyCount > 0;
@@ -157,6 +161,24 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
       <JackpotCelebration showCelebration={showCelebration} />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {isJackpot && (
+          <motion.div
+            className="mb-8"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <button
+              onClick={onBack}
+              className="flex items-center gap-2 text-sm text-[#4A4A4A] hover:text-[#E1261C] transition-colors font-semibold"
+            >
+              <div className="relative flex items-center justify-center">
+                <div className="absolute w-8 h-8 rounded-full bg-[#E1261C]/10"></div>
+                <ArrowLeft className="h-4 w-4 relative z-10 text-[#E1261C]" />
+              </div>
+            </button>
+          </motion.div>
+        )}
         {/* Success Header */}
         <motion.div
           className="text-center mb-8"
@@ -520,27 +542,42 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
             <button
               onClick={handleClaim}
               disabled={isButtonDisabled}
-              className={`px-6 sm:px-16 py-6 text-xl font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3 mx-auto ${
+              className={`px-6 sm:px-16 py-6 text-xl font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3 mx-auto w-auto min-w-[300px] ${
                 !isButtonDisabled
                   ? 'bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg'
                   : 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed opacity-60'
               }`}
             >
-              <span className="relative z-10 flex items-center gap-3">
-                Claim My $
-                {selectedTotalAmount.toLocaleString('en-US', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}{' '}
-                Now
-                <motion.span
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 1, repeat: Infinity }}
-                  className="text-yellow-400"
-                >
-                  💰
-                </motion.span>
-              </span>
+              {isClaiming ? (
+                <>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{
+                      duration: 1,
+                      repeat: Infinity,
+                      ease: 'linear',
+                    }}
+                    className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                  />
+                  Claiming...
+                </>
+              ) : (
+                <span className="relative z-10 flex items-center gap-3">
+                  Claim My ${' '}
+                  {selectedTotalAmount.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}{' '}
+                  Now
+                  <motion.span
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ duration: 1, repeat: Infinity }}
+                    className="text-yellow-400"
+                  >
+                    💰
+                  </motion.span>
+                </span>
+              )}
             </button>
           </motion.div>
           <motion.div

@@ -52,6 +52,8 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
   const [searchProgress, setSearchProgress] = useState(0);
   const [currentSearchStep, setCurrentSearchStep] = useState('');
   const [validationError, setValidationError] = useState('');
+  const [firstNameError, setFirstNameError] = useState('');
+  const [lastNameError, setLastNameError] = useState('');
   const { setUserData, setSearchResults } = useSearchStore();
   const [addressError, setAddressError] = useState('');
   //
@@ -195,8 +197,22 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
     return urlRegex.test(value.trim());
   };
 
+  const handleNameChange = (setter, errorSetter, value) => {
+    const nameRegex = /^[a-zA-Z\s]*$/;
+    setter(value);
+    if (nameRegex.test(value)) {
+      errorSetter('');
+    } else {
+      errorSetter('Only alphabetic characters are allowed.');
+    }
+  };
+
   // ─── Form submit ──────────────────────────────────────────────────────────
   const handleSearch = async () => {
+    if (firstNameError || lastNameError) {
+      setValidationError('Please fix the errors before searching.');
+      return;
+    }
     const missingFields = [];
     if (!firstName.trim()) missingFields.push('first name');
     if (!lastName.trim()) missingFields.push('last name');
@@ -319,10 +335,11 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
     }
   };
 
-  const isFormValid = firstName.trim().length > 0 && lastName.trim().length > 0;
-  // address.trim().length > 0 &&
-  // city.trim().length > 0 &&
-  // zipCode.trim().length > 0 &&
+  const isFormValid =
+    firstName.trim().length > 0 &&
+    lastName.trim().length > 0 &&
+    !firstNameError &&
+    !lastNameError;
   // !addressError;
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -495,15 +512,32 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
                       <InputField
                         type="text"
                         value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
+                        onChange={(e) =>
+                          handleNameChange(
+                            setFirstName,
+                            setFirstNameError,
+                            e.target.value,
+                          )
+                        }
                         placeholder="Enter first name"
-                        className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${firstName.trim() ? 'border-[#E1261C]/50 focus:border-[#E1261C]' : 'border-[#E8E6E3] focus:border-[#E1261C]'}`}
+                        className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${
+                          firstNameError
+                            ? 'border-red-500'
+                            : firstName.trim()
+                              ? 'border-[#E1261C]/50 focus:border-[#E1261C]'
+                              : 'border-[#E8E6E3] focus:border-[#E1261C]'
+                        }`}
                         onKeyPress={(e) =>
                           e.key === 'Enter' && isFormValid && handleSearch()
                         }
                         disabled={isSearching}
                       />
-                      {firstName.trim() && (
+                      {firstNameError && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {firstNameError}
+                        </p>
+                      )}
+                      {firstName.trim() && !firstNameError && (
                         <motion.div
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
@@ -521,15 +555,32 @@ const PropertySearch = ({ onNext, onFieldFilled }) => {
                       <InputField
                         type="text"
                         value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
+                        onChange={(e) =>
+                          handleNameChange(
+                            setLastName,
+                            setLastNameError,
+                            e.target.value,
+                          )
+                        }
                         placeholder="Enter last name"
-                        className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${lastName.trim() ? 'border-[#E1261C]/50 focus:border-[#E1261C]' : 'border-[#E8E6E3] focus:border-[#E1261C]'}`}
+                        className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${
+                          lastNameError
+                            ? 'border-red-500'
+                            : lastName.trim()
+                              ? 'border-[#E1261C]/50 focus:border-[#E1261C]'
+                              : 'border-[#E8E6E3] focus:border-[#E1261C]'
+                        }`}
                         onKeyPress={(e) =>
                           e.key === 'Enter' && isFormValid && handleSearch()
                         }
                         disabled={isSearching}
                       />
-                      {lastName.trim() && (
+                      {lastNameError && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {lastNameError}
+                        </p>
+                      )}
+                      {lastName.trim() && !lastNameError && (
                         <motion.div
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
