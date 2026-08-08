@@ -17,15 +17,22 @@ import {
   User,
   CreditCard,
   Building,
+  AlertCircle,
 } from 'lucide-react';
 import { InputField } from './uicomponents/InputField';
 import { useSearchStore } from '../store/searchStore';
 import axios from 'axios';
 
+const getInputErrorClass = (hasError) =>
+  hasError
+    ? 'border-[#E1261C] bg-[#FCE9E7] ring-2 ring-[#E1261C]/20'
+    : 'border-[#E8E6E3]';
+
 const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
     address: '',
@@ -53,7 +60,8 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
     ownPropertyIds,
   } = useSearchStore();
   const [errors, setErrors] = useState({
-    fullName: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
     address: '',
@@ -72,19 +80,12 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
     setToday(new Date().toISOString().split('T')[0]);
   }, []);
 
-  useEffect(() => {
-    if (userData?.first_name && userData?.last_name) {
-      setFormData((prev) => ({
-        ...prev,
-        fullName: `${userData.first_name} ${userData.last_name}`,
-      }));
-    }
-  }, [userData]);
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
+    setApiError('');
 
     setErrors((prev) => {
       const updated = {
@@ -102,11 +103,11 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
         }
       }
 
-      if (field === 'fullName') {
-        const nameRegex = /^[A-Za-z\s]*$/;
+      if (field === 'firstName' || field === 'lastName') {
+        const nameRegex = /^[A-Za-z]*$/;
 
         if (value && !nameRegex.test(value)) {
-          updated.fullName = 'Full name can only contain letters and spaces.';
+          updated[field] = 'Only alphabets are allowed.';
         }
       }
 
@@ -237,7 +238,12 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
 
   const handlePhoneBlur = () => {
     const phoneDigits = formData.phone.replace(/\D/g, '');
-    if (phoneDigits.length !== 10) {
+    if (!formData.phone.trim()) {
+      setErrors((prev) => ({
+        ...prev,
+        phone: 'Phone number is required.',
+      }));
+    } else if (phoneDigits.length !== 10) {
       setErrors((prev) => ({
         ...prev,
         phone: 'Phone number must be exactly 10 digits.',
@@ -260,7 +266,9 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
 
   const handleSSNBlur = () => {
     const ssnDigits = formData.ssn.replace(/\D/g, '');
-    if (ssnDigits.length !== 9) {
+    if (!formData.ssn.trim()) {
+      setErrors((prev) => ({ ...prev, ssn: 'SSN is required.' }));
+    } else if (ssnDigits.length !== 9) {
       setErrors((prev) => ({ ...prev, ssn: 'SSN must be exactly 9 digits.' }));
     } else {
       setErrors((prev) => ({ ...prev, ssn: '' }));
@@ -268,9 +276,14 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
   };
 
   const handleZipBlur = () => {
-    const zip = formData.zipCode;
+    const zip = formData.zipCode.trim();
     const zipRegex = /^\d{5}$/;
-    if (!zipRegex.test(zip)) {
+    if (!zip) {
+      setErrors((prev) => ({
+        ...prev,
+        zipCode: 'ZIP code is required.',
+      }));
+    } else if (!zipRegex.test(zip)) {
       setErrors((prev) => ({
         ...prev,
         zipCode: 'ZIP code must be exactly 5 digits.',
@@ -280,21 +293,10 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
     }
   };
 
-  const getFirstAndLastName = (fullName = '') => {
-    const trimmed = fullName.trim();
-    if (!trimmed.includes(' ')) {
-      return { firstName: trimmed, lastName: '' };
-    }
-    const firstSpaceIndex = trimmed.indexOf(' ');
-    return {
-      firstName: trimmed.slice(0, firstSpaceIndex),
-      lastName: trimmed.slice(firstSpaceIndex + 1),
-    };
-  };
-
   useEffect(() => {
     const requiredFields = [
-      formData.fullName,
+      formData.firstName,
+      formData.lastName,
       formData.email,
       formData.phone,
       formData.address,
@@ -307,6 +309,29 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
     onFieldFilled?.(count);
   }, [formData]);
 
+  const scrollToFirstError = (errorMap) => {
+    const fieldOrder = [
+      'firstName',
+      'lastName',
+      'dateOfBirth',
+      'email',
+      'phone',
+      'ssn',
+      'address',
+      'city',
+      'zipCode',
+    ];
+    const firstErrorField = fieldOrder.find((field) => errorMap[field]);
+    if (!firstErrorField) return;
+
+    const el = document.querySelector(`[data-field="${firstErrorField}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const input = el.querySelector('input, textarea');
+      input?.focus?.({ preventScroll: true });
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (loading) return;
@@ -314,7 +339,8 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
     let newErrors = {};
 
     const requiredFields = {
-      fullName: 'Full name is required.',
+      firstName: 'First name is required.',
+      lastName: 'Last name is required.',
       email: 'Email is required.',
       phone: 'Phone number is required.',
       address: 'Address is required.',
@@ -331,34 +357,51 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
     });
 
     const phoneDigits = formData.phone.replace(/\D/g, '');
-    if (phoneDigits.length !== 10) {
+    if (formData.phone.trim() && phoneDigits.length !== 10) {
       newErrors.phone = 'Phone number must be exactly 10 digits.';
     }
 
     const ssnDigits = formData.ssn.replace(/\D/g, '');
-    if (ssnDigits.length !== 9) {
+    if (formData.ssn.trim() && ssnDigits.length !== 9) {
       newErrors.ssn = 'SSN must be exactly 9 digits.';
     }
 
     const zipDigits = formData.zipCode.replace(/\D/g, '');
-    if (zipDigits.length !== 5) {
+    if (formData.zipCode.trim() && zipDigits.length !== 5) {
       newErrors.zipCode = 'ZIP code must be exactly 5 digits.';
     }
 
-    const nameRegex = /^[A-Za-z\s]+$/;
+    const nameRegex = /^[A-Za-z]+$/;
 
-    if (!nameRegex.test(formData.fullName.trim())) {
-      newErrors.fullName = 'Full name can only contain letters and spaces.';
+    if (formData.firstName.trim() && !nameRegex.test(formData.firstName.trim())) {
+      newErrors.firstName = 'First name can only contain alphabets.';
+    }
+
+    if (formData.lastName.trim() && !nameRegex.test(formData.lastName.trim())) {
+      newErrors.lastName = 'Last name can only contain alphabets.';
     }
 
     const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 
-    if (!emailRegex.test(formData.email.trim())) {
+    if (formData.email.trim() && !emailRegex.test(formData.email.trim())) {
       newErrors.email = 'Please enter a valid email address.';
+    }
+
+    if (formData.address.trim()) {
+      const urlRegex =
+        /^(https?:\/\/|www\.|[a-zA-Z0-9-]+\.(com|net|org|io|co|gov|edu|info|biz|me|us|uk|ca|au)(\/.*)?$)/i;
+      if (urlRegex.test(formData.address.trim())) {
+        newErrors.address =
+          'Please enter a valid street address, not a website URL.';
+      }
     }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      setApiError(
+        'Please fill in all required fields and fix the highlighted errors.',
+      );
+      scrollToFirstError(newErrors);
       return;
     }
 
@@ -371,9 +414,10 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
 
     try {
       setLoading(true);
+      const legalName = `${formData.firstName.trim()} ${formData.lastName.trim()}`;
       const payload = {
         user_id: userData._id,
-        legal_name: formData.fullName,
+        legal_name: legalName,
         date_of_birth: formData.dateOfBirth,
         email_id: formData.email,
         contact_no: formData.phone,
@@ -392,15 +436,14 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
         userType: 'User',
       };
 
-      const { firstName, lastName } = getFirstAndLastName(formData.fullName);
       const [dobYear, dobMonth, dobDay] = formData.dateOfBirth.split('-');
 
       const claimSubmissionPayloadData = {
         userId: userData._id,
         property_ids: ownPropertyIds,
         form_data: {
-          firstName: firstName,
-          lastName: lastName,
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim(),
           email: 'help@mail.catchmycash.com',
           phone1: formData.phone,
           taxID: formData.ssn,
@@ -579,10 +622,10 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <h1 className="flex items-center gap-2 text-3xl font-bold text-[#0A0A0A] font-['Fraunces']">
             <span className="h-2.5 w-2.5 rounded-full bg-[#E1261C]"></span>
-            CatchMyCash
+            <a href="https://catchmycash.com" rel="noopener noreferrer">CatchMyCash</a>
           </h1>
           <p className="text-[#4A4A4A] mt-1">
-            Investigator Agreement Information
+            Investigator Agreement Information  
           </p>
         </div>
       </div>
@@ -645,9 +688,24 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <fieldset disabled={loading}>
             <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 md:p-8 shadow-md">
+              {(apiError || Object.values(errors).some(Boolean)) && (
+                <div className="mb-6 flex items-start gap-3 rounded-lg border border-[#E1261C]/40 bg-[#FCE9E7] p-4">
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-[#E1261C]" />
+                  <div>
+                    <p className="font-semibold text-[#E1261C]">
+                      Please review the highlighted fields
+                    </p>
+                    <p className="mt-1 text-sm text-[#4A4A4A]">
+                      {apiError ||
+                        'Some required fields are empty or have invalid values.'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Personal Information Section */}
                 <div className="md:col-span-2">
@@ -664,28 +722,55 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                   </div>
                 </div>
 
-                <div>
+                <div data-field="firstName">
                   <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
-                    Full Legal Name *
+                    First Name *
                   </label>
                   <InputField
                     type="text"
-                    value={formData.fullName}
-                    placeholder="As it appears on government documents"
-                    className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${
-                      errors.fullName ? 'border-[#E1261C]' : 'border-[#E8E6E3]'
-                    } bg-[#F0EEEB] cursor-not-allowed`}
-                    required
-                    disabled
+                    value={formData.firstName}
+                    onChange={(e) =>
+                      handleInputChange(
+                        'firstName',
+                        e.target.value.replace(/[^A-Za-z]/g, ''),
+                      )
+                    }
+                    placeholder="First name"
+                    aria-invalid={!!errors.firstName}
+                    className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${getInputErrorClass(!!errors.firstName)}`}
                   />
-                  {errors.fullName && (
-                    <p className="text-[#E1261C] text-xs mt-1">
-                      {errors.fullName}
+                  {errors.firstName && (
+                    <p className="text-[#E1261C] text-xs mt-1 font-medium">
+                      {errors.firstName}
                     </p>
                   )}
                 </div>
 
-                <div>
+                <div data-field="lastName">
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
+                    Last Name *
+                  </label>
+                  <InputField
+                    type="text"
+                    value={formData.lastName}
+                    onChange={(e) =>
+                      handleInputChange(
+                        'lastName',
+                        e.target.value.replace(/[^A-Za-z]/g, ''),
+                      )
+                    }
+                    placeholder="Last name"
+                    aria-invalid={!!errors.lastName}
+                    className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${getInputErrorClass(!!errors.lastName)}`}
+                  />
+                  {errors.lastName && (
+                    <p className="text-[#E1261C] text-xs mt-1 font-medium">
+                      {errors.lastName}
+                    </p>
+                  )}
+                </div>
+
+                <div data-field="dateOfBirth">
                   <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
                     Date of Birth *
                   </label>
@@ -696,21 +781,17 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                       handleInputChange('dateOfBirth', e.target.value)
                     }
                     max={today}
-                    className={`w-full text-[#0A0A0A] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${
-                      errors.dateOfBirth
-                        ? 'border-[#E1261C]'
-                        : 'border-[#E8E6E3]'
-                    }`}
-                    required
+                    aria-invalid={!!errors.dateOfBirth}
+                    className={`w-full text-[#0A0A0A] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${getInputErrorClass(!!errors.dateOfBirth)}`}
                   />
                   {errors.dateOfBirth && (
-                    <p className="text-[#E1261C] text-xs mt-1">
+                    <p className="text-[#E1261C] text-xs mt-1 font-medium">
                       {errors.dateOfBirth}
                     </p>
                   )}
                 </div>
 
-                <div>
+                <div data-field="email">
                   <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
                     Email Address *
                   </label>
@@ -719,19 +800,17 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     placeholder="your@email.com"
-                    className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${
-                      errors.email ? 'border-[#E1261C]' : 'border-[#E8E6E3]'
-                    }`}
-                    required
+                    aria-invalid={!!errors.email}
+                    className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${getInputErrorClass(!!errors.email)}`}
                   />
                   {errors.email && (
-                    <p className="text-[#E1261C] text-xs mt-1">
+                    <p className="text-[#E1261C] text-xs mt-1 font-medium">
                       {errors.email}
                     </p>
                   )}
                 </div>
 
-                <div>
+                <div data-field="phone">
                   <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
                     Phone Number *
                   </label>
@@ -741,17 +820,17 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                     onChange={(e) => handlePhoneChange(e.target.value)}
                     placeholder="(555) 123-4567"
                     onBlur={handlePhoneBlur}
-                    className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
-                    required
+                    aria-invalid={!!errors.phone}
+                    className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${getInputErrorClass(!!errors.phone)}`}
                   />
                   {errors.phone && (
-                    <p className="text-[#E1261C] text-xs mt-1">
+                    <p className="text-[#E1261C] text-xs mt-1 font-medium">
                       {errors.phone}
                     </p>
                   )}
                 </div>
 
-                <div>
+                <div data-field="ssn">
                   <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
                     Social Security Number *
                   </label>
@@ -761,18 +840,20 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                     onChange={(e) => handleSSNChange(e.target.value)}
                     onBlur={handleSSNBlur}
                     placeholder="XXX-XX-XXXX"
-                    className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
-                    required
+                    aria-invalid={!!errors.ssn}
+                    className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${getInputErrorClass(!!errors.ssn)}`}
                   />
                   <p className="text-xs text-[#888888] mt-1">
                     Required for identity verification
                   </p>
                   {errors.ssn && (
-                    <p className="text-[#E1261C] text-xs mt-1">{errors.ssn}</p>
+                    <p className="text-[#E1261C] text-xs mt-1 font-medium">
+                      {errors.ssn}
+                    </p>
                   )}
                 </div>
 
-                <div>
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
                     Current Employer
                   </label>
@@ -802,7 +883,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                   </div>
                 </div>
 
-                <div className="md:col-span-2">
+                <div className="md:col-span-2" data-field="address">
                   <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
                     Street Address *
                   </label>
@@ -815,19 +896,17 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                     onChange={(e) =>
                       handleInputChange('address', e.target.value)
                     }
-                    required
-                    className={`w-full rounded-lg border-2 bg-white px-4 py-2.5 text-sm text-[#0A0A0A] placeholder-[#888888] leading-6 focus:outline-none focus:border-[#E1261C] transition-all duration-300 ${
-                      errors.address ? 'border-[#E1261C]' : 'border-[#E8E6E3]'
-                    }`}
+                    aria-invalid={!!errors.address}
+                    className={`w-full rounded-lg border-2 bg-white px-4 py-2.5 text-sm text-[#0A0A0A] placeholder-[#888888] leading-6 focus:outline-none focus:border-[#E1261C] transition-all duration-300 ${getInputErrorClass(!!errors.address)}`}
                   />
                   {errors.address && (
-                    <p className="text-[#E1261C] text-xs mt-1">
+                    <p className="text-[#E1261C] text-xs mt-1 font-medium">
                       {errors.address}
                     </p>
                   )}
                 </div>
 
-                <div>
+                <div data-field="city">
                   <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
                     City *
                   </label>
@@ -836,17 +915,17 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                     value={formData.city}
                     onChange={(e) => handleInputChange('city', e.target.value)}
                     placeholder="Los Angeles"
-                    className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${
-                      errors.city ? 'border-[#E1261C]' : 'border-[#E8E6E3]'
-                    }`}
-                    required
+                    aria-invalid={!!errors.city}
+                    className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${getInputErrorClass(!!errors.city)}`}
                   />
                   {errors.city && (
-                    <p className="text-[#E1261C] text-xs mt-1">{errors.city}</p>
+                    <p className="text-[#E1261C] text-xs mt-1 font-medium">
+                      {errors.city}
+                    </p>
                   )}
                 </div>
 
-                <div>
+                <div data-field="zipCode">
                   <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
                     ZIP Code *
                   </label>
@@ -858,11 +937,11 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                     }
                     onBlur={handleZipBlur}
                     placeholder="90210"
-                    className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
-                    required
+                    aria-invalid={!!errors.zipCode}
+                    className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${getInputErrorClass(!!errors.zipCode)}`}
                   />
                   {errors.zipCode && (
-                    <p className="text-[#E1261C] text-xs mt-1">
+                    <p className="text-[#E1261C] text-xs mt-1 font-medium">
                       {errors.zipCode}
                     </p>
                   )}
@@ -907,7 +986,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                     }
                     placeholder="List any companies you've worked for that might have unclaimed property..."
                     rows={3}
-                    className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
+                    className="w-full h-24 min-h-24 max-h-24 overflow-y-auto resize-none [field-sizing:fixed] text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
                   />
                 </div>
 
@@ -922,7 +1001,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                     }
                     placeholder="List any previous addresses where you might have lived..."
                     rows={3}
-                    className="w-full text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
+                    className="w-full h-24 min-h-24 max-h-24 overflow-y-auto resize-none [field-sizing:fixed] text-[#0A0A0A] placeholder-[#888888] border-2 border-[#E8E6E3] rounded-lg focus:border-[#E1261C] focus:outline-none transition-all"
                   />
                 </div>
               </div>
@@ -960,12 +1039,21 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
               </div>
 
               {/* SMS Agreement */}
-              <div className="mt-4">
+              <div
+                className={`mt-4 rounded-lg p-3 ${
+                  apiError?.includes('SMS')
+                    ? 'border border-[#E1261C]/40 bg-[#FCE9E7]'
+                    : ''
+                }`}
+              >
                 <label className="flex items-center space-x-2 text-sm text-[#0A0A0A] cursor-pointer">
                   <input
                     type="checkbox"
                     checked={agreeSMS}
-                    onChange={(e) => setAgreeSMS(e.target.checked)}
+                    onChange={(e) => {
+                      setAgreeSMS(e.target.checked);
+                      if (e.target.checked) setApiError('');
+                    }}
                     className="h-4 w-4 text-[#E1261C] rounded border-[#E8E6E3] focus:ring-[#E1261C]"
                   />
                   <span>
@@ -973,6 +1061,11 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                     claim.
                   </span>
                 </label>
+                {apiError?.includes('SMS') && (
+                  <p className="text-[#E1261C] text-xs mt-2 font-medium">
+                    {apiError}
+                  </p>
+                )}
               </div>
 
               {/* Submit Button */}

@@ -161,7 +161,7 @@ export async function POST(req) {
                   <td bgcolor="${COLORS.cream}" style="background-color:${COLORS.cream}; padding: 24px 32px; border-top: 1px solid ${COLORS.border};">
                     <p style="margin:0; color:${COLORS.textMuted}; font-size:13px; line-height:1.5; font-family: Arial, Helvetica, sans-serif;">
                       Sincerely,<br/>
-                      <strong style="color:${COLORS.charcoal};">The CatchMyCash Team</strong>
+                      <strong style="color:${COLORS.charcoal};">The catchmycash Team</strong>
                     </p>
                   </td>
                 </tr>
