@@ -408,8 +408,8 @@ export default function PrivacyPage() {
               <p className="text-base leading-relaxed text-[#4A4A4A] mt-4">
                 To exercise any of these rights,{' '}
                 <span className="text-black font-semibold">
-                  <br /> Email: help@catchmycash.com <br /> Website:
-                  https://catchmycash.com
+                  <br /> Email: <a href="mailto:help@catchmycash.com" target="_blank" rel="noopener noreferrer">help@catchmycash.com</a>   <br /> Website:
+                  <a href="https://catchmycash.com" target="_blank" rel="noopener noreferrer">https://catchmycash.com</a> 
                   <br />
                   SMS Support: Reply HELP to any SMS message.
                 </span>
