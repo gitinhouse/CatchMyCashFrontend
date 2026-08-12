@@ -54,6 +54,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     setUserCase,
     searchResults,
     setSearchResults,
+    resetAll,
   } = useSearchStore();
 
   const [errorModal, setErrorModal] = useState({
@@ -142,6 +143,35 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     return path.includes('FilledAgreement_form');
   };
 
+  const areRequiredDocsComplete = (userDocs) => {
+    if (!userDocs || Array.isArray(userDocs) || typeof userDocs !== 'object') {
+      return false;
+    }
+
+    const hasRequiredUploads = Boolean(
+      userDocs.proof_id && userDocs.ssn_id && userDocs.adress_proof,
+    );
+    const hasFilledAgreement = Boolean(
+      userDocs.filled_agreement_doc ||
+        isFilledAgreementDoc(userDocs.filled_agreement_doc) ||
+        isFilledAgreementDoc(userDocs.signed_doc),
+    );
+    const hasInvestigatorSigned = isInvestigatorSignedDoc(userDocs.signed_doc);
+
+    return hasRequiredUploads && hasFilledAgreement && hasInvestigatorSigned;
+  };
+
+  const hasRedirectedToTracking = useRef(false);
+
+  const redirectToTrackingIfComplete = (userDocs) => {
+    if (hasRedirectedToTracking.current) return false;
+    if (!areRequiredDocsComplete(userDocs)) return false;
+
+    hasRedirectedToTracking.current = true;
+    onNext();
+    return true;
+  };
+
   const isDocComplete = (docId) => {
     if (docId === 'agreement') return agreementDocuSignComplete;
     return uploadedDocs.includes(docId);
@@ -227,6 +257,23 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
           ) {
             setAgreementDocuSignComplete(true);
           }
+
+          if (redirectToTrackingIfComplete(allDocs)) {
+            return;
+          }
+
+          const uploadedIds = [];
+          if (allDocs.proof_id) uploadedIds.push('id');
+          if (allDocs.ssn_id) uploadedIds.push('ssn');
+          if (allDocs.adress_proof) uploadedIds.push('address');
+          if (allDocs.brith_proof) uploadedIds.push('birth');
+          if (allDocs.employee_proof) uploadedIds.push('employment');
+          if (allDocs.claim_doc) uploadedIds.push('claim');
+          if (uploadedIds.length > 0) {
+            setUploadedDocs((prev) =>
+              Array.from(new Set([...prev, ...uploadedIds])),
+            );
+          }
         } catch {
           // ignore invalid localStorage value
         }
@@ -303,6 +350,12 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
         'userAllDocs',
         JSON.stringify(data?.data?.[0]?.user_docs?.[0]),
       );
+
+      // All docs already on file → skip re-submit and go to Case Tracking
+      if (redirectToTrackingIfComplete(userDocs)) {
+        return;
+      }
+
       if (
         caseData?.claim_process_task_status === '' ||
         caseData?.claim_process_task_status === null ||
@@ -1070,6 +1123,20 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
             title: '',
             message: '',
           });
+
+          // Clear session so login can restore a clean documents flow
+          resetAll();
+          [
+            'userLogin',
+            'userData',
+            'userAgreement',
+            'userCase',
+            'userAllDocs',
+            'propertyData',
+            'ownPropertyIds',
+            'signedDoc',
+            'filledAgreementDoc',
+          ].forEach((key) => localStorage.removeItem(key));
 
           router.push('/userLogin');
         }}

@@ -141,7 +141,14 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
     fetchNotifications();
   }, [userData]);
 
-  const formatDate = (date) => date.toISOString().split('T')[0];
+  const formatDate = (date) => {
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const addDays = (date, days) => {
     const result = new Date(date);
     result.setDate(result.getDate() + days);
@@ -155,13 +162,15 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
       year: 'numeric',
     });
 
-  // State processing base date → Recent Updates schedule
-  const stateProcessingDate = new Date(
-    userCase?.submitted_at || userCase?.createdAt || Date.now(),
-  );
-  const documentationVerifiedDate = addDays(stateProcessingDate, 15);
+  // Shared case start → both Case Timeline + Recent Updates use this
+  const caseStartSource =
+    userCase?.submitted_at || userCase?.createdAt || null;
+  const caseStartDate = new Date(caseStartSource || Date.now());
+  const documentationVerifiedDate = addDays(caseStartDate, 15);
   const stateProcessingQueueDate = addDays(documentationVerifiedDate, 7);
-  const initialReviewCompletedDate = addDays(stateProcessingQueueDate, 30);
+  // Same date as Case Timeline → Payment Authorization
+  const paymentAuthorizationDate = addDays(documentationVerifiedDate, 14);
+  const initialReviewCompletedDate = paymentAuthorizationDate;
 
   const recentUpdates = [
     {
@@ -196,9 +205,24 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   ];
 
   useEffect(() => {
-    const today = new Date();
     const generated = baseMilestones.map((name, index) => {
-      const milestoneDate = addDays(today, index * 7);
+      let milestoneDate;
+      if (name === 'Case Submitted') {
+        milestoneDate = caseStartDate;
+      } else if (name === 'Initial Review') {
+        milestoneDate = addDays(caseStartDate, 7);
+      } else if (name === 'Documentation Verified') {
+        milestoneDate = documentationVerifiedDate;
+      } else if (name === 'State Processing') {
+        milestoneDate = stateProcessingQueueDate;
+      } else if (name === 'Payment Authorization') {
+        // Same date Recent Updates uses for "Initial Review Completed"
+        milestoneDate = paymentAuthorizationDate;
+      } else {
+        // Funds Distributed: one week after payment authorization
+        milestoneDate = addDays(paymentAuthorizationDate, 7);
+      }
+
       return {
         name,
         date: formatDate(milestoneDate),
@@ -208,7 +232,7 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
       };
     });
     setMilestones(generated);
-  }, []);
+  }, [caseStartSource]);
 
   const handleShareSuccess = () => {
     if (shareAmount && parseFloat(shareAmount) > 0) {
@@ -530,7 +554,7 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
               <div className="mt-4 flex flex-col sm:flex-row items-center gap-3">
                 <input
                   type="number"
-                  placeholder="Amount you received"
+                  placeholder="$ Amount you received"
                   value={shareAmount}
                   onChange={(e) => setShareAmount(e.target.value)}
                   className="w-full sm:flex-1 px-4 py-2 border-2 border-[#E8E6E3] rounded-lg text-[#0A0A0A] placeholder-[#888888] focus:border-[#E1261C] focus:outline-none transition-all"
