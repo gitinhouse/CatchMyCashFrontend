@@ -98,8 +98,15 @@ export async function POST(req) {
       );
     }
 
+    // NEW: resolve/create the case FIRST, so we can tag UserDetails with case_id
+    const userCase = await upsertUserCaseWithClaimSubmission(
+      user_id,
+      claimSubmission,
+    );
+
     const newUserDetails = await UserDetails.create({
       user_id,
+      case_id: userCase?._id, // NEW
       legal_name,
       date_of_birth,
       email_id,
@@ -113,11 +120,6 @@ export async function POST(req) {
       formal_employer: formal_employer || "",
       previous_address: previous_address || "",
     });
-
-    const userCase = await upsertUserCaseWithClaimSubmission(
-      user_id,
-      claimSubmission,
-    );
 
     return NextResponse.json(
       { ...newUserDetails.toObject(), userCase },

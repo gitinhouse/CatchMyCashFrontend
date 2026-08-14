@@ -6,6 +6,11 @@ const UserDetailsSchema = new mongoose.Schema({
     ref: "UserInformation",
     required: true,
   },
+  case_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "UserCases",
+    required: false,
+  },
   legal_name: { type: String, required: true },
   date_of_birth: { type: String, required: true },
   email_id: { type: String, required: true },

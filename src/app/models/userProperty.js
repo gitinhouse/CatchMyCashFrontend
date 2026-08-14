@@ -6,6 +6,11 @@ const UserPropertySchema = new mongoose.Schema({
     ref: "UserInformation",
     required: true,
   },
+  case_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "UserCases",
+    required: false,
+  },
   property_id: { type: String, required: true },
   property_type: { type: String, required: true },
   property_title: { type: String, required: true },

@@ -29,6 +29,10 @@ export const SiteHeader = () => {
     router.push('/userLogin');
   };
 
+  const handleDashboard = async () => {
+    router.push('/myAccount');
+  };
+
   const handleSearchNow = () => {
     router.push('/?step=search');
   };
@@ -58,11 +62,10 @@ export const SiteHeader = () => {
             <Link
               key={item.name}
               href={item.path}
-              className={`text-sm font-medium transition-colors ${
-                pathname === item.path
-                  ? 'text-[#0A0A0A]'
-                  : 'text-[#4A4A4A] hover:text-[#0A0A0A]'
-              }`}
+              className={`text-sm font-medium transition-colors ${pathname === item.path
+                ? 'text-[#0A0A0A]'
+                : 'text-[#4A4A4A] hover:text-[#0A0A0A]'
+                }`}
             >
               {item.name}
             </Link>
@@ -78,6 +81,12 @@ export const SiteHeader = () => {
             className="inline-flex items-center gap-2 px-5 py-3 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md"
           >
             Login
+          </button>
+          <button
+            onClick={handleDashboard}
+            className="inline-flex items-center gap-2 px-5 py-3 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md"
+          >
+            My Dashboard
           </button>
         </nav>
 
@@ -194,12 +203,30 @@ export default function Home() {
     const stepParam = searchParams.get('step');
     if (stepParam) {
       setCurrentStep(stepParam);
+    } else {
+      // If no step parameter, ensure we're on the landing page
+      setCurrentStep('landing');
     }
   }, [searchParams, setCurrentStep]);
 
+
   const handleStepChange = (step, data) => {
+    // If navigating to landing, clear the URL
+    if (step === 'landing') {
+      router.push('/', { scroll: false });
+      setCurrentStep('landing');
+      return;
+    }
+
+    // For other steps, update URL with step parameter
+    const params = new URLSearchParams(window.location.search);
+    params.set('step', step);
+    router.push(`?${params.toString()}`, { scroll: false });
+
+    // Use the store's navigation
     navigateToStep(step, data);
   };
+
 
   const renderCurrentStep = () => {
     const pageVariants = {
