@@ -5,7 +5,7 @@ import { Card } from './uicomponents/Card';
 import { Badge } from './uicomponents/Badge';
 import { useWebSocket } from '../hooks/useWebSocket';
 import axios from 'axios';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   Upload,
@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useSearchStore } from '../store/searchStore';
 import { QRCodeSVG } from 'qrcode.react';
+import Link from 'next/link';
 
 const DocumentUpload = ({ onNext, onFieldFilled }) => {
   const [uploadedDocs, setUploadedDocs] = useState([]);
@@ -41,6 +42,8 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const hasRun = useRef(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const caseIdFromUrl = searchParams.get('case_id'); // NEW
   const {
     userData,
     userAgreement,
@@ -242,14 +245,23 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
 
   const fetchUserData = async (token, userId) => {
     try {
-      const response = await axios.get(`/api/register?user_id=${userId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      console.log('API Response:', response?.data?._id);
+      // NEW: if a specific case_id came from the dashboard's "Continue Filing"
+      // link, resume THAT exact case. Otherwise fall back to the old
+      // single-case lookup (unchanged behaviour for users with one claim).
+      let resolvedCaseId = caseIdFromUrl;
+
+      if (!resolvedCaseId) {
+        const response = await axios.get(`/api/register?user_id=${userId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        console.log('API Response:', response?.data?._id);
+        resolvedCaseId = response?.data?._id;
+      }
+
       const { data } = await axios.get(
-        `/api/case?case_id=${response?.data?._id}`,
+        `/api/case?case_id=${resolvedCaseId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -670,12 +682,14 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       {/* Header */}
       <div className="bg-white border-b border-[#E8E6E3] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <h1 className="text-3xl font-bold text-[#0A0A0A] font-['Fraunces']">
-            CatchMyCash
-          </h1>
-          <p className="text-[#4A4A4A] mt-1">
-            Document Collection & Signatures
-          </p>
+          <Link href="/" className="inline-block">
+            <h1 className="text-3xl font-bold text-[#0A0A0A] font-['Fraunces']">
+              CatchMyCash
+            </h1>
+            <p className="text-[#4A4A4A] mt-1">
+              Document Collection & Signatures
+            </p>
+          </Link>
         </div>
       </div>
 
@@ -804,13 +818,12 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
             {requiredDocuments.map((doc) => (
               <div
                 key={doc.id}
-                className={`border rounded-lg p-4 transition-all ${
-                  isDocComplete(doc.id)
+                className={`border rounded-lg p-4 transition-all ${isDocComplete(doc.id)
                     ? doc.id === 'agreement'
                       ? 'border-[#003f2f] bg-[#F0FFF4] ring-2 ring-[#003f2f]/30'
                       : 'border-[#003f2f]/50 bg-[#F0FFF4]'
                     : 'border-[#E8E6E3]'
-                }`}
+                  }`}
               >
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center">

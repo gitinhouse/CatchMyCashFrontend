@@ -28,7 +28,7 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   const [milestones, setMilestones] = useState([]);
   const [smsEnabled, setSmsEnabled] = useState(false);
 
-  const caseProgress = 75;
+    const [caseProgress, setCaseProgress] = useState(0);
 
   const {
     userData,
@@ -196,19 +196,38 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   ];
 
   useEffect(() => {
-    const today = new Date();
-    const generated = baseMilestones.map((name, index) => {
-      const milestoneDate = addDays(today, index * 7);
-      return {
-        name,
-        date: formatDate(milestoneDate),
-        completed: index < 3,
-        current: index === 3,
-        estimated: index >= 3 ? formatDate(milestoneDate) : undefined,
-      };
-    });
+    // Anchor timeline to the case's real submission date, not "today at page load"
+    const anchorDate = new Date(
+      userCase?.submitted_at || userCase?.createdAt || Date.now(),
+    );
+    const now = new Date();
+
+    const withDates = baseMilestones.map((name, index) => ({
+      name,
+      milestoneDate: addDays(anchorDate, index * 7),
+    }));
+
+    // First milestone whose date hasn't arrived yet = the "current" one.
+    // If every milestone date has already passed, treat the last as current.
+    let currentIndex = withDates.findIndex((m) => m.milestoneDate > now);
+    if (currentIndex === -1) currentIndex = withDates.length - 1;
+
+    const generated = withDates.map((m, index) => ({
+      name: m.name,
+      date: formatDate(m.milestoneDate),
+      completed: index < currentIndex,
+      current: index === currentIndex,
+      estimated: index >= currentIndex ? formatDate(m.milestoneDate) : undefined,
+    }));
+
     setMilestones(generated);
-  }, []);
+
+    // Overall progress bar — completed steps + half-credit for the in-progress one
+    const percent = Math.round(
+      ((currentIndex + 0.5) / baseMilestones.length) * 100,
+    );
+    setCaseProgress(Math.min(percent, 100));
+  }, [userCase]);
 
   const handleShareSuccess = () => {
     if (shareAmount && parseFloat(shareAmount) > 0) {
