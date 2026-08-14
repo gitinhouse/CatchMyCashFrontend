@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from './uicomponents/Button';
 import { Card } from './uicomponents/Card';
 import { Badge } from './uicomponents/Badge';
+import { Progress } from './uicomponents/Progress';
 import {
   CheckCircle,
   Clock,
@@ -10,6 +11,7 @@ import {
   Trophy,
   Share2,
   Bell,
+  Shield,
 } from 'lucide-react';
 import { useSearchStore } from '../store/searchStore';
 import axios from 'axios';
@@ -26,7 +28,7 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   const [milestones, setMilestones] = useState([]);
   const [smsEnabled, setSmsEnabled] = useState(false);
 
-  const [caseProgress, setCaseProgress] = useState(0);
+  const caseProgress = 75;
 
   const {
     userData,
@@ -43,9 +45,9 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   const parsePropertyAmount = (property) => {
     const value = parseFloat(
       property?.amount ??
-      property?.current_cash_balance ??
-      property?.cash_reported ??
-      0,
+        property?.current_cash_balance ??
+        property?.cash_reported ??
+        0,
     );
     return Number.isFinite(value) ? value : 0;
   };
@@ -100,8 +102,8 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
     const claimedProperties =
       claimedIds.length > 0
         ? searchResults.filter((property) =>
-          claimedIds.includes(getPropertyId(property)),
-        )
+            claimedIds.includes(getPropertyId(property)),
+          )
         : searchResults;
 
     const total = claimedProperties.reduce(
@@ -154,13 +156,13 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
     });
 
   // State processing base date → Recent Updates schedule
-  const caseStartDate = new Date(
-    userCase?.submitted_at || userCase?.createdAt || Date.now()
+  const stateProcessingDate = new Date(
+    userCase?.submitted_at || userCase?.createdAt || Date.now(),
   );
+  const documentationVerifiedDate = addDays(stateProcessingDate, 15);
+  const stateProcessingQueueDate = addDays(documentationVerifiedDate, 7);
+  const initialReviewCompletedDate = addDays(stateProcessingQueueDate, 30);
 
-  const documentationVerifiedDate = addDays(caseStartDate, 14);
-  const stateProcessingQueueDate = addDays(caseStartDate, 21);
-  const initialReviewCompletedDate = addDays(caseStartDate, 28);
   const recentUpdates = [
     {
       title: 'Documentation Verified',
@@ -194,38 +196,19 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   ];
 
   useEffect(() => {
-    // Anchor timeline to the case's real submission date, not "today at page load"
-    const anchorDate = new Date(
-      userCase?.submitted_at || userCase?.createdAt || Date.now(),
-    );
-    const now = new Date();
-
-    const withDates = baseMilestones.map((name, index) => ({
-      name,
-      milestoneDate: addDays(anchorDate, index * 7),
-    }));
-
-    // First milestone whose date hasn't arrived yet = the "current" one.
-    // If every milestone date has already passed, treat the last as current.
-    let currentIndex = withDates.findIndex((m) => m.milestoneDate > now);
-    if (currentIndex === -1) currentIndex = withDates.length - 1;
-
-    const generated = withDates.map((m, index) => ({
-      name: m.name,
-      date: formatDate(m.milestoneDate),
-      completed: index < currentIndex,
-      current: index === currentIndex,
-      estimated: index >= currentIndex ? formatDate(m.milestoneDate) : undefined,
-    }));
-
+    const today = new Date();
+    const generated = baseMilestones.map((name, index) => {
+      const milestoneDate = addDays(today, index * 7);
+      return {
+        name,
+        date: formatDate(milestoneDate),
+        completed: index < 3,
+        current: index === 3,
+        estimated: index >= 3 ? formatDate(milestoneDate) : undefined,
+      };
+    });
     setMilestones(generated);
-
-    // Overall progress bar — completed steps + half-credit for the in-progress one
-    const percent = Math.round(
-      ((currentIndex + 0.5) / baseMilestones.length) * 100,
-    );
-    setCaseProgress(Math.min(percent, 100));
-  }, [userCase]);
+  }, []);
 
   const handleShareSuccess = () => {
     if (shareAmount && parseFloat(shareAmount) > 0) {
@@ -307,10 +290,11 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
             <div className="flex items-center space-x-3 flex-wrap gap-2">
               <button
                 onClick={handleSmsToggle}
-                className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg transition-all ${smsEnabled
+                className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
+                  smsEnabled
                     ? 'bg-[#E1261C] text-white shadow-sm'
                     : 'border border-[#E8E6E3] text-[#0A0A0A] hover:bg-[#FCE9E7]'
-                  }`}
+                }`}
               >
                 <span className="text-base">📱</span>
                 <span className="hidden sm:inline">
@@ -328,8 +312,9 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setNotifications(!notifications)}
-                  className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg transition-all border border-[#E8E6E3] hover:bg-[#FCE9E7] ${notifications ? 'bg-[#FCE9E7]' : ''
-                    }`}
+                  className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg transition-all border border-[#E8E6E3] hover:bg-[#FCE9E7] ${
+                    notifications ? 'bg-[#FCE9E7]' : ''
+                  }`}
                 >
                   <Bell className="h-4 w-4 text-[#E1261C]" />
                   <span className="hidden sm:inline">Notifications</span>
@@ -460,12 +445,13 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
             {milestones.map((milestone, index) => (
               <div key={index} className="flex items-center">
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 flex-shrink-0 ${milestone.completed
+                  className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 flex-shrink-0 ${
+                    milestone.completed
                       ? 'bg-[#003f2f]'
                       : milestone.current
                         ? 'bg-[#E1261C] animate-pulse'
                         : 'bg-[#D4D4D4]'
-                    }`}
+                  }`}
                 >
                   {milestone.completed ? (
                     <CheckCircle className="h-5 w-5 text-white" />
@@ -479,12 +465,13 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                 </div>
                 <div className="flex-1">
                   <h4
-                    className={`font-medium ${milestone.completed
+                    className={`font-medium ${
+                      milestone.completed
                         ? 'text-[#0A0A0A]'
                         : milestone.current
                           ? 'text-[#E1261C]'
                           : 'text-[#888888]'
-                      }`}
+                    }`}
                   >
                     {milestone.name}
                   </h4>
@@ -551,10 +538,11 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                 <button
                   onClick={handleShareSuccess}
                   disabled={!shareAmount}
-                  className={`w-full sm:w-auto px-6 py-2 font-semibold rounded-lg transition-all ${shareAmount
+                  className={`w-full sm:w-auto px-6 py-2 font-semibold rounded-lg transition-all ${
+                    shareAmount
                       ? 'bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg'
                       : 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
-                    }`}
+                  }`}
                 >
                   Create My Referral Link
                 </button>
@@ -593,8 +581,9 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
             {recentUpdates.map((update) => (
               <div key={update.title} className="flex items-start">
                 <div
-                  className={`w-2 h-2 rounded-full mt-2 mr-3 ${update.active ? 'bg-[#E1261C]' : 'bg-[#003f2f]'
-                    }`}
+                  className={`w-2 h-2 rounded-full mt-2 mr-3 ${
+                    update.active ? 'bg-[#E1261C]' : 'bg-[#003f2f]'
+                  }`}
                 ></div>
                 <div className="w-[90%]">
                   <p className="font-medium text-[#0A0A0A]">{update.title}</p>
