@@ -6,6 +6,66 @@ import { Types } from 'mongoose';
 import { verifyToken } from '../../lib/verifyToken';
 import { generateCaseNumber } from '../../lib/generateCaseNumber';
 
+
+export async function POST(req) {
+  try {
+    const body = await req.json();
+    const { user_id, property_ids } = body;
+
+    if (!user_id) {
+      return NextResponse.json(
+        { error: 'user_id is required' },
+        { status: 400 },
+      );
+    }
+
+    const normalizedPropertyIds = Array.isArray(property_ids)
+      ? property_ids.map(String).filter(Boolean)
+      : [];
+
+    await connectToDatabase();
+    const userExists = await User.findById(user_id);
+    if (!userExists) {
+      return NextResponse.json(
+        { error: 'User not found with provided user_id' },
+        { status: 404 },
+      );
+    }
+
+    const existingCase = await UserCases.findOne({ user_id });
+    if (existingCase) {
+      if (normalizedPropertyIds.length > 0) {
+        const updatedCase = await UserCases.findOneAndUpdate(
+          { user_id },
+          { $set: { property_ids: normalizedPropertyIds } },
+          { new: true },
+        );
+        return NextResponse.json(updatedCase, { status: 200 });
+      }
+
+      return NextResponse.json(existingCase, { status: 200 });
+    }
+
+    const case_id = await generateCaseNumber();
+
+    const newCase = await UserCases.create({
+      user_id,
+      case_id,
+      status: true,
+      ...(normalizedPropertyIds.length > 0 && {
+        property_ids: normalizedPropertyIds,
+      }),
+    });
+
+    return NextResponse.json(newCase, { status: 201 });
+  } catch (error) {
+    console.error('POST /api/userCases error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+
+
 export async function GET(req) {
   try {
     // 🔹 Verify JWT
