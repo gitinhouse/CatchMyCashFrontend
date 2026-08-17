@@ -476,6 +476,39 @@ function buildAgreementTextTabs(userDetails, pageNumber, layout) {
     });
 }
 
+export async function GET(req) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const user_id = searchParams.get('user_id');
+    
+    if (!user_id) {
+      return NextResponse.json(
+        { error: 'user_id is required' },
+        { status: 400 }
+      );
+    }
+    
+    await connectToDatabase();
+    
+    // Check if user has an agreement document
+    const userDocs = await UserDocs.findOne({ user_id });
+    const hasAgreement = !!(userDocs?.agreement_doc);
+    
+    return NextResponse.json({
+      hasAgreement,
+      agreement_doc: userDocs?.agreement_doc || null,
+      user_id
+    });
+    
+  } catch (error) {
+    console.error('Error checking agreement:', error);
+    return NextResponse.json(
+      { error: 'Failed to check agreement availability' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(req) {
   try {
     const { user_id } = await req.json();

@@ -16,6 +16,7 @@ import {
   Scan,
   Shield,
   Trash2,
+  Info,
 } from 'lucide-react';
 import { useSearchStore } from '../store/searchStore';
 import { QRCodeSVG } from 'qrcode.react';
@@ -44,6 +45,8 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const caseIdFromUrl = searchParams.get('case_id'); // NEW
+  const [isAgreementAvailable, setIsAgreementAvailable] = useState(false);
+
   const {
     userData,
     userAgreement,
@@ -156,8 +159,8 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     );
     const hasFilledAgreement = Boolean(
       userDocs.filled_agreement_doc ||
-        isFilledAgreementDoc(userDocs.filled_agreement_doc) ||
-        isFilledAgreementDoc(userDocs.signed_doc),
+      isFilledAgreementDoc(userDocs.filled_agreement_doc) ||
+      isFilledAgreementDoc(userDocs.signed_doc),
     );
     const hasInvestigatorSigned = isInvestigatorSignedDoc(userDocs.signed_doc);
 
@@ -406,6 +409,60 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   }, [docusignComplete]);
 
   useEffect(() => {
+    const checkAgreementDocumentExists = async () => {
+      if (!userData?._id) {
+        setIsAgreementAvailable(false);
+        return;
+      }
+
+      try {
+        // Use the GET endpoint to check if agreement exists
+        const response = await fetch(`/api/docusign/agreement?user_id=${userData._id}`);
+        const data = await response.json();
+
+        if (response.ok) {
+          // Check if user has filled in their details
+          const hasUserDetails = !!(userAgreement?.legal_name && userAgreement?.email_id) ||
+            !!(userData?.first_name && userData?.last_name);
+
+          // Agreement is available ONLY if BOTH conditions are met:
+          // 1. User details exist (name, email)
+          // 2. Agreement document exists in database
+          const agreementAvailable = data.hasAgreement && hasUserDetails;
+
+          setIsAgreementAvailable(agreementAvailable);
+
+          console.log('Agreement check result:', {
+            hasAgreementDoc: data.hasAgreement,
+            agreementDocPath: data.agreement_doc,
+            hasUserDetails,
+            agreementAvailable
+          });
+
+          // Show error modal if agreement document is missing but user has details
+          if (!data.hasAgreement && hasUserDetails) {
+            setErrorModal({
+              show: true,
+              title: 'Agreement Document Not Found',
+              message: 'No agreement document has been uploaded for your account. Please contact support to get your agreement document uploaded so you can proceed with the signing process.',
+            });
+          }
+        } else {
+          setIsAgreementAvailable(false);
+          console.error('Failed to check agreement:', data.error);
+        }
+      } catch (error) {
+        console.error('Error checking agreement document:', error);
+        setIsAgreementAvailable(false);
+      }
+    };
+
+    if (userData?._id) {
+      checkAgreementDocumentExists();
+    }
+  }, [userData?._id, userAgreement, userData]);
+
+  useEffect(() => {
     const requiredDocIds = ['id', 'ssn', 'address'];
     const uploadedRequired = requiredDocIds.filter((id) =>
       uploadedDocs.includes(id),
@@ -470,16 +527,24 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
 
   const handleDocuSign = async () => {
     setIsDocuSignLoading(true);
+
+    // Check both userAgreement and userData for required fields
     const fallbackName = splitLegalName(userAgreement?.legal_name);
     const firstName = userData?.first_name || fallbackName.firstName;
     const lastName = userData?.last_name || fallbackName.lastName;
-    const email = userAgreement?.email_id;
+    const email = userAgreement?.email_id || userData?.email;
 
     if (!firstName || !lastName || !email) {
       setError(
-        'Missing name or email. Please complete the previous steps first.',
+        'Missing name or email. Please complete the previous steps first. Agreement document not found for this user.',
       );
       setIsDocuSignLoading(false);
+      // Show error modal for better visibility
+      setErrorModal({
+        show: true,
+        title: 'Agreement Not Available',
+        message: 'Please complete the Property Selection step first to generate your agreement. This requires your legal name and email address.',
+      });
       return;
     }
 
@@ -514,11 +579,27 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     }
   };
 
+
   const handleAgreementDocuSign = async () => {
-    // const userId = '6a4c9c5454b07b5a9055838d'; //userData?._id;
     const userId = userData?._id;
     if (!userId) {
       setError('User ID missing. Please complete the previous steps first.');
+      setErrorModal({
+        show: true,
+        title: 'User ID Missing',
+        message: 'Please complete the Property Selection step first to generate your agreement.',
+      });
+      return;
+    }
+
+    // Check if agreement is available
+    if (!isAgreementAvailable) {
+      setError('Agreement document not found for this user. Please complete the previous step first.');
+      setErrorModal({
+        show: true,
+        title: 'Agreement Not Available',
+        message: 'Please complete the Property Selection step first to generate your agreement. This requires your legal name and email address.',
+      });
       return;
     }
 
@@ -553,9 +634,20 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   };
 
   const handleUploadClick = (docId) => {
+    // Check if agreement is available before allowing upload
+    if (!isAgreementAvailable) {
+      setErrorModal({
+        show: true,
+        title: 'Cannot Upload Documents',
+        message: 'You cannot upload documents until the agreement is available.',
+      });
+      return;
+    }
+
     setSelectedDocId(docId);
     if (fileInputRef.current) fileInputRef.current.click();
   };
+
 
   const handleRemoveDocument = (docId) => {
     if (docId === 'agreement') return;
@@ -621,6 +713,16 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   };
 
   const handleScanDocument = (docId) => {
+    // Check if agreement is available before allowing scan
+    if (!isAgreementAvailable) {
+      setErrorModal({
+        show: true,
+        title: 'Cannot Scan Documents',
+        message: 'Please complete the Property Selection step first to generate your agreement. You cannot scan documents until the agreement is available.',
+      });
+      return;
+    }
+
     const doc = requiredDocuments.find((d) => d.id === docId);
     if (!doc) return;
     setQrPopupDoc({
@@ -784,8 +886,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
           {!docusignComplete ? (
             <div>
               <p className="text-[#4A4A4A] mb-4">
-                Sign your investigator agreement and authorization forms via
-                DocuSign
+                Sign your investigator agreement and authorization forms via DocuSign
               </p>
               <div className="bg-[#FCE9E7] border border-[#E8E6E3] rounded-lg p-4 mb-4">
                 <h4 className="font-medium text-[#0A0A0A] mb-2 font-['JetBrains_Mono']">
@@ -806,28 +907,41 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
                   </li>
                 </ul>
               </div>
-              <button
-                onClick={handleDocuSign}
-                className="bg-[#E1261C] hover:bg-[#B11912] text-white px-4 py-3 rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                disabled={isDocuSignLoading}
-              >
-                {isDocuSignLoading ? (
-                  <>
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{
-                        duration: 1,
-                        repeat: Infinity,
-                        ease: 'linear',
-                      }}
-                      className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
-                    />
-                    Processing...
-                  </>
-                ) : (
-                  'Open DocuSign to Sign Documents'
-                )}
-              </button>
+              {!isAgreementAvailable ? (
+                <div className="bg-[#FFF4E5] border border-[#FFB347] rounded-lg p-4 flex items-start gap-3">
+                  <Info className="h-5 w-5 text-[#FF8C00] mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-[#0A0A0A]">Agreement Not Available</p>
+                    <p className="text-sm text-[#4A4A4A]">
+                      Please complete the previous step (Property Selection) first to generate your agreement.
+                      The agreement requires your legal name and email address to be filled in.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={handleDocuSign}
+                  className="bg-[#E1261C] hover:bg-[#B11912] text-white px-4 py-3 rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed w-full"
+                  disabled={isDocuSignLoading || !isAgreementAvailable}
+                >
+                  {isDocuSignLoading ? (
+                    <>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{
+                          duration: 1,
+                          repeat: Infinity,
+                          ease: 'linear',
+                        }}
+                        className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                      />
+                      Processing...
+                    </>
+                  ) : (
+                    'Open DocuSign to Sign Documents'
+                  )}
+                </button>
+              )}
             </div>
           ) : (
             <div className="flex items-center text-[#003f2f]">
@@ -872,10 +986,10 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
               <div
                 key={doc.id}
                 className={`border rounded-lg p-4 transition-all ${isDocComplete(doc.id)
-                    ? doc.id === 'agreement'
-                      ? 'border-[#003f2f] bg-[#F0FFF4] ring-2 ring-[#003f2f]/30'
-                      : 'border-[#003f2f]/50 bg-[#F0FFF4]'
-                    : 'border-[#E8E6E3]'
+                  ? doc.id === 'agreement'
+                    ? 'border-[#003f2f] bg-[#F0FFF4] ring-2 ring-[#003f2f]/30'
+                    : 'border-[#003f2f]/50 bg-[#F0FFF4]'
+                  : 'border-[#E8E6E3]'
                   }`}
               >
                 <div className="flex items-center justify-between flex-wrap gap-2">
@@ -916,49 +1030,65 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
                     !isDocComplete(doc.id) && (
                       <div className="flex space-x-2 flex-wrap gap-2">
                         {doc.id === 'agreement' && (
-                          <button
-                            onClick={handleAgreementDocuSign}
-                            disabled={isAgreementDocuSignLoading}
-                            className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium bg-[#E1261C] text-white rounded-lg hover:bg-[#B11912] transition-all disabled:opacity-60 disabled:cursor-not-allowed min-w-[250px]"
-                          >
-                            {isAgreementDocuSignLoading ? (
-                              <>
-                                <motion.div
-                                  animate={{ rotate: 360 }}
-                                  transition={{
-                                    duration: 1,
-                                    repeat: Infinity,
-                                    ease: 'linear',
-                                  }}
-                                  className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
-                                />
-                                Opening DocuSign...
-                              </>
-                            ) : (
-                              'Open DocuSign to Sign Document'
-                            )}
-                          </button>
+                          !isAgreementAvailable ? (
+                            <div className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium bg-[#FFF4E5] border border-[#FFB347] rounded-lg text-[#FF8C00] cursor-not-allowed w-full min-w-[250px]">
+                              <Info className="h-4 w-4" />
+                              <span className="text-left">Agreement required - Complete previous step</span>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={handleAgreementDocuSign}
+                              disabled={isAgreementDocuSignLoading || !isAgreementAvailable}
+                              className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium bg-[#E1261C] text-white rounded-lg hover:bg-[#B11912] transition-all disabled:opacity-60 disabled:cursor-not-allowed min-w-[250px]"
+                            >
+                              {isAgreementDocuSignLoading ? (
+                                <>
+                                  <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{
+                                      duration: 1,
+                                      repeat: Infinity,
+                                      ease: 'linear',
+                                    }}
+                                    className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                                  />
+                                  Opening DocuSign...
+                                </>
+                              ) : (
+                                'Open DocuSign to Sign Document'
+                              )}
+                            </button>
+                          )
                         )}
+
                         {doc.id !== 'agreement' && (
-                          <>
-                            <button
-                              onClick={() => handleUploadClick(doc.id)}
-                              disabled={isScanning}
-                              className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium border border-[#E8E6E3] rounded-lg text-[#0A0A0A] hover:bg-[#FCE9E7] hover:border-[#E1261C]/50 transition-all"
-                            >
-                              <Upload className="h-4 w-4" />
-                              Upload
-                            </button>
-                            <button
-                              onClick={() => handleScanDocument(doc.id)}
-                              disabled={isScanning}
-                              className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium border border-[#E8E6E3] rounded-lg text-[#0A0A0A] hover:bg-[#FCE9E7] hover:border-[#E1261C]/50 transition-all"
-                            >
-                              <Camera className="h-4 w-4" />
-                              Scan
-                            </button>
-                          </>
+                          !isAgreementAvailable ? (
+                            <div className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium bg-[#FFF4E5] border border-[#FFB347] rounded-lg text-[#FF8C00] cursor-not-allowed">
+                              <Info className="h-4 w-4" />
+                              <span>Complete agreement first</span>
+                            </div>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleUploadClick(doc.id)}
+                                disabled={isScanning || !isAgreementAvailable}
+                                className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium border border-[#E8E6E3] rounded-lg text-[#0A0A0A] hover:bg-[#FCE9E7] hover:border-[#E1261C]/50 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-[#E8E6E3]"
+                              >
+                                <Upload className="h-4 w-4" />
+                                Upload
+                              </button>
+                              <button
+                                onClick={() => handleScanDocument(doc.id)}
+                                disabled={isScanning || !isAgreementAvailable}
+                                className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium border border-[#E8E6E3] rounded-lg text-[#0A0A0A] hover:bg-[#FCE9E7] hover:border-[#E1261C]/50 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-[#E8E6E3]"
+                              >
+                                <Camera className="h-4 w-4" />
+                                Scan
+                              </button>
+                            </>
+                          )
                         )}
+
                       </div>
                     )
                   )}
