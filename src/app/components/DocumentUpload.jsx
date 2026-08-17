@@ -417,7 +417,8 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
 
       try {
         // Use the GET endpoint to check if agreement exists
-        const response = await fetch(`/api/docusign/agreement?user_id=${userData._id}`);
+        // const response = await fetch(`/api/docusign/agreement?user_id=${userData._id}`);
+        const response = await fetch(`/api/docusign/agreement?user_id=6a7d64c5942c7410458aea7b`);
         const data = await response.json();
 
         if (response.ok) {
@@ -607,11 +608,21 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       setIsAgreementDocuSignLoading(true);
       setError(null);
 
+      // const res = await fetch('/api/docusign/agreement', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ user_id: userId }),
+      // });
+
       const res = await fetch('/api/docusign/agreement', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId }),
+        body: JSON.stringify({
+          user_id: '6a7d64c5942c7410458aea7b',
+        }),
       });
+
+
 
       const data = await res.json();
 
