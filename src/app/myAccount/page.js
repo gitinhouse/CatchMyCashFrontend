@@ -37,8 +37,16 @@ function deriveCaseStatus(caseItem) {
     const hasAddress = !!docs.adress_proof;
     const requiredDocsUploaded = hasId && hasSsn && hasAddress;
 
+    // Real completeness, computed the same way DocumentUpload.jsx checks it
+    const documentsActuallyComplete =
+        hasInvestigatorSigned && hasAgreementForm && requiredDocsUploaded;
+
+    // Only trust the "submitted" flag if the documents are genuinely done —
+    // this stops a premature status value (set as soon as the case record
+    // is created in Step 4) from skipping over an incomplete Step 5.
     const isSubmitted =
-        !!caseItem?.submitted_at || !!caseItem?.document_upload_task_status;
+        documentsActuallyComplete &&
+        (!!caseItem?.submitted_at || !!caseItem?.document_upload_task_status);
 
     const hasProperties = properties && properties.length > 0;
     const hasUserInfo = !!caseItem?.user_details?.[0];

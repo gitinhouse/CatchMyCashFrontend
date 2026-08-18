@@ -44,7 +44,7 @@ export default function ContactPage() {
     } catch (error) {
       setSubmitError(
         error.message ||
-          'There was a problem sending your message. Please try again.',
+        'There was a problem sending your message. Please try again.',
       );
     } finally {
       setIsSubmitting(false);
@@ -89,24 +89,27 @@ export default function ContactPage() {
               <div className="font-mono text-[11px] tracking-[0.15em] uppercase text-[#E1261C] mb-3">
                 FOLLOW
               </div>
-              <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 mt-3">
                 <a
                   href="#"
-                  className="w-full border border-[#D4D4D4] py-3 px-4 rounded flex items-center justify-center gap-2.5 text-sm font-medium hover:border-[#E1261C] hover:text-[#E1261C] transition-all"
+                  className="min-w-0 w-full border border-[#D4D4D4] py-2.5 sm:py-3 px-2 sm:px-4 rounded flex items-center justify-center gap-1.5 sm:gap-2.5 text-xs sm:text-sm font-medium hover:border-[#E1261C] hover:text-[#E1261C] transition-all"
                 >
-                  <span className="text-[#E1261C] font-bold">𝕏</span> Twitter
+                  <span className="text-[#E1261C] font-bold shrink-0">𝕏</span>
+                  <span className="truncate">Twitter</span>
                 </a>
                 <a
                   href="#"
-                  className="w-full border border-[#D4D4D4] py-3 px-4 rounded flex items-center justify-center gap-2.5 text-sm font-medium hover:border-[#E1261C] hover:text-[#E1261C] transition-all"
+                  className="min-w-0 w-full border border-[#D4D4D4] py-2.5 sm:py-3 px-2 sm:px-4 rounded flex items-center justify-center gap-1.5 sm:gap-2.5 text-xs sm:text-sm font-medium hover:border-[#E1261C] hover:text-[#E1261C] transition-all"
                 >
-                  <span className="text-[#E1261C] font-bold">in</span> LinkedIn
+                  <span className="text-[#E1261C] font-bold shrink-0">in</span>
+                  <span className="truncate">LinkedIn</span>
                 </a>
                 <a
                   href="#"
-                  className="w-full sm:col-span-1 border border-[#D4D4D4] py-3 px-4 rounded flex items-center justify-center gap-2.5 text-sm font-medium hover:border-[#E1261C] hover:text-[#E1261C] transition-all"
+                  className="min-w-0 w-full col-span-2 sm:col-span-1 border border-[#D4D4D4] py-2.5 sm:py-3 px-2 sm:px-4 rounded flex items-center justify-center gap-1.5 sm:gap-2.5 text-xs sm:text-sm font-medium hover:border-[#E1261C] hover:text-[#E1261C] transition-all"
                 >
-                  <span className="text-[#E1261C] font-bold">◉</span> Instagram
+                  <span className="text-[#E1261C] font-bold shrink-0">◉</span>
+                  <span className="truncate">Instagram</span>
                 </a>
               </div>
             </div>
