@@ -15,6 +15,7 @@ import {
 import { useSearchStore } from '../store/searchStore';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import Link from 'next/link';
 
 const FormAutomation = ({ userData, onNext }) => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -120,9 +121,11 @@ const FormAutomation = ({ userData, onNext }) => {
       {/* Header */}
       <div className="bg-white border-b border-[#E8E6E3] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <Link href='/'>
           <h1 className="text-3xl font-bold text-[#0A0A0A] font-['Fraunces']">
             CatchMyCash
           </h1>
+          </Link>
           <p className="text-[#4A4A4A] mt-1">Automated Form Processing</p>
         </div>
       </div>

@@ -14,8 +14,13 @@ export default function Footer() {
           {/* Brand Block */}
           <div className="text-center sm:text-left">
             <div className="font-['Fraunces'] font-black text-[22px] tracking-[-0.02em] flex items-center gap-2 justify-center sm:justify-start mb-4">
-              <span className="w-2.5 h-2.5 bg-[#E1261C] rounded-full inline-block"></span>
-              CatchMyCash
+              <Link
+                href="/"
+                className="font-['Fraunces'] font-black text-[22px] tracking-[-0.02em] flex items-center gap-2 justify-center sm:justify-start mb-4"
+              >
+                <span className="w-2.5 h-2.5 bg-[#E1261C] rounded-full inline-block"></span>
+                CatchMyCash
+              </Link>
             </div>
             <p className="text-[#888888] text-sm max-w-[280px] mx-auto sm:mx-0">
               Helping Californians recover unclaimed property held by the State

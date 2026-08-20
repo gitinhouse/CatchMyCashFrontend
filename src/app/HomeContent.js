@@ -47,52 +47,55 @@ export const SiteHeader = () => {
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-[#E8E6E3] shadow-sm">
-      <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between">
+      <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between gap-3">
         <Link
           href="/"
-          className="font-['Fraunces'] font-black text-[22px] tracking-[-0.02em] flex items-center gap-2 text-black"
+          className="font-['Fraunces'] font-black text-lg md:text-xl lg:text-[22px] tracking-[-0.02em] flex items-center gap-2 text-black shrink-0"
         >
           <span className="w-2.5 h-2.5 bg-[#E1261C] rounded-full inline-block"></span>
           CatchMyCash
         </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-8">
+        {/* Desktop Navigation — visible from md (tablet) up */}
+        <nav className="hidden md:flex items-center gap-2.5 lg:gap-6 xl:gap-8">
           {navItems.map((item) => (
             <Link
               key={item.name}
               href={item.path}
-              className={`text-sm font-medium transition-colors ${pathname === item.path
-                ? 'text-[#0A0A0A]'
-                : 'text-[#4A4A4A] hover:text-[#0A0A0A]'
+              className={`text-xs lg:text-sm font-medium whitespace-nowrap transition-colors ${pathname === item.path
+                  ? 'text-[#0A0A0A]'
+                  : 'text-[#4A4A4A] hover:text-[#0A0A0A]'
                 }`}
             >
               {item.name}
             </Link>
           ))}
-          <button
-            onClick={handleSearchNow}
-            className="inline-flex items-center gap-2 px-5 py-3 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md"
-          >
-            Search Now
-          </button>
-          <button
-            onClick={handleLogin}
-            className="inline-flex items-center gap-2 px-5 py-3 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md"
-          >
-            Login
-          </button>
-          <button
-            onClick={handleDashboard}
-            className="inline-flex items-center gap-2 px-5 py-3 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md"
-          >
-            My Dashboard
-          </button>
+
+          <div className="flex items-center gap-1.5 lg:gap-3">
+            <button
+              onClick={handleSearchNow}
+              className="inline-flex items-center gap-1.5 px-2 py-1.5 lg:px-5 lg:py-3 bg-[#E1261C] text-white text-xs lg:text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md whitespace-nowrap"
+            >
+              Search Now
+            </button>
+            <button
+              onClick={handleLogin}
+              className="inline-flex items-center gap-1.5 px-2 py-1.5 lg:px-5 lg:py-3 bg-[#E1261C] text-white text-xs lg:text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md whitespace-nowrap"
+            >
+              Login
+            </button>
+            <button
+              onClick={handleDashboard}
+              className="inline-flex items-center gap-1.5 px-2 py-1.5 lg:px-5 lg:py-3 bg-[#E1261C] text-white text-xs lg:text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md whitespace-nowrap"
+            >
+              My Dashboard
+            </button>
+          </div>
         </nav>
 
-        {/* Mobile Menu Button */}
+        {/* Mobile Menu Button — only below md (phones only) */}
         <button
-          className="md:hidden p-2"
+          className="md:hidden p-2 shrink-0"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
           {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -130,6 +133,15 @@ export const SiteHeader = () => {
               className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all w-full shadow-sm"
             >
               Login
+            </button>
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                handleDashboard();
+              }}
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all w-full shadow-sm"
+            >
+              My Dashboard
             </button>
           </div>
         </div>

@@ -118,6 +118,17 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
           updated.email = 'Please enter a valid email address.';
         }
       }
+
+      if (field === 'dateOfBirth' && value) {
+        const dob = new Date(value);
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        if (dob > now) {
+          updated.dateOfBirth = 'Date of birth cannot be in the future.';
+        }
+      }
+
       return updated;
     });
   };
@@ -381,6 +392,26 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
       newErrors.lastName = 'Last name can only contain alphabets.';
     }
 
+    if (formData.dateOfBirth) {
+      const dob = new Date(formData.dateOfBirth);
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+
+      if (isNaN(dob.getTime())) {
+        newErrors.dateOfBirth = 'Please enter a valid date.';
+      } else if (dob > now) {
+        newErrors.dateOfBirth = 'Date of birth cannot be in the future.';
+      } else {
+        const age = now.getFullYear() - dob.getFullYear() -
+          (now < new Date(now.getFullYear(), dob.getMonth(), dob.getDate()) ? 1 : 0);
+        if (age < 18) {
+          newErrors.dateOfBirth = 'You must be at least 18 years old.';
+        } else if (age > 120) {
+          newErrors.dateOfBirth = 'Please enter a valid date of birth.';
+        }
+      }
+    }
+
     const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 
     if (formData.email.trim() && !emailRegex.test(formData.email.trim())) {
@@ -625,7 +656,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
             <a href="https://catchmycash.com" rel="noopener noreferrer">CatchMyCash</a>
           </h1>
           <p className="text-[#4A4A4A] mt-1">
-            Investigator Agreement Information  
+            Investigator Agreement Information
           </p>
         </div>
       </div>
@@ -1040,11 +1071,10 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
 
               {/* SMS Agreement */}
               <div
-                className={`mt-4 rounded-lg p-3 ${
-                  apiError?.includes('SMS')
-                    ? 'border border-[#E1261C]/40 bg-[#FCE9E7]'
-                    : ''
-                }`}
+                className={`mt-4 rounded-lg p-3 ${apiError?.includes('SMS')
+                  ? 'border border-[#E1261C]/40 bg-[#FCE9E7]'
+                  : ''
+                  }`}
               >
                 <label className="flex items-center space-x-2 text-sm text-[#0A0A0A] cursor-pointer">
                   <input
@@ -1079,11 +1109,10 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`px-8 py-3 text-white font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3 w-auto min-w-[300px] ${
-                    loading
-                      ? 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
-                      : 'bg-[#E1261C] hover:bg-[#B11912] shadow-md hover:shadow-lg'
-                  }`}
+                  className={`px-8 py-3 text-white font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3 w-auto min-w-[300px] ${loading
+                    ? 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
+                    : 'bg-[#E1261C] hover:bg-[#B11912] shadow-md hover:shadow-lg'
+                    }`}
                 >
                   {loading ? (
                     <>
