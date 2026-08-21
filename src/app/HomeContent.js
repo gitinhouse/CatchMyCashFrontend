@@ -201,7 +201,53 @@ export default function Home() {
       ];
 
       if (!stepParam || !allowedSteps.includes(stepParam)) {
-        router.replace('/?step=documents');
+        // Don't blindly bounce to documents — check whether this user
+        // has already completed doc collection & signing. If so, send
+        // them to tracking instead so a reload after completion doesn't
+        // put them back through the steps flow.
+        let destination = 'documents';
+        try {
+          const savedAllDocs = JSON.parse(
+            localStorage.getItem('userAllDocs') || 'null',
+          );
+          const savedCase = JSON.parse(
+            localStorage.getItem('userCase') || 'null',
+          );
+
+          const isInvestigatorSigned =
+            typeof savedAllDocs?.signed_doc === 'string' &&
+            savedAllDocs.signed_doc.includes('signed-document');
+
+          const hasFilledAgreement = Boolean(
+            savedAllDocs?.filled_agreement_doc ||
+            (typeof savedAllDocs?.signed_doc === 'string' &&
+              savedAllDocs.signed_doc.includes('FilledAgreement_form')),
+          );
+
+          const hasRequiredUploads = Boolean(
+            savedAllDocs?.proof_id &&
+            savedAllDocs?.ssn_id &&
+            savedAllDocs?.adress_proof,
+          );
+
+          const docsComplete =
+            hasRequiredUploads && hasFilledAgreement && isInvestigatorSigned;
+
+          // Also treat an already-submitted/queued case as "done with steps"
+          const caseSubmitted =
+            savedCase?.claim_process_task_status &&
+            !['', null, 'queued', 'failed', 'Failed'].includes(
+              savedCase.claim_process_task_status,
+            );
+
+          if (docsComplete || caseSubmitted) {
+            destination = 'tracking';
+          }
+        } catch (error) {
+          console.error('Failed to evaluate saved completion state:', error);
+        }
+
+        router.replace(`/?step=${destination}`);
         return;
       }
 
