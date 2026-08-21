@@ -225,32 +225,6 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     }
   }, []);
 
-  useEffect(() => {
-    try {
-      const scannedDocs = JSON.parse(localStorage.getItem('scannedDocs') || '{}');
-      const docKeyMap = {
-        'id': 'proof_id',
-        'ssn': 'ssn_id',
-        'address': 'adress_proof',
-        'birth': 'brith_proof',
-        'employment': 'employee_proof',
-        'claim': 'claim_doc',
-      };
-
-      // Check if we have scanned docs and they're not already in uploadedDocs
-      const scannedDocIds = Object.keys(scannedDocs);
-      if (scannedDocIds.length > 0) {
-        setUploadedDocs((prev) => {
-          const existing = new Set(prev);
-          scannedDocIds.forEach(id => existing.add(id));
-          return Array.from(existing);
-        });
-      }
-    } catch (err) {
-      console.error('Error restoring scanned documents:', err);
-    }
-  }, []);
-
   const { socket, isConnected, message } = useWebSocket(wsUrl, connectSocket);
 
   useEffect(() => {
@@ -565,8 +539,8 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
 
       try {
         // Use the GET endpoint to check if agreement exists
-        // const response = await fetch(`/api/docusign/agreement?user_id=${userData._id}`);
-        const response = await fetch(`/api/docusign/agreement?user_id=6a7d64c5942c7410458aea7b`);
+        const response = await fetch(`/api/docusign/agreement?user_id=${userData._id}`);
+        // const response = await fetch(`/api/docusign/agreement?user_id=6a7d64c5942c7410458aea7b`);
         const data = await response.json();
 
         if (response.ok) {
@@ -756,19 +730,19 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       setIsAgreementDocuSignLoading(true);
       setError(null);
 
-      // const res = await fetch('/api/docusign/agreement', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ user_id: userId }),
-      // });
-
       const res = await fetch('/api/docusign/agreement', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: '6a7d64c5942c7410458aea7b',
-        }),
+        body: JSON.stringify({ user_id: userId }),
       });
+
+      // const res = await fetch('/api/docusign/agreement', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({
+      //     user_id: '6a7d64c5942c7410458aea7b',
+      //   }),
+      // });
 
 
 
@@ -897,91 +871,34 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
 
     const doc = requiredDocuments.find((d) => d.id === docId);
     if (!doc) return;
-
-    // 🔹 FIX: Set the QR popup doc to show the QR code
     setQrPopupDoc({
       docId: doc.id,
       docName: doc.name,
     });
   };
-// 🔹 ADD: Handle scan input trigger
-useEffect(() => {
-  if (scanTargetDocId && scanInputRef.current) {
-    // This will trigger when scanTargetDocId is set
-    scanInputRef.current.click();
-  }
-}, [scanTargetDocId]);
- const handleScanChange = async (event) => {
-  const file = event.target.files[0];
-  if (!file || !scanTargetDocId) {
+
+  const handleScanChange = async (event) => {
+    const file = event.target.files[0];
+    if (!file || !scanTargetDocId) {
+      event.target.value = '';
+      return;
+    }
+
+    const { valid, error: validationError } = await validateDocumentFile(file);
+    if (!valid) {
+      setFileErrorModal({ show: true, message: validationError });
+      event.target.value = '';
+      return;
+    }
+
+    setError(null);
+    setUploadedDocs((prev) => [
+      ...prev.filter((id) => id !== scanTargetDocId),
+      scanTargetDocId,
+    ]);
+    setUploadedFiles((prev) => ({ ...prev, [scanTargetDocId]: file }));
     event.target.value = '';
-    return;
-  }
-
-  // 🔹 Show scanning state
-  setIsScanning(true);
-
-  const { valid, error: validationError } = await validateDocumentFile(file);
-  if (!valid) {
-    setFileErrorModal({
-      show: true,
-      fileName: file.name,
-      message: validationError,
-    });
-    event.target.value = '';
-    setIsScanning(false);
-    return;
-  }
-
-  setError(null);
-
-  // 🔹 FIX: Update uploadedDocs and uploadedFiles
-  setUploadedDocs((prev) => {
-    // Remove the document if it already exists, then add it
-    const filtered = prev.filter((id) => id !== scanTargetDocId);
-    return [...filtered, scanTargetDocId];
-  });
-
-  setUploadedFiles((prev) => ({
-    ...prev,
-    [scanTargetDocId]: file,
-  }));
-
-  // 🔹 Store the file in localStorage for persistence
-  try {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const existingDocs = JSON.parse(localStorage.getItem('scannedDocs') || '{}');
-        existingDocs[scanTargetDocId] = {
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          data: e.target.result,
-        };
-        localStorage.setItem('scannedDocs', JSON.stringify(existingDocs));
-      } catch (err) {
-        console.error('Error saving scanned doc to localStorage:', err);
-      }
-    };
-    reader.readAsDataURL(file);
-  } catch (err) {
-    console.error('Error reading file:', err);
-  }
-
-  // 🔹 Clear the input and reset state
-  event.target.value = '';
-  const docId = scanTargetDocId;
-  setScanTargetDocId(null);
-  setIsScanning(false);
-  setQrPopupDoc(null);
-
-  // 🔹 Show success feedback
-  console.log(`Document ${docId} uploaded successfully via scan`);
-  
-  // Optional: Show a success toast or notification
-  // You can add a success state here if needed
-};
+  };
 
   const requiredDocsUploaded = requiredDocuments
     .filter((doc) => doc.required)
@@ -1304,13 +1221,6 @@ useEffect(() => {
 
                   {isDocComplete(doc.id) && doc.id !== 'agreement' ? (
                     <div className="flex space-x-2 flex-wrap gap-2">
-                      {/* 🔹 ADD: Scanned badge */}
-                      {uploadedFiles[doc.id] && (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-[#FCE9E7] text-[#E1261C] rounded-lg">
-                          <Camera className="h-3 w-3" />
-                          Scanned
-                        </span>
-                      )}
                       <button
                         onClick={() => handleRemoveDocument(doc.id)}
                         disabled={isSubmitted}
@@ -1511,7 +1421,6 @@ useEffect(() => {
       />
 
       {/* QR Popup - Red Themed */}
-      {/* QR Popup - Red Themed */}
       {qrPopupDoc && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-[90%] max-w-md relative shadow-xl">
@@ -1528,7 +1437,8 @@ useEffect(() => {
               </span>
             </h3>
             <p className="text-[#4A4A4A] mb-4 text-sm">
-              Use your mobile device to scan the QR code below, or click the button to upload from your device.
+              Use your mobile device to scan the QR code below to upload this
+              document.
             </p>
             <div className="flex justify-center mb-4">
               <QRCodeSVG
@@ -1540,27 +1450,10 @@ useEffect(() => {
             <p className="text-[#888888] text-xs break-words text-center">
               {getQrUrl(qrPopupDoc.docId)}
             </p>
-            <div className="flex flex-col gap-2 mt-4">
-              {/* 🔹 FIX: Direct upload button that triggers file input */}
-              <button
-                onClick={() => {
-                  setQrPopupDoc(null);
-                  // Set the target doc ID and trigger the file input
-                  setScanTargetDocId(qrPopupDoc.docId);
-                  // Small delay to ensure state is updated
-                  setTimeout(() => {
-                    if (scanInputRef.current) {
-                      scanInputRef.current.click();
-                    }
-                  }, 100);
-                }}
-                className="bg-[#E1261C] hover:bg-[#B11912] text-white px-6 py-2 rounded-lg transition-all"
-              >
-                Upload from Device
-              </button>
+            <div className="text-center mt-4">
               <button
                 onClick={() => setQrPopupDoc(null)}
-                className="bg-[#F0EEEB] hover:bg-[#E8E6E3] text-[#4A4A4A] px-6 py-2 rounded-lg transition-all"
+                className="bg-[#E1261C] hover:bg-[#B11912] text-white px-6 py-2 rounded-lg transition-all"
               >
                 Close
               </button>
