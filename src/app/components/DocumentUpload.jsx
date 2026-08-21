@@ -955,7 +955,18 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       onNext();
     } catch (err) {
       console.error('Upload failed:', err);
-      setError(err.message || 'Failed to submit documents');
+
+      // axios errors carry the real backend message in err.response.data.message;
+      // fall back to err.message (e.g. network errors) if that's not present.
+      const backendMessage =
+        err?.response?.data?.message || err?.message || 'Failed to submit documents';
+
+      setError(backendMessage);
+      setErrorModal({
+        show: true,
+        title: 'Submission Failed',
+        message: backendMessage,
+      });
       setIsSubmitted(false);
     }
   };
