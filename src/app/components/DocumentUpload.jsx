@@ -22,6 +22,123 @@ import { useSearchStore } from '../store/searchStore';
 import { QRCodeSVG } from 'qrcode.react';
 import Link from 'next/link';
 
+// ---------------------------------------------------------------------------
+// Document validation rules
+//
+// Files:
+//   - Must be PDF, TIF, PNG, or JPEG
+//   - Must be greater than 1 byte and less than 10 MB
+//   - Cannot be password protected
+// File names:
+//   - Can only contain letters, numbers, dashes, and underscores
+//   - Cannot exceed 100 characters
+// ---------------------------------------------------------------------------
+const ALLOWED_FILE_EXTENSIONS = ['pdf', 'tif', 'tiff', 'png', 'jpg', 'jpeg'];
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'image/tiff',
+  'image/png',
+  'image/jpeg',
+];
+const MIN_FILE_SIZE_BYTES = 1; // must be greater than 1 byte
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_FILENAME_LENGTH = 100;
+
+const getFileExtension = (fileName) => {
+  const parts = String(fileName || '').split('.');
+  return parts.length > 1 ? parts.pop().toLowerCase() : '';
+};
+
+// Lightweight client-side heuristic for detecting an encrypted/password
+// protected PDF: scan the raw bytes for the "/Encrypt" dictionary key that
+// the PDF spec requires on encrypted files. This is not a substitute for a
+// real server-side check (which should still happen), but it lets us warn
+// the user immediately instead of letting them submit a file that will fail
+// later.
+const isPdfPasswordProtected = async (file) => {
+  try {
+    const buffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let text = '';
+    const chunkSize = 20000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      text += String.fromCharCode(...bytes.slice(i, i + chunkSize));
+    }
+    return /\/Encrypt/.test(text);
+  } catch (err) {
+    console.error('Error inspecting PDF for encryption:', err);
+    // If the file can't be inspected, don't block the upload on this check alone.
+    return false;
+  }
+};
+
+const validateDocumentFile = async (file) => {
+  if (!file) {
+    return { valid: false, error: 'No file selected. Please choose a file to upload.' };
+  }
+
+  const extension = getFileExtension(file.name);
+
+  if (!ALLOWED_FILE_EXTENSIONS.includes(extension)) {
+    return {
+      valid: false,
+      error: `"${file.name}" isn't a supported file type. Only PDF, TIF, PNG, or JPEG files are accepted. Please convert the file or upload a different one.`,
+    };
+  }
+
+  if (file.type && !ALLOWED_MIME_TYPES.includes(file.type)) {
+    return {
+      valid: false,
+      error: `"${file.name}" isn't a supported file type. Only PDF, TIF, PNG, or JPEG files are accepted. Please convert the file or upload a different one.`,
+    };
+  }
+
+  if (file.size <= MIN_FILE_SIZE_BYTES) {
+    return {
+      valid: false,
+      error: `"${file.name}" appears to be empty (0 bytes). Please check the file and upload a valid document.`,
+    };
+  }
+
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+    return {
+      valid: false,
+      error: `"${file.name}" is ${sizeMB} MB, which exceeds the 10 MB limit. Please compress the file or upload a smaller version.`,
+    };
+  }
+
+  const nameWithoutExtension = file.name.includes('.')
+    ? file.name.slice(0, file.name.lastIndexOf('.'))
+    : file.name;
+
+  if (!/^[A-Za-z0-9_-]+$/.test(nameWithoutExtension)) {
+    return {
+      valid: false,
+      error: `"${file.name}" isn't a valid file name. File names can only contain letters, numbers, dashes, and underscores. Please rename the file and upload again.`,
+    };
+  }
+
+  if (file.name.length > MAX_FILENAME_LENGTH) {
+    return {
+      valid: false,
+      error: `"${file.name}" isn't a valid file name. File names must be under 100 characters (this one is ${file.name.length}). Please rename the file and upload again.`,
+    };
+  }
+
+  if (extension === 'pdf') {
+    const encrypted = await isPdfPasswordProtected(file);
+    if (encrypted) {
+      return {
+        valid: false,
+        error: `"${file.name}" is password protected. Please remove the password and upload an unprotected version of the file.`,
+      };
+    }
+  }
+
+  return { valid: true, error: null };
+};
+
 const DocumentUpload = ({ onNext, onFieldFilled }) => {
   const [uploadedDocs, setUploadedDocs] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState({});
@@ -66,6 +183,11 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   const [errorModal, setErrorModal] = useState({
     show: false,
     title: '',
+    message: '',
+  });
+  const [fileErrorModal, setFileErrorModal] = useState({
+    show: false,
+    fileName: '',
     message: '',
   });
   const requiredDocuments = [
@@ -676,6 +798,19 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     const file = event.target.files[0];
     if (!file || !selectedDocId) return;
 
+    const { valid, error: validationError } = await validateDocumentFile(file);
+    if (!valid) {
+      setFileErrorModal({
+        show: true,
+        fileName: file.name,
+        message: validationError,
+      });
+      event.target.value = '';
+      return;
+    }
+
+    setError(null);
+
     setUploadedDocs((prev) => [
       ...prev.filter((id) => id !== selectedDocId),
       selectedDocId,
@@ -742,15 +877,26 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     });
   };
 
-  const handleScanChange = (event) => {
+  const handleScanChange = async (event) => {
     const file = event.target.files[0];
-    if (file && scanTargetDocId) {
-      setUploadedDocs((prev) => [
-        ...prev.filter((id) => id !== scanTargetDocId),
-        scanTargetDocId,
-      ]);
-      setUploadedFiles((prev) => ({ ...prev, [scanTargetDocId]: file }));
+    if (!file || !scanTargetDocId) {
+      event.target.value = '';
+      return;
     }
+
+    const { valid, error: validationError } = await validateDocumentFile(file);
+    if (!valid) {
+      setFileErrorModal({ show: true, message: validationError });
+      event.target.value = '';
+      return;
+    }
+
+    setError(null);
+    setUploadedDocs((prev) => [
+      ...prev.filter((id) => id !== scanTargetDocId),
+      scanTargetDocId,
+    ]);
+    setUploadedFiles((prev) => ({ ...prev, [scanTargetDocId]: file }));
     event.target.value = '';
   };
 
@@ -874,6 +1020,43 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
             Complete the legal process by signing forms and providing identity
             verification
           </p>
+        </div>
+
+        {/* Document Requirements Banner */}
+        {/* Document Requirements Banner */}
+        <div className="bg-[#FFF8F0] border border-[#FFD9B3] rounded-xl p-4 mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <Info className="h-5 w-5 text-[#E1261C] flex-shrink-0" />
+            <p className="font-semibold text-[#0A0A0A] font-['JetBrains_Mono']">
+              Document Requirements
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+            <div className="flex items-start gap-2">
+              <FileText className="h-4 w-4 text-[#E1261C] mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-[#4A4A4A]">
+                <span className="font-medium text-[#0A0A0A]">Format:</span> PDF, TIF, PNG, or JPEG
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <Upload className="h-4 w-4 text-[#E1261C] mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-[#4A4A4A]">
+                <span className="font-medium text-[#0A0A0A]">File size:</span> Greater than 1 byte, less than 10 MB
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <Shield className="h-4 w-4 text-[#E1261C] mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-[#4A4A4A]">
+                <span className="font-medium text-[#0A0A0A]">Security:</span> Cannot be password protected
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-[#E1261C] mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-[#4A4A4A]">
+                <span className="font-medium text-[#0A0A0A]">File name:</span> Letters, numbers, dashes, underscores only; max 100 characters
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Step 1: Digital Signatures - Red Themed */}
@@ -1212,7 +1395,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       {/* Hidden File Inputs */}
       <input
         type="file"
-        accept="image/*,.pdf"
+        accept=".pdf,.tif,.tiff,.png,.jpg,.jpeg"
         ref={fileInputRef}
         onChange={handleFileChange}
         className="hidden"
@@ -1295,6 +1478,14 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
           router.push('/userLogin');
         }}
       />
+
+      <FileValidationErrorModal
+        show={fileErrorModal.show}
+        fileName={fileErrorModal.fileName}
+        message={fileErrorModal.message}
+        onClose={() => setFileErrorModal({ show: false, fileName: '', message: '' })}
+      />
+
     </div>
   );
 };
@@ -1314,6 +1505,41 @@ const ErrorModal = ({ show, title, message, onClose }) => {
           </h3>
         </div>
         <p className="text-sm text-[#4A4A4A] mb-6">{message}</p>
+        <button
+          onClick={onClose}
+          className="w-full px-4 py-2.5 bg-[#E1261C] hover:bg-[#B11912] text-white font-semibold rounded-lg transition-all duration-300"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const FileValidationErrorModal = ({ show, fileName, message, onClose }) => {
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-4">
+      <div className="bg-white border border-[#E8E6E3] rounded-xl shadow-lg max-w-md w-full p-6 relative animate-in fade-in zoom-in duration-200">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-[#FCE9E7] rounded-full flex items-center justify-center shrink-0">
+            <AlertCircle className="h-5 w-5 text-[#E1261C]" />
+          </div>
+          <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
+            Upload Error
+          </h3>
+        </div>
+
+        {fileName && (
+          <div className="flex items-center gap-2 bg-[#F7F5F2] border border-[#E8E6E3] rounded-lg px-3 py-2 mb-3">
+            <FileText className="h-4 w-4 text-[#888888] flex-shrink-0" />
+            <span className="text-sm text-[#0A0A0A] truncate">{fileName}</span>
+          </div>
+        )}
+
+        <p className="text-sm text-[#4A4A4A] mb-6">{message}</p>
+
         <button
           onClick={onClose}
           className="w-full px-4 py-2.5 bg-[#E1261C] hover:bg-[#B11912] text-white font-semibold rounded-lg transition-all duration-300"
