@@ -44,9 +44,12 @@ function deriveCaseStatus(caseItem) {
     // Only trust the "submitted" flag if the documents are genuinely done —
     // this stops a premature status value (set as soon as the case record
     // is created in Step 4) from skipping over an incomplete Step 5.
-    const isSubmitted =
-        documentsActuallyComplete &&
-        (!!caseItem?.submitted_at || !!caseItem?.document_upload_task_status);
+    const isSubmitted = Boolean(
+        caseItem?.submitted_at ||
+        caseItem?.document_upload_task_status === 'completed' ||
+        caseItem?.claim_process_task_status === 'completed' ||
+        caseItem?.claim_status === 'Success',
+    );
 
     const hasProperties = properties && properties.length > 0;
     const hasUserInfo = !!caseItem?.user_details?.[0];
@@ -329,8 +332,13 @@ export default function MyAccountPage() {
                                                     {status.label}
                                                 </span>
                                                 <span className="text-xs text-[#888888] font-['JetBrains_Mono']">
-                                                    #{String(caseItem.case_id || caseItem._id).slice(-8).toUpperCase()}
+                                                    #{caseItem.case_id || String(caseItem._id).slice(-8).toUpperCase()}
                                                 </span>
+                                                {caseItem.claim_id && (
+                                                    <span className="text-xs text-[#888888] font-['JetBrains_Mono']">
+                                                        • Claim ID: {caseItem.claim_id}
+                                                    </span>
+                                                )}
                                             </div>
                                             <p className="text-2xl font-bold text-[#0A0A0A] font-['Fraunces']">
                                                 ${formatMoney(caseTotal)}
@@ -391,8 +399,8 @@ export default function MyAccountPage() {
                                                             setActiveTab((prev) => ({ ...prev, [caseItem._id]: t.id }))
                                                         }
                                                         className={`pb-3 text-sm font-medium border-b-2 transition-all ${tab === t.id
-                                                                ? 'border-[#E1261C] text-[#E1261C]'
-                                                                : 'border-transparent text-[#4A4A4A] hover:text-[#0A0A0A]'
+                                                            ? 'border-[#E1261C] text-[#E1261C]'
+                                                            : 'border-transparent text-[#4A4A4A] hover:text-[#0A0A0A]'
                                                             }`}
                                                     >
                                                         {t.label}
@@ -424,6 +432,12 @@ export default function MyAccountPage() {
                                                                             <p className="text-xs text-[#888888] font-['JetBrains_Mono']">
                                                                                 ID: {p.property_id}
                                                                             </p>
+                                                                            {/* 🔹 ADD THIS: Display property-level claim_id */}
+                                                                            {p.claim_id && (
+                                                                                <p className="text-xs text-[#E1261C] font-['JetBrains_Mono'] mt-1">
+                                                                                    Claim ID: {p.claim_id}
+                                                                                </p>
+                                                                            )}
                                                                         </div>
                                                                         <p className="font-bold text-[#0A0A0A]">
                                                                             ${formatMoney(parseAmount(p.amount))}

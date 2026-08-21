@@ -24,6 +24,45 @@ export const SiteHeader = () => {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const { goToSearch } = useSearchStore();
+  
+  // 🔹 ADD: Check if user is logged in
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const [userName, setUserName] = React.useState('');
+
+  // 🔹 ADD: Check login status on mount and when localStorage changes
+  React.useEffect(() => {
+    const checkLoginStatus = () => {
+      try {
+        const storedLoginRaw = localStorage.getItem('userLogin');
+        if (storedLoginRaw) {
+          const storedLogin = JSON.parse(storedLoginRaw);
+          if (storedLogin?.token && storedLogin?.user) {
+            setIsLoggedIn(true);
+            setUserName(storedLogin.user.first_name || storedLogin.user.email || 'User');
+          } else {
+            setIsLoggedIn(false);
+            setUserName('');
+          }
+        } else {
+          setIsLoggedIn(false);
+          setUserName('');
+        }
+      } catch (error) {
+        console.error('Error checking login status:', error);
+        setIsLoggedIn(false);
+        setUserName('');
+      }
+    };
+
+    checkLoginStatus();
+
+    // Listen for storage changes (in case user logs in/out in another tab)
+    window.addEventListener('storage', checkLoginStatus);
+    
+    return () => {
+      window.removeEventListener('storage', checkLoginStatus);
+    };
+  }, []);
 
   const handleLogin = async () => {
     router.push('/userLogin');
@@ -31,6 +70,13 @@ export const SiteHeader = () => {
 
   const handleDashboard = async () => {
     router.push('/myAccount');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('userLogin');
+    setIsLoggedIn(false);
+    setUserName('');
+    router.push('/');
   };
 
   const handleSearchNow = () => {
@@ -78,18 +124,31 @@ export const SiteHeader = () => {
             >
               Search Now
             </button>
-            <button
-              onClick={handleLogin}
-              className="inline-flex items-center gap-1.5 px-2 py-1.5 lg:px-5 lg:py-3 bg-[#E1261C] text-white text-xs lg:text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md whitespace-nowrap"
-            >
-              Login
-            </button>
-            <button
-              onClick={handleDashboard}
-              className="inline-flex items-center gap-1.5 px-2 py-1.5 lg:px-5 lg:py-3 bg-[#E1261C] text-white text-xs lg:text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md whitespace-nowrap"
-            >
-              My Dashboard
-            </button>
+            
+            {/* 🔹 MODIFIED: Conditional rendering for Login/Dashboard */}
+            {isLoggedIn ? (
+              <>
+                <button
+                  onClick={handleDashboard}
+                  className="inline-flex items-center gap-1.5 px-2 py-1.5 lg:px-5 lg:py-3 bg-[#E1261C] text-white text-xs lg:text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md whitespace-nowrap"
+                >
+                  My Dashboard
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="inline-flex items-center gap-1.5 px-2 py-1.5 lg:px-5 lg:py-3 border border-[#E1261C] text-[#E1261C] text-xs lg:text-sm font-semibold rounded-lg hover:bg-[#FCE9E7] transition-all whitespace-nowrap"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleLogin}
+                className="inline-flex items-center gap-1.5 px-2 py-1.5 lg:px-5 lg:py-3 bg-[#E1261C] text-white text-xs lg:text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md whitespace-nowrap"
+              >
+                Login
+              </button>
+            )}
           </div>
         </nav>
 
@@ -125,24 +184,40 @@ export const SiteHeader = () => {
             >
               Search Now
             </button>
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                handleLogin();
-              }}
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all w-full shadow-sm"
-            >
-              Login
-            </button>
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                handleDashboard();
-              }}
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all w-full shadow-sm"
-            >
-              My Dashboard
-            </button>
+            
+            {/* 🔹 MODIFIED: Conditional rendering for Login/Dashboard in mobile */}
+            {isLoggedIn ? (
+              <>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleDashboard();
+                  }}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all w-full shadow-sm"
+                >
+                  My Dashboard
+                </button>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-3 border border-[#E1261C] text-[#E1261C] text-sm font-semibold rounded-lg hover:bg-[#FCE9E7] transition-all w-full"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  handleLogin();
+                }}
+                className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all w-full shadow-sm"
+              >
+                Login
+              </button>
+            )}
           </div>
         </div>
       )}

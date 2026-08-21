@@ -65,10 +65,179 @@ export async function POST(req) {
 }
 
 
-
 export async function GET(req) {
   try {
-    // 🔹 Verify JWT
+    const { searchParams } = new URL(req.url);
+    const case_id = searchParams.get('case_id');
+    const claim_id = searchParams.get('claim_id');
+    const search = searchParams.get('search');
+    const my_user_id = searchParams.get('user_id');
+    const public_search = searchParams.get('public');
+
+    // 🔹 CHECK PUBLIC SEARCH FIRST - BEFORE AUTHENTICATION
+    if (public_search === 'true' && claim_id) {
+      await connectToDatabase();
+      
+      const pipeline = [];
+      
+      // Filter by claim_id
+      pipeline.push({
+        $match: { claim_id: claim_id }
+      });
+
+      // Join related collections
+      pipeline.push(
+        {
+          $lookup: {
+            from: 'userinformations',
+            localField: 'user_id',
+            foreignField: '_id',
+            as: 'user_info',
+          },
+        },
+        { $unwind: { path: '$user_info', preserveNullAndEmptyArrays: true } },
+        {
+          $lookup: {
+            from: 'userdetails',
+            let: { caseId: '$_id', userId: '$user_id' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $or: [
+                      { $eq: ['$case_id', '$$caseId'] },
+                      {
+                        $and: [
+                          { $eq: [{ $ifNull: ['$case_id', null] }, null] },
+                          { $eq: ['$user_id', '$$userId'] },
+                        ],
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+            as: 'user_details',
+          },
+        },
+        {
+          $lookup: {
+            from: 'userdocs',
+            let: { caseId: '$_id', userId: '$user_id' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $or: [
+                      { $eq: ['$case_id', '$$caseId'] },
+                      {
+                        $and: [
+                          { $eq: [{ $ifNull: ['$case_id', null] }, null] },
+                          { $eq: ['$user_id', '$$userId'] },
+                        ],
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+            as: 'user_docs',
+          },
+        },
+        {
+          $lookup: {
+            from: 'userproperties',
+            let: { caseId: '$_id', userId: '$user_id' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $or: [
+                      { $eq: ['$case_id', '$$caseId'] },
+                      {
+                        $and: [
+                          { $eq: [{ $ifNull: ['$case_id', null] }, null] },
+                          { $eq: ['$user_id', '$$userId'] },
+                        ],
+                      },
+                    ],
+                  },
+                },
+              },
+              {
+                $lookup: {
+                  from: 'usercases',
+                  let: { caseId: '$$caseId' },
+                  pipeline: [
+                    {
+                      $match: {
+                        $expr: { $eq: ['$_id', '$$caseId'] }
+                      }
+                    },
+                    {
+                      $project: { claim_id: 1 }
+                    }
+                  ],
+                  as: 'case_info'
+                }
+              },
+              {
+                $addFields: {
+                  claim_id: { $arrayElemAt: ['$case_info.claim_id', 0] }
+                }
+              },
+              {
+                $project: {
+                  case_info: 0
+                }
+              }
+            ],
+            as: 'user_properties',
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            case_id: 1,
+            status: 1,
+            claim_status: 1,
+            claim_id: 1,
+            claim_process_task_status: 1,
+            document_upload_task_status: 1,
+            submitted_at: 1,
+            property_ids: 1,
+            createdAt: 1,
+            'user_info._id': 1,
+            'user_info.first_name': 1,
+            'user_info.last_name': 1,
+            'user_info.email': 1,
+            user_details: 1,
+            user_docs: 1,
+            'user_properties._id': 1,
+            'user_properties.property_id': 1,
+            'user_properties.property_title': 1,
+            'user_properties.property_type': 1,
+            'user_properties.amount': 1,
+            'user_properties.claim_id': 1,
+          },
+        },
+      );
+
+      const results = await UserCases.aggregate(pipeline);
+
+      if (results.length === 0) {
+        return NextResponse.json(
+          { error: 'No claim found with this Claim ID' },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({
+        data: results
+      });
+    }
+
+    // 🔹 AUTHENTICATION - Only runs for non-public requests
     let user;
     try {
       user = verifyToken(req);
@@ -77,11 +246,6 @@ export async function GET(req) {
     }
 
     await connectToDatabase();
-
-    const { searchParams } = new URL(req.url);
-    const case_id = searchParams.get('case_id');
-    const search = searchParams.get('search');
-    const my_user_id = searchParams.get('user_id'); // NEW: "give me all MY cases"
 
     const page = parseInt(searchParams.get('page')) || 1;
     const limit = parseInt(searchParams.get('limit')) || 10;
@@ -111,8 +275,14 @@ export async function GET(req) {
       });
     }
 
-    // 🔹 NEW: Filter by logged-in user's own cases (dashboard mode)
-    if (my_user_id && !case_id) {
+    if (claim_id) {
+      pipeline.push({
+        $match: { claim_id: claim_id }
+      });
+    }
+
+    // 🔹 Filter by logged-in user's own cases
+    if (my_user_id && !case_id && !claim_id) {
       pipeline.push({
         $match: { user_id: new Types.ObjectId(my_user_id) },
       });
@@ -167,8 +337,6 @@ export async function GET(req) {
     }
 
     // 🔹 Join related collections
-    // CHANGED: case_id-first joins with fallback to user_id for legacy records
-    // that predate the case_id field (won't collide across a user's multiple cases)
     pipeline.push(
       {
         $lookup: {
@@ -247,6 +415,33 @@ export async function GET(req) {
                 },
               },
             },
+            {
+              $lookup: {
+                from: 'usercases',
+                let: { caseId: '$$caseId' },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: { $eq: ['$_id', '$$caseId'] }
+                    }
+                  },
+                  {
+                    $project: { claim_id: 1 }
+                  }
+                ],
+                as: 'case_info'
+              }
+            },
+            {
+              $addFields: {
+                claim_id: { $arrayElemAt: ['$case_info.claim_id', 0] }
+              }
+            },
+            {
+              $project: {
+                case_info: 0
+              }
+            }
           ],
           as: 'user_properties',
         },
@@ -257,6 +452,7 @@ export async function GET(req) {
           case_id: 1,
           status: 1,
           claim_status: 1,
+          claim_id: 1,
           claim_process_task_status: 1,
           document_upload_task_status: 1,
           submitted_at: 1,
@@ -268,17 +464,22 @@ export async function GET(req) {
           'user_info.email': 1,
           user_details: 1,
           user_docs: 1,
-          user_properties: 1,
+          'user_properties._id': 1,
+          'user_properties.property_id': 1,
+          'user_properties.property_title': 1,
+          'user_properties.property_type': 1,
+          'user_properties.amount': 1,
+          'user_properties.claim_id': 1,
         },
       },
     );
 
-    // 🔹 Pagination only for admin list (not for search/case_id/my_user_id)
+    // 🔹 Pagination only for admin list
     if (!case_id && !search && !my_user_id) {
       pipeline.push({ $skip: skip }, { $limit: limit });
     }
 
-    // 🔹 NEW: sort dashboard results newest-first
+    // 🔹 Sort dashboard results newest-first
     if (my_user_id) {
       pipeline.unshift({ $sort: { createdAt: -1 } });
     }
@@ -300,16 +501,16 @@ export async function GET(req) {
     const responseData =
       !case_id && !search && !my_user_id
         ? {
-            total: totalRecords,
-            page,
-            limit,
-            totalPages: Math.ceil(totalRecords / limit),
-            count: results.length,
-            data: results,
-          }
+          total: totalRecords,
+          page,
+          limit,
+          totalPages: Math.ceil(totalRecords / limit),
+          count: results.length,
+          data: results,
+        }
         : {
-            data: results,
-          };
+          data: results,
+        };
 
     return NextResponse.json(responseData);
   } catch (error) {

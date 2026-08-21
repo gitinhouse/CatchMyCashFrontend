@@ -115,7 +115,7 @@ export async function POST(req) {
                         <td>
                          
                           <h1 style="margin: 14px 0 0; color:${COLORS.white}; font-size: 24px; font-weight: 700; font-family: Georgia, 'Times New Roman', serif;">
-                            Claim Submission Failed
+                            Claim Submission
                           </h1>
                         </td>
                       </tr>
@@ -138,9 +138,6 @@ export async function POST(req) {
                       <tr>
                         <td width="4" bgcolor="${COLORS.red}" style="background-color:${COLORS.red}; padding:0;"></td>
                         <td style="padding: 16px 20px;">
-                          <p style="margin:0 0 6px; color:${COLORS.redDark}; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; font-family: Arial, Helvetica, sans-serif;">
-                            Error Details
-                          </p>
                           <p style="margin:0; color:${COLORS.redDark}; font-size:15px; font-weight:600; line-height:1.5; font-family: Arial, Helvetica, sans-serif;">
                             ${errorMessage}
                           </p>
