@@ -227,31 +227,69 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
 
   const { socket, isConnected, message } = useWebSocket(wsUrl, connectSocket);
 
+  // Update the useEffect that handles WebSocket messages (around line 145)
   useEffect(() => {
-    if (message && message.type === 'documents_submitted') {
-      console.log('Message received:', message);
-      setSocketMessage(message);
+    if (message) {
+      console.log('📨 WebSocket message received:', message);
 
-      const docs = message.documents || {};
+      if (message.type === 'documents_submitted') {
+        console.log('📄 Document uploaded event:', message);
 
-      const docKeyMap = {
-        proof_id: 'id',
-        ssn_id: 'ssn',
-        adress_proof: 'address',
-        brith_proof: 'birth',
-        employee_proof: 'employment',
-        claim_doc: 'claim',
-      };
+        // Get the document ID from the message
+        const docId = message.document;
 
-      const uploadedIds = Object.entries(docs)
-        .filter(([key, value]) => value === true)
-        .map(([key]) => docKeyMap[key])
-        .filter(Boolean);
+        // Map the document ID to the frontend ID
+        const docKeyMap = {
+          proof_id: 'id',
+          ssn_id: 'ssn',
+          adress_proof: 'address',
+          brith_proof: 'birth',
+          employee_proof: 'employment',
+          claim_doc: 'claim',
+        };
 
-      setUploadedDocs((prev) => {
-        const merged = new Set([...prev, ...uploadedIds]);
-        return Array.from(merged);
-      });
+        // If we have a specific document, update it
+        if (docId && docKeyMap[docId]) {
+          const frontendId = docKeyMap[docId];
+          setUploadedDocs((prev) => {
+            if (!prev.includes(frontendId)) {
+              return [...prev, frontendId];
+            }
+            return prev;
+          });
+
+          // Show success notification
+          setSocketMessage({
+            type: 'success',
+            message: `✅ ${message.file_name || 'Document'} uploaded successfully from mobile!`,
+            document: frontendId
+          });
+
+          // Clear notification after 5 seconds
+          setTimeout(() => setSocketMessage(null), 5000);
+        }
+        // Fallback: update all documents
+        else {
+          const docs = message.documents || {};
+          const uploadedIds = Object.entries(docs)
+            .filter(([key, value]) => value === true)
+            .map(([key]) => docKeyMap[key])
+            .filter(Boolean);
+
+          if (uploadedIds.length > 0) {
+            setUploadedDocs((prev) => {
+              const merged = new Set([...prev, ...uploadedIds]);
+              return Array.from(merged);
+            });
+
+            setSocketMessage({
+              type: 'success',
+              message: `✅ ${uploadedIds.length} document(s) uploaded successfully!`,
+            });
+            setTimeout(() => setSocketMessage(null), 5000);
+          }
+        }
+      }
     }
   }, [message]);
 
@@ -854,7 +892,10 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
 
   const getQrUrl = (docId) => {
     if (typeof window === 'undefined') return '';
+    const userId = userData?._id;
+    const caseId = userCase?._id;
     if (!userId || !caseId || !docId) return '';
+    // ✅ Use the correct path with all parameters
     return `${window.location.origin}/userDocs?userId=${userId}&caseId=${caseId}&docId=${docId}`;
   };
 
@@ -886,18 +927,95 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
 
     const { valid, error: validationError } = await validateDocumentFile(file);
     if (!valid) {
-      setFileErrorModal({ show: true, message: validationError });
+      setFileErrorModal({
+        show: true,
+        fileName: file.name,
+        message: validationError
+      });
       event.target.value = '';
       return;
     }
 
     setError(null);
-    setUploadedDocs((prev) => [
-      ...prev.filter((id) => id !== scanTargetDocId),
-      scanTargetDocId,
-    ]);
-    setUploadedFiles((prev) => ({ ...prev, [scanTargetDocId]: file }));
-    event.target.value = '';
+    setIsScanning(true);
+
+    try {
+      const docKeyMap = {
+        id: 'proof_id',
+        ssn: 'ssn_id',
+        address: 'adress_proof',
+        birth: 'brith_proof',
+        employment: 'employee_proof',
+        claim: 'claim_doc',
+      };
+
+      const backendKey = docKeyMap[scanTargetDocId];
+      if (!backendKey) {
+        throw new Error('Invalid document type');
+      }
+
+      // Upload the scanned file
+      const formData = new FormData();
+      formData.append('case_id', userCase?._id);
+      formData.append(backendKey, file);
+
+      const res = await fetch('/api/docs', {
+        method: 'PUT',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to upload scanned document');
+      }
+
+      // Update local state
+      setUploadedDocs((prev) => [
+        ...prev.filter((id) => id !== scanTargetDocId),
+        scanTargetDocId,
+      ]);
+
+      setUploadedFiles((prev) => ({ ...prev, [scanTargetDocId]: file }));
+
+      // Store in localStorage
+      const allDocs = JSON.parse(localStorage.getItem('userAllDocs') || '{}');
+      allDocs[backendKey] = data[backendKey] || file.name;
+      localStorage.setItem('userAllDocs', JSON.stringify(allDocs));
+
+      // ✅ EMIT WEBSOCKET EVENT for real-time sync
+      if (socket && isConnected) {
+        const wsMessage = {
+          type: 'documents_submitted',
+          caseId: userCase?._id,
+          userId: userId,
+          document: backendKey,
+          file_name: file.name,
+          timestamp: new Date().toISOString()
+        };
+        socket.send(JSON.stringify(wsMessage));
+        console.log('📤 WebSocket message sent:', wsMessage);
+      }
+
+      // Show success message
+      setSocketMessage({
+        type: 'success',
+        message: `✅ ${file.name} uploaded successfully!`,
+        document: scanTargetDocId
+      });
+      setTimeout(() => setSocketMessage(null), 3000);
+
+    } catch (err) {
+      console.error('Scan upload failed:', err);
+      setError(err.message || 'Failed to upload scanned document');
+      setErrorModal({
+        show: true,
+        title: 'Scan Upload Failed',
+        message: err.message || 'There was an error uploading your scanned document.'
+      });
+    } finally {
+      setIsScanning(false);
+      event.target.value = '';
+    }
   };
 
   const requiredDocsUploaded = requiredDocuments
@@ -1002,6 +1120,44 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
           <p className="text-[#4A4A4A]">Please wait, this may take a moment.</p>
         </motion.div>
       )}
+
+      {socketMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className={`fixed top-20 right-4 z-50 p-4 rounded-xl shadow-lg max-w-sm ${socketMessage.type === 'success'
+            ? 'bg-[#F0FFF4] border border-[#00C896]'
+            : socketMessage.type === 'error'
+              ? 'bg-[#FCE9E7] border border-[#E1261C]'
+              : 'bg-[#FFF8F0] border border-[#FFD9B3]'
+            }`}
+        >
+          <div className="flex items-start gap-3">
+            {socketMessage.type === 'success' && (
+              <CheckCircle className="h-5 w-5 text-[#00C896] flex-shrink-0 mt-0.5" />
+            )}
+            {socketMessage.type === 'error' && (
+              <AlertCircle className="h-5 w-5 text-[#E1261C] flex-shrink-0 mt-0.5" />
+            )}
+            {socketMessage.type !== 'success' && socketMessage.type !== 'error' && (
+              <Info className="h-5 w-5 text-[#FF8C00] flex-shrink-0 mt-0.5" />
+            )}
+            <div>
+              <p className="text-sm text-[#0A0A0A] font-medium">
+                {socketMessage.message}
+              </p>
+              {socketMessage.document && (
+                <p className="text-xs text-[#888888] mt-1">
+                  Document: {socketMessage.document}
+                </p>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+
       {/* Header */}
       <div className="bg-white border-b border-[#E8E6E3] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
