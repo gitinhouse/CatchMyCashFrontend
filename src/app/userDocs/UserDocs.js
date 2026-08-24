@@ -133,32 +133,26 @@ const UserDocs = () => {
     if (!res.ok) throw new Error("Failed to upload file");
   };
 
-  // ✅ WebSocket update
   const sendWebSocketUpdate = (uploadedFiles, attempt = 1) => {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_WS_URL || window.location.origin;
-       const protocol = baseUrl.startsWith("https") ? "wss" : "ws";
-    const host = baseUrl.replace(/^https?:\/\//, ""); // remove protocol
-    const wsUrl = `${protocol}://${host}/api/ws`;
-const socket = new WebSocket(wsUrl);
-      socket.onopen = () => {
-        const documentStatus = {
-          proof_id: !!uploadedFiles.id,
-          ssn_id: !!uploadedFiles.ssn,
-          adress_proof: !!uploadedFiles.address,
-          brith_proof: !!uploadedFiles.birth,
-          employee_proof: !!uploadedFiles.employment,
-          claim_doc: !!uploadedFiles.claim,
-        };
+      const protocol = baseUrl.startsWith("https") ? "wss" : "ws";
+      const host = baseUrl.replace(/^https?:\/\//, "");
+      const wsUrl = `${protocol}://${host}/api/ws`;
+      const socket = new WebSocket(wsUrl);
 
+      socket.onopen = () => {
+        // ✅ CORRECTED: Send the actual file info, not just boolean flags
         const message = {
           type: "documents_submitted",
-          caseId,
-          userId,
-          documents: documentStatus,
+          caseId: caseId,
+          userId: userId,
+          document: docId,  // ← Send which document was uploaded
+          file_name: uploadedFiles[docId]?.name || 'document',
           timestamp: new Date().toISOString(),
         };
 
+        console.log('📤 Sending WebSocket message:', message);
         socket.send(JSON.stringify(message));
         setTimeout(() => socket.close(), 500);
       };
@@ -166,16 +160,13 @@ const socket = new WebSocket(wsUrl);
       socket.onerror = (err) => {
         console.error("WebSocket error:", err);
         socket.close();
-        if (attempt < 3)
-          setTimeout(
-            () => sendWebSocketUpdate(uploadedFiles, attempt + 1),
-            1000
-          );
+        if (attempt < 3) setTimeout(() => sendWebSocketUpdate(uploadedFiles, attempt + 1), 1000);
       };
     } catch (err) {
       console.error("WebSocket send failed:", err);
     }
   };
+
 
   // ✅ User tap triggers gallery
   const handleTapAnywhere = () => {
@@ -189,18 +180,18 @@ const socket = new WebSocket(wsUrl);
   };
 
   useEffect(() => {
-  if (showSuccessPopup) {
-    const timer = setTimeout(() => {
-      window.open("", "_self");
-      window.close();
+    if (showSuccessPopup) {
+      const timer = setTimeout(() => {
+        window.open("", "_self");
+        window.close();
 
-      // fallback redirect if tab cannot be closed
-      router.push("/");
-    }, 2000);
+        // fallback redirect if tab cannot be closed
+        router.push("/");
+      }, 2000);
 
-    return () => clearTimeout(timer);
-  }
-}, [showSuccessPopup, router]);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessPopup, router]);
 
   return (
     <div
