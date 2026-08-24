@@ -121,39 +121,39 @@ const LandingPage = ({ onNext }) => {
     router.push('/userLogin');
   };
 
-const handleSearchClaim = async () => {
-  if (!searchClaimId.trim()) {
-    setSearchError('Please enter a Claim ID');
-    return;
-  }
-
-  setIsSearching(true);
-  setSearchError('');
-  setSearchResult(null);
-
-  try {
-    // Use the existing endpoint with public=true
-    const { data } = await axios.get(
-      `/api/case?claim_id=${searchClaimId.trim()}&public=true`
-    );
-
-    if (data?.data && data.data.length > 0) {
-      setSearchResult(data.data[0]);
-      setShowModal(true);
-    } else {
-      setSearchError('No claim found with this Claim ID');
+  const handleSearchClaim = async () => {
+    if (!searchClaimId.trim()) {
+      setSearchError('Please enter a Claim ID');
+      return;
     }
-  } catch (err) {
-    console.error('Search error:', err);
-    if (err.response?.status === 404) {
-      setSearchError('No claim found with this Claim ID');
-    } else {
-      setSearchError('Failed to search for claim. Please try again.');
+
+    setIsSearching(true);
+    setSearchError('');
+    setSearchResult(null);
+
+    try {
+      // Use the existing endpoint with public=true
+      const { data } = await axios.get(
+        `/api/case?claim_id=${searchClaimId.trim()}&public=true`
+      );
+
+      if (data?.data && data.data.length > 0) {
+        setSearchResult(data.data[0]);
+        setShowModal(true);
+      } else {
+        setSearchError('No claim found with this Claim ID');
+      }
+    } catch (err) {
+      console.error('Search error:', err);
+      if (err.response?.status === 404) {
+        setSearchError('No claim found with this Claim ID');
+      } else {
+        setSearchError('Failed to search for claim. Please try again.');
+      }
+    } finally {
+      setIsSearching(false);
     }
-  } finally {
-    setIsSearching(false);
-  }
-};
+  };
 
   // 🔹 NEW: Close modal function
   const closeModal = () => {
@@ -591,7 +591,7 @@ const handleSearchClaim = async () => {
           </motion.div>
         </motion.div>
       </div>
-    {showModal && searchResult && (
+      {showModal && searchResult && (
         <ClaimProgressModal
           claim={searchResult}
           onClose={closeModal}
@@ -604,7 +604,7 @@ const ClaimProgressModal = ({ claim, onClose }) => {
   const [activeTab, setActiveTab] = useState('progress');
   const properties = claim?.user_properties || [];
   const details = claim?.user_details?.[0] || {};
-  
+
   const parseAmount = (v) => {
     const n = parseFloat(v);
     return Number.isFinite(n) ? n : 0;
@@ -622,7 +622,7 @@ const ClaimProgressModal = ({ claim, onClose }) => {
   const getProgressSteps = () => {
     const docs = claim?.user_docs?.[0] || {};
     const steps = [];
-    
+
     // Step 1: Property Selected
     steps.push({
       id: 1,
@@ -777,11 +777,10 @@ const ClaimProgressModal = ({ claim, onClose }) => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`pb-3 text-sm font-medium border-b-2 transition-all ${
-                  activeTab === tab.id
+                className={`pb-3 text-sm font-medium border-b-2 transition-all ${activeTab === tab.id
                     ? 'border-[#E1261C] text-[#E1261C]'
                     : 'border-transparent text-[#4A4A4A] hover:text-[#0A0A0A]'
-                }`}
+                  }`}
               >
                 {tab.label}
               </button>
@@ -796,17 +795,15 @@ const ClaimProgressModal = ({ claim, onClose }) => {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className={`flex items-start gap-4 p-4 rounded-xl border transition-all ${
-                    step.completed
+                  className={`flex items-start gap-4 p-4 rounded-xl border transition-all ${step.completed
                       ? 'bg-[#F0FFF4] border-[#00C896]/30'
                       : 'bg-[#F7F5F2] border-[#E8E6E3] opacity-70'
-                  }`}
+                    }`}
                 >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    step.completed
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${step.completed
                       ? 'bg-[#00C896] text-white'
                       : 'bg-[#D4D4D4] text-[#888888]'
-                  }`}>
+                    }`}>
                     {step.completed ? (
                       <CheckCircle2 className="h-5 w-5" />
                     ) : (
@@ -815,9 +812,8 @@ const ClaimProgressModal = ({ claim, onClose }) => {
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h4 className={`font-semibold ${
-                        step.completed ? 'text-[#0A0A0A]' : 'text-[#888888]'
-                      }`}>
+                      <h4 className={`font-semibold ${step.completed ? 'text-[#0A0A0A]' : 'text-[#888888]'
+                        }`}>
                         {step.title}
                       </h4>
                       {step.completed && (
@@ -826,9 +822,8 @@ const ClaimProgressModal = ({ claim, onClose }) => {
                         </span>
                       )}
                     </div>
-                    <p className={`text-sm ${
-                      step.completed ? 'text-[#4A4A4A]' : 'text-[#888888]'
-                    }`}>
+                    <p className={`text-sm ${step.completed ? 'text-[#4A4A4A]' : 'text-[#888888]'
+                      }`}>
                       {step.description}
                     </p>
                   </div>
@@ -844,32 +839,47 @@ const ClaimProgressModal = ({ claim, onClose }) => {
                 <p className="text-sm text-[#888888]">No assets on this claim.</p>
               ) : (
                 <div className="space-y-3">
-                  {properties.map((p, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between border-b border-[#F0EEEB] pb-3 last:border-b-0"
-                    >
-                      <div>
-                        <p className="font-semibold text-[#0A0A0A]">
-                          {claim.user_info?.first_name} {claim.user_info?.last_name}
-                        </p>
-                        <p className="text-sm text-[#4A4A4A]">
-                          {p.property_title || p.property_type}
-                        </p>
-                        <p className="text-xs text-[#888888] font-['JetBrains_Mono']">
-                          ID: {p.property_id}
-                        </p>
-                        {p.claim_id && (
-                          <p className="text-xs text-[#E1261C] font-['JetBrains_Mono'] mt-1">
-                            Claim ID: {p.claim_id}
+                  {properties.map((p, idx) => {
+                    const isClaimed = p.is_claimed === true;
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between border-b border-[#F0EEEB] pb-3 last:border-b-0"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-[#0A0A0A]">
+                              {claim.user_info?.first_name} {claim.user_info?.last_name}
+                            </p>
+                            {isClaimed && (
+                              <span className="px-2 py-0.5 bg-[#00C896] text-white text-[10px] font-semibold rounded-full">
+                                ✓ Claimed
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-[#4A4A4A]">
+                            {p.property_title || p.property_type}
                           </p>
-                        )}
+                          <p className="text-xs text-[#888888] font-['JetBrains_Mono']">
+                            ID: {p.property_id}
+                          </p>
+                          {p.claim_id && (
+                            <p className="text-xs text-[#E1261C] font-['JetBrains_Mono'] mt-1">
+                              Claim ID: {p.claim_id}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-[#0A0A0A]">
+                            ${formatMoney(parseAmount(p.amount))}
+                          </p>
+                          {isClaimed && (
+                            <p className="text-xs text-[#00C896]">Claimed</p>
+                          )}
+                        </div>
                       </div>
-                      <p className="font-bold text-[#0A0A0A]">
-                        ${formatMoney(parseAmount(p.amount))}
-                      </p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -912,10 +922,10 @@ const ClaimProgressModal = ({ claim, onClose }) => {
                 <p className="font-semibold text-[#0A0A0A]">
                   {claim.createdAt
                     ? new Date(claim.createdAt).toLocaleDateString('en-US', {
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })
                     : 'N/A'}
                 </p>
               </div>

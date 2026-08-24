@@ -19,73 +19,78 @@ function parseAmount(v) {
 }
 
 function deriveCaseStatus(caseItem) {
-    const docs = caseItem?.user_docs?.[0] || {};
     const properties = caseItem?.user_properties || [];
-
-    const hasInvestigatorSigned =
-        typeof docs.signed_doc === 'string' &&
-        docs.signed_doc.includes('signed-document');
-
-    const hasAgreementForm =
-        (typeof docs.filled_agreement_doc === 'string' &&
-            docs.filled_agreement_doc.includes('FilledAgreement_form')) ||
-        (typeof docs.signed_doc === 'string' &&
-            docs.signed_doc.includes('FilledAgreement_form'));
-
-    const hasId = !!docs.proof_id;
-    const hasSsn = !!docs.ssn_id;
-    const hasAddress = !!docs.adress_proof;
-    const requiredDocsUploaded = hasId && hasSsn && hasAddress;
-
-    // Real completeness, computed the same way DocumentUpload.jsx checks it
-    const documentsActuallyComplete =
-        hasInvestigatorSigned && hasAgreementForm && requiredDocsUploaded;
-
-    // Only trust the "submitted" flag if the documents are genuinely done —
-    // this stops a premature status value (set as soon as the case record
-    // is created in Step 4) from skipping over an incomplete Step 5.
-    const isSubmitted = Boolean(
-        caseItem?.submitted_at ||
-        caseItem?.document_upload_task_status === 'completed' ||
-        caseItem?.claim_process_task_status === 'completed' ||
-        caseItem?.claim_status === 'Success',
-    );
-
     const hasProperties = properties && properties.length > 0;
     const hasUserInfo = !!caseItem?.user_details?.[0];
+    const docs = caseItem?.user_docs?.[0] || {};
 
-    const checklist = {
-        hasInvestigatorSigned,
-        hasAgreementForm,
-        requiredDocsUploaded,
-        isSubmitted,
-        hasProperties,
-        hasUserInfo,
-    };
+    // Check what documents are actually uploaded from the API response
+    const hasAgreementDoc = !!docs.agreement_doc;
+    const hasProofId = !!docs.proof_id;
+    const hasSsnId = !!docs.ssn_id;
+    const hasAddressProof = !!docs.adress_proof;
 
-    // Approved takes priority (status === false means approved per existing convention)
-    if (caseItem?.status === false) {
+    // These come directly from the API
+    const isApproved = caseItem?.status === false;
+    const isSubmitted = Boolean(
+        caseItem?.submitted_at ||
+        caseItem?.claim_process_task_status === 'completed' ||
+        caseItem?.claim_status === 'Success' ||
+        caseItem?.document_upload_task_status === 'completed'
+    );
+
+    const docsCompleted = caseItem?.document_upload_task_status === 'completed';
+    const claimProcessed = caseItem?.claim_process_task_status === 'completed';
+
+    // Priority 1: Approved
+    if (isApproved) {
         return {
             label: 'Approved',
             tone: 'approved',
             resumeStep: null,
             stepTitle: 'Claim Approved',
             stepDescription: 'Your claim has been approved by the State Controller\'s Office',
-            checklist
+            checklist: { isApproved: true }
         };
     }
 
-    if (isSubmitted) {
+    // Priority 2: Claim submitted and processed → tracking
+    if ((isSubmitted || claimProcessed) && docsCompleted) {
         return {
             label: 'In Review',
             tone: 'review',
             resumeStep: 'tracking',
             stepTitle: 'Track Your Claim',
             stepDescription: 'Check the status of your submitted claim',
-            checklist
+            checklist: { isSubmitted: true, claimProcessed: true }
         };
     }
 
+    // Priority 3: Documents uploaded → tracking (waiting for processing)
+    if (docsCompleted && !claimProcessed) {
+        return {
+            label: 'Processing',
+            tone: 'review',
+            resumeStep: 'tracking',
+            stepTitle: 'Track Your Claim',
+            stepDescription: 'Your documents are uploaded. We\'re processing your claim.',
+            checklist: { docsCompleted: true }
+        };
+    }
+
+    // Priority 4: Has properties and user info but no docs → documents
+    if (hasProperties && hasUserInfo && !docsCompleted) {
+        return {
+            label: 'Action Required',
+            tone: 'action',
+            resumeStep: 'documents',
+            stepTitle: 'Upload Required Documents',
+            stepDescription: 'Upload Required Documents to continue',
+            checklist: { hasUserInfo: true, hasProperties: true }
+        };
+    }
+
+    // Priority 5: Has properties but no user info → userinfo
     if (hasProperties && !hasUserInfo) {
         return {
             label: 'Action Required',
@@ -93,10 +98,11 @@ function deriveCaseStatus(caseItem) {
             resumeStep: 'userinfo',
             stepTitle: 'Complete Your Information',
             stepDescription: 'Fill in your personal details to continue with the claim',
-            checklist,
+            checklist: { hasProperties: true }
         };
     }
 
+    // Priority 6: No properties → search
     if (!hasProperties) {
         return {
             label: 'Action Required',
@@ -104,50 +110,18 @@ function deriveCaseStatus(caseItem) {
             resumeStep: 'search',
             stepTitle: 'Select Property',
             stepDescription: 'Search for and select the unclaimed property you want to claim',
-            checklist,
+            checklist: { hasProperties: false }
         };
     }
 
-    if (!hasInvestigatorSigned) {
-        return {
-            label: 'Action Required',
-            tone: 'action',
-            resumeStep: 'documents',
-            stepTitle: 'Sign Investigator Agreement',
-            stepDescription: 'Sign your investigator services agreement via DocuSign',
-            checklist,
-        };
-    }
-
-    if (!hasAgreementForm) {
-        return {
-            label: 'Action Required',
-            tone: 'action',
-            resumeStep: 'documents',
-            stepTitle: 'Sign Agreement Form',
-            stepDescription: "Sign the State Controller's Office authorization form",
-            checklist,
-        };
-    }
-
-    if (!requiredDocsUploaded) {
-        return {
-            label: 'Action Required',
-            tone: 'action',
-            resumeStep: 'documents',
-            stepTitle: 'Identity Verification',
-            stepDescription: 'Verify your identity — upload ID, SSN, and address proof',
-            checklist,
-        };
-    }
-
+    // Default fallback
     return {
-        label: 'Ready to Submit',
+        label: 'In Progress',
         tone: 'action',
         resumeStep: 'documents',
-        stepTitle: 'Submit Your Case',
-        stepDescription: 'Review and submit your case to the State Controller\'s Office',
-        checklist,
+        stepTitle: 'Continue Your Claim',
+        stepDescription: 'Complete the remaining steps to file your claim',
+        checklist: {}
     };
 }
 
@@ -416,34 +390,48 @@ export default function MyAccountPage() {
                                                             <p className="text-sm text-[#888888]">No assets on this claim.</p>
                                                         ) : (
                                                             <div className="space-y-3">
-                                                                {properties.map((p, idx) => (
-                                                                    <div
-                                                                        key={idx}
-                                                                        className="flex items-center justify-between border-b border-[#F0EEEB] pb-3 last:border-b-0"
-                                                                    >
-                                                                        <div>
-                                                                            <p className="font-semibold text-[#0A0A0A]">
-                                                                                {caseItem.user_info?.first_name}{' '}
-                                                                                {caseItem.user_info?.last_name}
-                                                                            </p>
-                                                                            <p className="text-sm text-[#4A4A4A]">
-                                                                                {p.property_title || p.property_type}
-                                                                            </p>
-                                                                            <p className="text-xs text-[#888888] font-['JetBrains_Mono']">
-                                                                                ID: {p.property_id}
-                                                                            </p>
-                                                                            {/* 🔹 ADD THIS: Display property-level claim_id */}
-                                                                            {p.claim_id && (
-                                                                                <p className="text-xs text-[#E1261C] font-['JetBrains_Mono'] mt-1">
-                                                                                    Claim ID: {p.claim_id}
+                                                                {properties.map((p, idx) => {
+                                                                    const isClaimed = p.is_claimed === true;
+                                                                    return (
+                                                                        <div
+                                                                            key={idx}
+                                                                            className="flex items-center justify-between border-b border-[#F0EEEB] pb-3 last:border-b-0"
+                                                                        >
+                                                                            <div className="flex-1">
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <p className="font-semibold text-[#0A0A0A]">
+                                                                                        {caseItem.user_info?.first_name}{' '}
+                                                                                        {caseItem.user_info?.last_name}
+                                                                                    </p>
+                                                                                    {isClaimed && (
+                                                                                        <span className="px-2 py-0.5 bg-[#00C896] text-white text-[10px] font-semibold rounded-full">
+                                                                                            ✓ Claimed
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                                <p className="text-sm text-[#4A4A4A]">
+                                                                                    {p.property_title || p.property_type}
                                                                                 </p>
-                                                                            )}
+                                                                                <p className="text-xs text-[#888888] font-['JetBrains_Mono']">
+                                                                                    ID: {p.property_id}
+                                                                                </p>
+                                                                                {p.claim_id && (
+                                                                                    <p className="text-xs text-[#E1261C] font-['JetBrains_Mono'] mt-1">
+                                                                                        Claim ID: {p.claim_id}
+                                                                                    </p>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="text-right">
+                                                                                <p className="font-bold text-[#0A0A0A]">
+                                                                                    ${formatMoney(parseAmount(p.amount))}
+                                                                                </p>
+                                                                                {isClaimed && (
+                                                                                    <p className="text-xs text-[#00C896]">Claimed</p>
+                                                                                )}
+                                                                            </div>
                                                                         </div>
-                                                                        <p className="font-bold text-[#0A0A0A]">
-                                                                            ${formatMoney(parseAmount(p.amount))}
-                                                                        </p>
-                                                                    </div>
-                                                                ))}
+                                                                    );
+                                                                })}
                                                             </div>
                                                         )}
                                                     </div>

@@ -77,9 +77,9 @@ export async function GET(req) {
     // 🔹 CHECK PUBLIC SEARCH FIRST - BEFORE AUTHENTICATION
     if (public_search === 'true' && claim_id) {
       await connectToDatabase();
-      
+
       const pipeline = [];
-      
+
       // Filter by claim_id
       pipeline.push({
         $match: { claim_id: claim_id }
@@ -219,6 +219,7 @@ export async function GET(req) {
             'user_properties.property_type': 1,
             'user_properties.amount': 1,
             'user_properties.claim_id': 1,
+            'user_properties.is_claimed': 1, // ← ADD THIS
           },
         },
       );
@@ -470,6 +471,7 @@ export async function GET(req) {
           'user_properties.property_type': 1,
           'user_properties.amount': 1,
           'user_properties.claim_id': 1,
+          'user_properties.is_claimed': 1,
         },
       },
     );
