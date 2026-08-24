@@ -52,7 +52,7 @@ function deriveCaseStatus(caseItem) {
             tone: 'action',
             resumeStep: null, // No step to continue
             stepTitle: 'Properties Already Claimed',
-            stepDescription: 'All properties in this claim have already been claimed by another user. Please search for new properties.',
+            stepDescription: 'Properties already been claimed by another user. Please search for new properties.',
             checklist: { allClaimed: true, canContinue: false }
         };
     }
@@ -113,7 +113,7 @@ function deriveCaseStatus(caseItem) {
             tone: 'action',
             resumeStep: 'documents',
             stepTitle: 'Upload Required Documents',
-            stepDescription: 'Upload your ID, SSN, and address proof to continue',
+            stepDescription: 'Upload Required Documents to continue',
             checklist: { hasUserInfo: true, hasProperties: true, canContinue: true }
         };
     }
@@ -154,10 +154,12 @@ function deriveCaseStatus(caseItem) {
 }
 
 const toneStyles = {
-    approved: 'bg-[#00C896] text-white',
+    approved: 'bg-[#E1261C] text-white', // Changed from green to red
     review: 'bg-[#4A4A4A] text-white',
     action: 'bg-[#E1261C] text-white',
 };
+
+
 
 // ── Component ────────────────────────────────────────────────────────────
 export default function MyAccountPage() {
@@ -578,7 +580,7 @@ export default function MyAccountPage() {
                                                                     </p>
                                                                 </div>
                                                                 <p className="text-[#4A4A4A]">
-                                                                    All properties in this claim have already been claimed by another user.
+                                                                    Properties been claimed by another user.
                                                                     You cannot claim these properties.
                                                                 </p>
                                                                 <div className="mt-4 pt-4 border-t border-[#E8E6E3]">
