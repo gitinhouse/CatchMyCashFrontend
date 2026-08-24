@@ -88,32 +88,27 @@ const UserLogin = () => {
     }
   }, [email, password, validationError]);
 
-  // If already logged in, skip login form and go to the right page
-  useEffect(() => {
-    try {
-      const savedLoginRaw = localStorage.getItem('userLogin');
-      if (!savedLoginRaw) return;
+useEffect(() => {
+  try {
+    const savedLoginRaw = localStorage.getItem('userLogin');
+    if (!savedLoginRaw) return;
 
-      const savedLogin = JSON.parse(savedLoginRaw);
-      if (!savedLogin?.token || !savedLogin?.user) return;
+    const savedLogin = JSON.parse(savedLoginRaw);
+    if (!savedLogin?.token || !savedLogin?.user) return;
 
-      setUserLogin(savedLogin);
+    setUserLogin(savedLogin);
 
-      if (
-        savedLogin.user.type === 'User' &&
-        savedLogin.user.user_type === 'Old'
-      ) {
-        router.replace('/?step=documents');
-        return;
-      }
-
-      if (savedLogin.user.type !== 'User') {
-        router.replace('/allUsers');
-      }
-    } catch (error) {
-      console.error('Failed to restore login session:', error);
-    }
-  }, [router, setUserLogin]);
+    // ✅ Redirect all logged-in users to home page
+    // The Home component will handle where to redirect based on their progress
+    router.replace('/');
+    
+    // Note: The Home component's session restoration logic will:
+    // - If user is 'Old' (returning), redirect to appropriate step (documents/tracking)
+    // - If user is 'New', show the landing page with option to continue
+  } catch (error) {
+    console.error('Failed to restore login session:', error);
+  }
+}, [router, setUserLogin]);
 
   const handleSearch = async () => {
     setValidationError('');
