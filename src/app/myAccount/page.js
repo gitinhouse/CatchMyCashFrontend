@@ -52,7 +52,7 @@ function deriveCaseStatus(caseItem) {
             tone: 'action',
             resumeStep: null, // No step to continue
             stepTitle: 'Properties Already Claimed',
-            stepDescription: 'All properties in this claim have already been claimed by another user. Please search for new properties.',
+            stepDescription: 'Properties already been claimed by another user. Please search for new properties.',
             checklist: { allClaimed: true, canContinue: false }
         };
     }
@@ -113,7 +113,7 @@ function deriveCaseStatus(caseItem) {
             tone: 'action',
             resumeStep: 'documents',
             stepTitle: 'Upload Required Documents',
-            stepDescription: 'Upload your ID, SSN, and address proof to continue',
+            stepDescription: 'Upload Required Documents to continue',
             checklist: { hasUserInfo: true, hasProperties: true, canContinue: true }
         };
     }
@@ -154,10 +154,12 @@ function deriveCaseStatus(caseItem) {
 }
 
 const toneStyles = {
-    approved: 'bg-[#00C896] text-white',
+    approved: 'bg-[#E1261C] text-white', // Changed from green to red
     review: 'bg-[#4A4A4A] text-white',
     action: 'bg-[#E1261C] text-white',
 };
+
+
 
 // ── Component ────────────────────────────────────────────────────────────
 export default function MyAccountPage() {
@@ -284,7 +286,7 @@ export default function MyAccountPage() {
                         </div>
                         <div className="text-right">
                             <p className="text-xs uppercase text-[#888888] font-['JetBrains_Mono']">Approved</p>
-                            <p className="text-2xl font-bold text-[#00C896] font-['Fraunces']">
+                            <p className="text-2xl font-bold text-[#E1261C] font-['Fraunces']">
                                 ${formatMoney(totals.approved)}
                             </p>
                         </div>
@@ -348,7 +350,7 @@ export default function MyAccountPage() {
                                                     </span>
                                                 )}
                                                 {properties.some(p => p.is_claimed !== true) && (
-                                                    <span className="text-xs text-[#00C896] font-['JetBrains_Mono']">
+                                                    <span className="text-xs text-[#E1261C] font-['JetBrains_Mono']">
                                                         • {properties.filter(p => p.is_claimed !== true).length} available
                                                     </span>
                                                 )}
@@ -404,7 +406,7 @@ export default function MyAccountPage() {
                                             {status.checklist?.isProcessed && (
                                                 <button
                                                     onClick={() => router.push('/?step=tracking')}
-                                                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#00C896] text-white text-sm font-semibold rounded-lg hover:bg-[#00A87E] transition-all shadow-sm"
+                                                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#E1261C] transition-all shadow-sm"
                                                 >
                                                     View Claim Status
                                                     <ArrowRight className="h-4 w-4" />
@@ -472,7 +474,7 @@ export default function MyAccountPage() {
                                                                                     {properties.filter(p => p.is_claimed === true).length} of {properties.length} properties have already been claimed by another user and cannot be claimed again.
                                                                                 </p>
                                                                                 {properties.some(p => p.is_claimed !== true) && (
-                                                                                    <p className="text-sm text-[#00C896] mt-1">
+                                                                                    <p className="text-sm text-[#E1261C] mt-1">
                                                                                         ✅ {properties.filter(p => p.is_claimed !== true).length} properties are still available to claim.
                                                                                     </p>
                                                                                 )}
@@ -504,7 +506,7 @@ export default function MyAccountPage() {
                                                                                                 ⚠️ Already Claimed
                                                                                             </span>
                                                                                         ) : (
-                                                                                            <span className="px-2 py-0.5 bg-[#00C896] text-white text-[10px] font-semibold rounded-full">
+                                                                                            <span className="px-2 py-0.5 bg-[#E1261C] text-white text-[10px] font-semibold rounded-full">
                                                                                                 ✓ Available
                                                                                             </span>
                                                                                         )}
@@ -522,7 +524,7 @@ export default function MyAccountPage() {
                                                                                     )}
                                                                                     {isClaimed && (
                                                                                         <p className="text-xs text-[#E1261C] mt-1">
-                                                                                            ⚠️ This property has already been claimed by another user
+                                                                                            ⚠️ This property already  claimed.
                                                                                         </p>
                                                                                     )}
                                                                                 </div>
@@ -531,9 +533,9 @@ export default function MyAccountPage() {
                                                                                         ${formatMoney(parseAmount(p.amount))}
                                                                                     </p>
                                                                                     {isClaimed ? (
-                                                                                        <p className="text-xs text-[#E1261C] font-semibold">Claimed by another</p>
+                                                                                        <p className="text-xs text-[#E1261C] font-semibold">Already Claimed</p>
                                                                                     ) : (
-                                                                                        <p className="text-xs text-[#00C896]">Available to claim</p>
+                                                                                        <p className="text-xs text-[#E1261C]">Available to claim</p>
                                                                                     )}
                                                                                 </div>
                                                                             </div>
@@ -569,61 +571,16 @@ export default function MyAccountPage() {
 
                                                 {tab === 'status' && (
                                                     <div className="space-y-6 text-sm">
-                                                        {status.checklist?.allClaimed ? (
-                                                            <div className="bg-[#FCE9E7] border border-[#E1261C]/30 rounded-xl p-5">
-                                                                <div className="flex items-center gap-3 mb-3">
-                                                                    <AlertCircle className="h-6 w-6 text-[#E1261C]" />
-                                                                    <p className="font-bold text-[#0A0A0A] text-lg">
-                                                                        ⚠️ All Properties Already Claimed
-                                                                    </p>
-                                                                </div>
-                                                                <p className="text-[#4A4A4A]">
-                                                                    All properties in this claim have already been claimed by another user.
-                                                                    You cannot claim these properties.
-                                                                </p>
-                                                                <div className="mt-4 pt-4 border-t border-[#E8E6E3]">
-                                                                    <p className="text-xs text-[#888888] mb-2">Already Claimed Property IDs:</p>
-                                                                    <div className="flex flex-wrap gap-2">
-                                                                        {properties.filter(p => p.is_claimed === true).map(p => (
-                                                                            <span key={p.property_id} className="px-2 py-1 bg-[#FCE9E7] text-[#E1261C] text-xs rounded-full font-['JetBrains_Mono']">
-                                                                                {p.property_id}
-                                                                            </span>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                                <button
-                                                                    onClick={() => router.push('/?step=search')}
-                                                                    className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all"
-                                                                >
-                                                                    Search New Properties
-                                                                    <ArrowRight className="h-4 w-4" />
-                                                                </button>
-                                                            </div>
-                                                        ) : status.checklist?.someClaimed ? (
-                                                            <div className="bg-[#FFF8F0] border border-[#FFD9B3] rounded-xl p-5">
-                                                                <p className="font-bold text-[#0A0A0A] mb-1">
-                                                                    ⚠️ Some Properties Already Claimed
-                                                                </p>
-                                                                <p className="text-[#4A4A4A]">
-                                                                    {properties.filter(p => p.is_claimed === true).length} properties are already claimed by another user.
-                                                                    You can continue with the remaining {properties.filter(p => p.is_claimed !== true).length} properties.
-                                                                </p>
-                                                                <button
-                                                                    onClick={() => handleContinueFiling(caseItem)}
-                                                                    className="mt-3 inline-flex items-center gap-2 px-4 py-2.5 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all"
-                                                                >
-                                                                    Continue with Available Properties
-                                                                    <ArrowRight className="h-4 w-4" />
-                                                                </button>
-                                                            </div>
-                                                        ) : status.resumeStep ? (
-                                                            // ... existing "Action required" code
+                                                        {/* Checklist */}
+
+                                                        {/* Next step card — matches "Continue Filing" pattern */}
+                                                        {status.resumeStep ? (
                                                             <div>
                                                                 <h4 className="font-bold text-[#0A0A0A] mb-1">
                                                                     Action required to continue your claim
                                                                 </h4>
                                                                 <p className="text-[#4A4A4A] mb-4">
-                                                                    Complete the next step to continue with your claim.
+                                                                    Your claim is not finished yet. Complete the next step to keep things moving.
                                                                 </p>
                                                                 <div className="bg-[#F7F5F2] border border-[#E8E6E3] rounded-xl p-5">
                                                                     <p className="text-xs uppercase text-[#888888] font-['JetBrains_Mono'] mb-1">
@@ -645,12 +602,16 @@ export default function MyAccountPage() {
                                                                 </div>
                                                             </div>
                                                         ) : (
-                                                            <div className="bg-[#F7F5F2] border border-[#E8E6E3] rounded-xl p-5">
+                                                            <div className="bg-[#F0FFF4] border border-[#E1261C]/30 rounded-xl p-5">
                                                                 <p className="font-bold text-[#0A0A0A] mb-1">
-                                                                    Claim Status
+                                                                    {caseItem?.status === false
+                                                                        ? 'Your claim has been approved'
+                                                                        : 'Your claim is  under review'}
                                                                 </p>
                                                                 <p className="text-[#4A4A4A]">
-                                                                    {status.label || 'In Progress'}
+                                                                    {caseItem?.status === false
+                                                                        ? 'No further action needed from you right now.'
+                                                                        : "No further action needed from you right now."}
                                                                 </p>
                                                             </div>
                                                         )}
