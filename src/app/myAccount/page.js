@@ -24,96 +24,112 @@ function deriveCaseStatus(caseItem) {
     const hasUserInfo = !!caseItem?.user_details?.[0];
     const docs = caseItem?.user_docs?.[0] || {};
 
-    // Check if ALL properties are already claimed
+    // ✅ Check if ALL properties are already claimed (from RDP)
     const allClaimed = properties.length > 0 && properties.every(p => p.is_claimed === true);
     const someClaimed = properties.some(p => p.is_claimed === true);
 
-    // These come directly from the API
-    const isApproved = caseItem?.status === false;
-    const isFailed = caseItem?.claim_status === 'Failed' || caseItem?.claim_process_task_status === 'failed';
-    const isSubmitted = Boolean(
-        caseItem?.submitted_at ||
-        caseItem?.claim_process_task_status === 'completed' ||
-        caseItem?.claim_status === 'Success' ||
+    // ✅ Check if the user has actually uploaded documents
+    const hasUploadedDocs = !!(docs.proof_id || docs.ssn_id || docs.adress_proof || docs.agreement_doc);
+
+    // ✅ Check if the claim was actually submitted
+    const hasSubmitted = Boolean(
+        caseItem?.submitted_at &&
         caseItem?.document_upload_task_status === 'completed'
     );
 
-    const docsCompleted = caseItem?.document_upload_task_status === 'completed';
-    const claimProcessed = caseItem?.claim_process_task_status === 'completed';
+    // ✅ Check if claim process is actually complete
+    const isProcessed = Boolean(
+        caseItem?.claim_status === 'Success' &&
+        caseItem?.claim_process_task_status === 'completed' &&
+        hasSubmitted
+    );
 
-    // Priority 1: Approved
-    if (isApproved) {
+    // ✅ PRIORITY 1: ALL properties are claimed by another user
+    if (allClaimed) {
+        return {
+            label: 'Already Claimed',
+            tone: 'action',
+            resumeStep: null, // No step to continue
+            stepTitle: 'Properties Already Claimed',
+            stepDescription: 'All properties in this claim have already been claimed by another user. Please search for new properties.',
+            checklist: { allClaimed: true, canContinue: false }
+        };
+    }
+
+    // ✅ PRIORITY 2: Some properties are claimed, some are available
+    if (someClaimed && !allClaimed) {
+        const availableCount = properties.filter(p => p.is_claimed !== true).length;
+        return {
+            label: 'Partial Claim',
+            tone: 'action',
+            resumeStep: 'documents',
+            stepTitle: `Continue with ${availableCount} Available Properties`,
+            stepDescription: `${properties.filter(p => p.is_claimed === true).length} properties are already claimed. You can continue with the remaining ${availableCount} properties.`,
+            checklist: { someClaimed: true, canContinue: true }
+        };
+    }
+
+    // ✅ PRIORITY 3: Claim is actually approved
+    if (isProcessed && hasSubmitted) {
         return {
             label: 'Approved',
             tone: 'approved',
             resumeStep: null,
             stepTitle: 'Claim Approved',
-            stepDescription: 'Your claim has been approved by the State Controller\'s Office',
-            checklist: { isApproved: true }
+            stepDescription: 'Your claim has been successfully approved by the State Controller\'s Office',
+            checklist: { isProcessed: true, canContinue: false }
         };
     }
 
-    // Priority 2: Claim failed because all properties are already claimed
-    if (isFailed && allClaimed) {
-        return {
-            label: 'Already Claimed',
-            tone: 'action',
-            resumeStep: null,
-            stepTitle: 'Properties Already Claimed',
-            stepDescription: 'All properties in this claim have already been claimed by another user. Please search for new properties.',
-            checklist: { allClaimed: true }
-        };
-    }
-
-    // Priority 3: Claim submitted and processed → tracking
-    if ((isSubmitted || claimProcessed) && docsCompleted) {
+    // ✅ PRIORITY 4: Claim submitted but not processed
+    if (hasSubmitted && !isProcessed) {
         return {
             label: 'In Review',
             tone: 'review',
             resumeStep: 'tracking',
             stepTitle: 'Track Your Claim',
             stepDescription: 'Check the status of your submitted claim',
-            checklist: { isSubmitted: true, claimProcessed: true }
+            checklist: { hasSubmitted: true, canContinue: true }
         };
     }
 
-    // Priority 4: Documents uploaded → tracking
-    if (docsCompleted && !claimProcessed) {
+    // ✅ PRIORITY 5: Has documents uploaded but not submitted
+    if (hasUploadedDocs && !hasSubmitted) {
         return {
-            label: 'Processing',
-            tone: 'review',
-            resumeStep: 'tracking',
-            stepTitle: 'Track Your Claim',
-            stepDescription: 'Your documents are uploaded. We\'re processing your claim.',
-            checklist: { docsCompleted: true }
+            label: 'Action Required',
+            tone: 'action',
+            resumeStep: 'documents',
+            stepTitle: 'Submit Your Documents',
+            stepDescription: 'Review and submit your documents to complete the claim',
+            checklist: { hasUploadedDocs: true, canContinue: true }
         };
     }
 
-    // Priority 5: Has properties and user info but no docs → documents
-    if (hasProperties && hasUserInfo && !docsCompleted && !allClaimed) {
+    // ✅ PRIORITY 6: Has properties and user info but no docs
+    if (hasProperties && hasUserInfo && !hasUploadedDocs) {
         return {
             label: 'Action Required',
             tone: 'action',
             resumeStep: 'documents',
             stepTitle: 'Upload Required Documents',
-            stepDescription: 'Upload your documents to continue',
-            checklist: { hasUserInfo: true, hasProperties: true }
+            stepDescription: 'Upload your ID, SSN, and address proof to continue',
+            checklist: { hasUserInfo: true, hasProperties: true, canContinue: true }
         };
     }
 
-    // Priority 6: Has properties but no user info → userinfo
-    if (hasProperties && !hasUserInfo && !allClaimed) {
+    // ✅ PRIORITY 7: Has properties but no user info
+    if (hasProperties && !hasUserInfo) {
         return {
             label: 'Action Required',
             tone: 'action',
             resumeStep: 'userinfo',
             stepTitle: 'Complete Your Information',
             stepDescription: 'Fill in your personal details to continue with the claim',
-            checklist: { hasProperties: true }
+            checklist: { hasProperties: true, canContinue: true }
         };
     }
 
-    // Priority 7: No properties → search
+    // ✅ PRIORITY 8: No properties → search
     if (!hasProperties) {
         return {
             label: 'Action Required',
@@ -121,19 +137,7 @@ function deriveCaseStatus(caseItem) {
             resumeStep: 'search',
             stepTitle: 'Select Property',
             stepDescription: 'Search for and select the unclaimed property you want to claim',
-            checklist: { hasProperties: false }
-        };
-    }
-
-    // Priority 8: Some properties claimed, some not
-    if (someClaimed && !allClaimed) {
-        return {
-            label: 'Partial Claim',
-            tone: 'action',
-            resumeStep: 'documents',
-            stepTitle: 'Continue with Available Properties',
-            stepDescription: 'Some properties in this claim are already claimed. Continue with the remaining properties.',
-            checklist: { someClaimed: true }
+            checklist: { hasProperties: false, canContinue: true }
         };
     }
 
@@ -144,7 +148,7 @@ function deriveCaseStatus(caseItem) {
         resumeStep: 'documents',
         stepTitle: 'Continue Your Claim',
         stepDescription: 'Complete the remaining steps to file your claim',
-        checklist: {}
+        checklist: { canContinue: true }
     };
 }
 
@@ -336,13 +340,19 @@ export default function MyAccountPage() {
                                                         • Claim ID: {caseItem.claim_id}
                                                     </span>
                                                 )}
-                                                {/* Show claimed count if any properties are claimed */}
+                                                {/* ✅ Show claimed count */}
                                                 {properties.some(p => p.is_claimed === true) && (
                                                     <span className="text-xs text-[#E1261C] font-['JetBrains_Mono']">
-                                                        • {properties.filter(p => p.is_claimed === true).length} claimed
+                                                        • {properties.filter(p => p.is_claimed === true).length} already claimed
+                                                    </span>
+                                                )}
+                                                {properties.some(p => p.is_claimed !== true) && (
+                                                    <span className="text-xs text-[#00C896] font-['JetBrains_Mono']">
+                                                        • {properties.filter(p => p.is_claimed !== true).length} available
                                                     </span>
                                                 )}
                                             </div>
+
 
                                             <p className="text-2xl font-bold text-[#0A0A0A] font-['Fraunces']">
                                                 ${formatMoney(caseTotal)}
@@ -365,24 +375,41 @@ export default function MyAccountPage() {
                                         </div>
 
                                         <div className="flex items-center gap-2">
-                                            {status.resumeStep && !status.checklist?.allClaimed && (
-                                                <button
-                                                    onClick={() => handleContinueFiling(caseItem)}
-                                                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm"
-                                                >
-                                                    Continue Filing
-                                                    <ArrowRight className="h-4 w-4" />
-                                                </button>
-                                            )}
+                                            {/* ✅ Show "Search New Properties" if ALL are claimed */}
                                             {status.checklist?.allClaimed && (
                                                 <button
                                                     onClick={() => router.push('/?step=search')}
-                                                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#4A4A4A] text-white text-sm font-semibold rounded-lg hover:bg-[#0A0A0A] transition-all shadow-sm"
+                                                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm"
                                                 >
                                                     Search New Properties
                                                     <ArrowRight className="h-4 w-4" />
                                                 </button>
                                             )}
+
+                                            {/* ✅ Show "Continue Filing" ONLY if there are available properties */}
+                                            {status.checklist?.canContinue &&
+                                                status.resumeStep &&
+                                                !status.checklist?.allClaimed && (
+                                                    <button
+                                                        onClick={() => handleContinueFiling(caseItem)}
+                                                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm"
+                                                    >
+                                                        Continue Filing
+                                                        <ArrowRight className="h-4 w-4" />
+                                                    </button>
+                                                )}
+
+                                            {/* ✅ Show "View Claim" for completed claims */}
+                                            {status.checklist?.isProcessed && (
+                                                <button
+                                                    onClick={() => router.push('/?step=tracking')}
+                                                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#00C896] text-white text-sm font-semibold rounded-lg hover:bg-[#00A87E] transition-all shadow-sm"
+                                                >
+                                                    View Claim Status
+                                                    <ArrowRight className="h-4 w-4" />
+                                                </button>
+                                            )}
+
                                             <button
                                                 onClick={() => toggleCase(caseItem._id)}
                                                 className="p-2 border border-[#E8E6E3] rounded-lg text-[#4A4A4A] hover:bg-[#FCE9E7] transition-all"
@@ -429,22 +456,25 @@ export default function MyAccountPage() {
                                                             <p className="text-sm text-[#888888]">No assets on this claim.</p>
                                                         ) : (
                                                             <>
-                                                                {/* Show warning message if any property is already claimed */}
+                                                                {/* ✅ Show warning if any properties are already claimed */}
                                                                 {properties.some(p => p.is_claimed === true) && (
                                                                     <div className="mb-4 p-4 bg-[#FCE9E7] border border-[#E1261C]/30 rounded-lg">
                                                                         <div className="flex items-start gap-3">
                                                                             <div className="w-8 h-8 bg-[#E1261C] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                                                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                                                                </svg>
+                                                                                <AlertCircle className="h-4 w-4 text-white" />
                                                                             </div>
                                                                             <div>
                                                                                 <p className="text-sm font-semibold text-[#E1261C]">
                                                                                     ⚠️ Properties Already Claimed
                                                                                 </p>
                                                                                 <p className="text-sm text-[#4A4A4A] mt-1">
-                                                                                    {properties.filter(p => p.is_claimed === true).length} of {properties.length} properties have already been claimed with another email address and were not included in this claim.
+                                                                                    {properties.filter(p => p.is_claimed === true).length} of {properties.length} properties have already been claimed by another user and cannot be claimed again.
                                                                                 </p>
+                                                                                {properties.some(p => p.is_claimed !== true) && (
+                                                                                    <p className="text-sm text-[#00C896] mt-1">
+                                                                                        ✅ {properties.filter(p => p.is_claimed !== true).length} properties are still available to claim.
+                                                                                    </p>
+                                                                                )}
                                                                                 <p className="text-xs text-[#888888] mt-1 font-['JetBrains_Mono']">
                                                                                     Claimed Property IDs: {properties.filter(p => p.is_claimed === true).map(p => p.property_id).join(', ')}
                                                                                 </p>
@@ -491,7 +521,7 @@ export default function MyAccountPage() {
                                                                                     )}
                                                                                     {isClaimed && (
                                                                                         <p className="text-xs text-[#E1261C] mt-1">
-                                                                                            This property has already been claime.
+                                                                                            ⚠️ This property has already been claimed by another user
                                                                                         </p>
                                                                                     )}
                                                                                 </div>
@@ -500,9 +530,9 @@ export default function MyAccountPage() {
                                                                                         ${formatMoney(parseAmount(p.amount))}
                                                                                     </p>
                                                                                     {isClaimed ? (
-                                                                                        <p className="text-xs text-[#E1261C] font-semibold">Already Claimed</p>
+                                                                                        <p className="text-xs text-[#E1261C] font-semibold">Claimed by another</p>
                                                                                     ) : (
-                                                                                        <p className="text-xs text-[#00C896]">Available</p>
+                                                                                        <p className="text-xs text-[#00C896]">Available to claim</p>
                                                                                     )}
                                                                                 </div>
                                                                             </div>
@@ -538,16 +568,61 @@ export default function MyAccountPage() {
 
                                                 {tab === 'status' && (
                                                     <div className="space-y-6 text-sm">
-                                                        {/* Checklist */}
-
-                                                        {/* Next step card — matches "Continue Filing" pattern */}
-                                                        {status.resumeStep ? (
+                                                        {status.checklist?.allClaimed ? (
+                                                            <div className="bg-[#FCE9E7] border border-[#E1261C]/30 rounded-xl p-5">
+                                                                <div className="flex items-center gap-3 mb-3">
+                                                                    <AlertCircle className="h-6 w-6 text-[#E1261C]" />
+                                                                    <p className="font-bold text-[#0A0A0A] text-lg">
+                                                                        ⚠️ All Properties Already Claimed
+                                                                    </p>
+                                                                </div>
+                                                                <p className="text-[#4A4A4A]">
+                                                                    All properties in this claim have already been claimed by another user.
+                                                                    You cannot claim these properties.
+                                                                </p>
+                                                                <div className="mt-4 pt-4 border-t border-[#E8E6E3]">
+                                                                    <p className="text-xs text-[#888888] mb-2">Already Claimed Property IDs:</p>
+                                                                    <div className="flex flex-wrap gap-2">
+                                                                        {properties.filter(p => p.is_claimed === true).map(p => (
+                                                                            <span key={p.property_id} className="px-2 py-1 bg-[#FCE9E7] text-[#E1261C] text-xs rounded-full font-['JetBrains_Mono']">
+                                                                                {p.property_id}
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => router.push('/?step=search')}
+                                                                    className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all"
+                                                                >
+                                                                    Search New Properties
+                                                                    <ArrowRight className="h-4 w-4" />
+                                                                </button>
+                                                            </div>
+                                                        ) : status.checklist?.someClaimed ? (
+                                                            <div className="bg-[#FFF8F0] border border-[#FFD9B3] rounded-xl p-5">
+                                                                <p className="font-bold text-[#0A0A0A] mb-1">
+                                                                    ⚠️ Some Properties Already Claimed
+                                                                </p>
+                                                                <p className="text-[#4A4A4A]">
+                                                                    {properties.filter(p => p.is_claimed === true).length} properties are already claimed by another user.
+                                                                    You can continue with the remaining {properties.filter(p => p.is_claimed !== true).length} properties.
+                                                                </p>
+                                                                <button
+                                                                    onClick={() => handleContinueFiling(caseItem)}
+                                                                    className="mt-3 inline-flex items-center gap-2 px-4 py-2.5 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all"
+                                                                >
+                                                                    Continue with Available Properties
+                                                                    <ArrowRight className="h-4 w-4" />
+                                                                </button>
+                                                            </div>
+                                                        ) : status.resumeStep ? (
+                                                            // ... existing "Action required" code
                                                             <div>
                                                                 <h4 className="font-bold text-[#0A0A0A] mb-1">
                                                                     Action required to continue your claim
                                                                 </h4>
                                                                 <p className="text-[#4A4A4A] mb-4">
-                                                                    Your claim is not finished yet. Complete the next step to keep things moving.
+                                                                    Complete the next step to continue with your claim.
                                                                 </p>
                                                                 <div className="bg-[#F7F5F2] border border-[#E8E6E3] rounded-xl p-5">
                                                                     <p className="text-xs uppercase text-[#888888] font-['JetBrains_Mono'] mb-1">
@@ -569,16 +644,12 @@ export default function MyAccountPage() {
                                                                 </div>
                                                             </div>
                                                         ) : (
-                                                            <div className="bg-[#F0FFF4] border border-[#00C896]/30 rounded-xl p-5">
+                                                            <div className="bg-[#F7F5F2] border border-[#E8E6E3] rounded-xl p-5">
                                                                 <p className="font-bold text-[#0A0A0A] mb-1">
-                                                                    {caseItem?.status === false
-                                                                        ? 'Your claim has been approved'
-                                                                        : 'Your claim is submitted and under review'}
+                                                                    Claim Status
                                                                 </p>
                                                                 <p className="text-[#4A4A4A]">
-                                                                    {caseItem?.status === false
-                                                                        ? 'No further action needed from you right now.'
-                                                                        : "No further action needed from you right now."}
+                                                                    {status.label || 'In Progress'}
                                                                 </p>
                                                             </div>
                                                         )}
