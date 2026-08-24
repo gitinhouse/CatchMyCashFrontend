@@ -17,6 +17,7 @@ const UserPropertySchema = new mongoose.Schema({
   amount: { type: Number, required: true },
   reported_date: { type: String, required: true },
   status: { type: Boolean, default: false },
+  is_claimed: { type: Boolean, default: false }, 
   createdAt: { type: Date, default: Date.now },
 });
 
