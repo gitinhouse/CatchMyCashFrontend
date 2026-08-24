@@ -19,73 +19,78 @@ function parseAmount(v) {
 }
 
 function deriveCaseStatus(caseItem) {
-    const docs = caseItem?.user_docs?.[0] || {};
     const properties = caseItem?.user_properties || [];
-
-    const hasInvestigatorSigned =
-        typeof docs.signed_doc === 'string' &&
-        docs.signed_doc.includes('signed-document');
-
-    const hasAgreementForm =
-        (typeof docs.filled_agreement_doc === 'string' &&
-            docs.filled_agreement_doc.includes('FilledAgreement_form')) ||
-        (typeof docs.signed_doc === 'string' &&
-            docs.signed_doc.includes('FilledAgreement_form'));
-
-    const hasId = !!docs.proof_id;
-    const hasSsn = !!docs.ssn_id;
-    const hasAddress = !!docs.adress_proof;
-    const requiredDocsUploaded = hasId && hasSsn && hasAddress;
-
-    // Real completeness, computed the same way DocumentUpload.jsx checks it
-    const documentsActuallyComplete =
-        hasInvestigatorSigned && hasAgreementForm && requiredDocsUploaded;
-
-    // Only trust the "submitted" flag if the documents are genuinely done —
-    // this stops a premature status value (set as soon as the case record
-    // is created in Step 4) from skipping over an incomplete Step 5.
-    const isSubmitted = Boolean(
-        caseItem?.submitted_at ||
-        caseItem?.document_upload_task_status === 'completed' ||
-        caseItem?.claim_process_task_status === 'completed' ||
-        caseItem?.claim_status === 'Success',
-    );
-
     const hasProperties = properties && properties.length > 0;
     const hasUserInfo = !!caseItem?.user_details?.[0];
-
-    const checklist = {
-        hasInvestigatorSigned,
-        hasAgreementForm,
-        requiredDocsUploaded,
-        isSubmitted,
-        hasProperties,
-        hasUserInfo,
-    };
-
-    // Approved takes priority (status === false means approved per existing convention)
-    if (caseItem?.status === false) {
+    const docs = caseItem?.user_docs?.[0] || {};
+    
+    // Check what documents are actually uploaded from the API response
+    const hasAgreementDoc = !!docs.agreement_doc;
+    const hasProofId = !!docs.proof_id;
+    const hasSsnId = !!docs.ssn_id;
+    const hasAddressProof = !!docs.adress_proof;
+    
+    // These come directly from the API
+    const isApproved = caseItem?.status === false;
+    const isSubmitted = Boolean(
+        caseItem?.submitted_at ||
+        caseItem?.claim_process_task_status === 'completed' ||
+        caseItem?.claim_status === 'Success' ||
+        caseItem?.document_upload_task_status === 'completed'
+    );
+    
+    const docsCompleted = caseItem?.document_upload_task_status === 'completed';
+    const claimProcessed = caseItem?.claim_process_task_status === 'completed';
+    
+    // Priority 1: Approved
+    if (isApproved) {
         return {
             label: 'Approved',
             tone: 'approved',
             resumeStep: null,
             stepTitle: 'Claim Approved',
             stepDescription: 'Your claim has been approved by the State Controller\'s Office',
-            checklist
+            checklist: { isApproved: true }
         };
     }
-
-    if (isSubmitted) {
+    
+    // Priority 2: Claim submitted and processed → tracking
+    if ((isSubmitted || claimProcessed) && docsCompleted) {
         return {
             label: 'In Review',
             tone: 'review',
             resumeStep: 'tracking',
             stepTitle: 'Track Your Claim',
             stepDescription: 'Check the status of your submitted claim',
-            checklist
+            checklist: { isSubmitted: true, claimProcessed: true }
         };
     }
-
+    
+    // Priority 3: Documents uploaded → tracking (waiting for processing)
+    if (docsCompleted && !claimProcessed) {
+        return {
+            label: 'Processing',
+            tone: 'review',
+            resumeStep: 'tracking',
+            stepTitle: 'Track Your Claim',
+            stepDescription: 'Your documents are uploaded. We\'re processing your claim.',
+            checklist: { docsCompleted: true }
+        };
+    }
+    
+    // Priority 4: Has properties and user info but no docs → documents
+    if (hasProperties && hasUserInfo && !docsCompleted) {
+        return {
+            label: 'Action Required',
+            tone: 'action',
+            resumeStep: 'documents',
+            stepTitle: 'Upload Required Documents',
+            stepDescription: 'Upload your ID, SSN, and address proof to continue',
+            checklist: { hasUserInfo: true, hasProperties: true }
+        };
+    }
+    
+    // Priority 5: Has properties but no user info → userinfo
     if (hasProperties && !hasUserInfo) {
         return {
             label: 'Action Required',
@@ -93,10 +98,11 @@ function deriveCaseStatus(caseItem) {
             resumeStep: 'userinfo',
             stepTitle: 'Complete Your Information',
             stepDescription: 'Fill in your personal details to continue with the claim',
-            checklist,
+            checklist: { hasProperties: true }
         };
     }
-
+    
+    // Priority 6: No properties → search
     if (!hasProperties) {
         return {
             label: 'Action Required',
@@ -104,50 +110,18 @@ function deriveCaseStatus(caseItem) {
             resumeStep: 'search',
             stepTitle: 'Select Property',
             stepDescription: 'Search for and select the unclaimed property you want to claim',
-            checklist,
+            checklist: { hasProperties: false }
         };
     }
-
-    if (!hasInvestigatorSigned) {
-        return {
-            label: 'Action Required',
-            tone: 'action',
-            resumeStep: 'documents',
-            stepTitle: 'Sign Investigator Agreement',
-            stepDescription: 'Sign your investigator services agreement via DocuSign',
-            checklist,
-        };
-    }
-
-    if (!hasAgreementForm) {
-        return {
-            label: 'Action Required',
-            tone: 'action',
-            resumeStep: 'documents',
-            stepTitle: 'Sign Agreement Form',
-            stepDescription: "Sign the State Controller's Office authorization form",
-            checklist,
-        };
-    }
-
-    if (!requiredDocsUploaded) {
-        return {
-            label: 'Action Required',
-            tone: 'action',
-            resumeStep: 'documents',
-            stepTitle: 'Identity Verification',
-            stepDescription: 'Verify your identity — upload ID, SSN, and address proof',
-            checklist,
-        };
-    }
-
+    
+    // Default fallback
     return {
-        label: 'Ready to Submit',
+        label: 'In Progress',
         tone: 'action',
         resumeStep: 'documents',
-        stepTitle: 'Submit Your Case',
-        stepDescription: 'Review and submit your case to the State Controller\'s Office',
-        checklist,
+        stepTitle: 'Continue Your Claim',
+        stepDescription: 'Complete the remaining steps to file your claim',
+        checklist: {}
     };
 }
 
