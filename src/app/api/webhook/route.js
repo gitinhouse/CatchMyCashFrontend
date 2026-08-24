@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { sendEmailTwilio } from '../../lib/sendgrid';
 import connectToDatabase from '../../lib/mongodb';
 import UserDetails from '../../models/userDetails';
-import UserProperty from '@/app/models/userProperty';
+import UserProperty from '../../models/userProperty';
 import UserCases from '../../models/userCases'; // ← ADD THIS IMPORT
 import mongoose from 'mongoose';
 
