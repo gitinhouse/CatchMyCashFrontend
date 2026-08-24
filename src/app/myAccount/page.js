@@ -10,6 +10,7 @@ import {
     CheckCircle2,
     Clock,
     ArrowRight,
+    AlertCircle,
 } from 'lucide-react';
 
 // ── Helpers: derive a human step from case + docs data ─────────────────────
