@@ -96,7 +96,7 @@ function deriveCaseStatus(caseItem) {
             tone: 'action',
             resumeStep: 'documents',
             stepTitle: 'Upload Required Documents',
-            stepDescription: 'Upload your ID, SSN, and address proof to continue',
+            stepDescription: 'Upload your documents to continue',
             checklist: { hasUserInfo: true, hasProperties: true }
         };
     }
@@ -491,7 +491,7 @@ export default function MyAccountPage() {
                                                                                     )}
                                                                                     {isClaimed && (
                                                                                         <p className="text-xs text-[#E1261C] mt-1">
-                                                                                            This property has already been claimed by another user
+                                                                                            This property has already been claime.
                                                                                         </p>
                                                                                     )}
                                                                                 </div>
@@ -500,7 +500,7 @@ export default function MyAccountPage() {
                                                                                         ${formatMoney(parseAmount(p.amount))}
                                                                                     </p>
                                                                                     {isClaimed ? (
-                                                                                        <p className="text-xs text-[#E1261C] font-semibold">Claimed by another</p>
+                                                                                        <p className="text-xs text-[#E1261C] font-semibold">Already Claimed</p>
                                                                                     ) : (
                                                                                         <p className="text-xs text-[#00C896]">Available</p>
                                                                                     )}
@@ -578,7 +578,7 @@ export default function MyAccountPage() {
                                                                 <p className="text-[#4A4A4A]">
                                                                     {caseItem?.status === false
                                                                         ? 'No further action needed from you right now.'
-                                                                        : "We'll notify you as the State Controller's Office processes your claim."}
+                                                                        : "No further action needed from you right now."}
                                                                 </p>
                                                             </div>
                                                         )}

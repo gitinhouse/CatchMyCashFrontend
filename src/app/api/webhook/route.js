@@ -3,7 +3,7 @@ import { sendEmailTwilio } from '../../lib/sendgrid';
 import connectToDatabase from '../../lib/mongodb';
 import UserDetails from '../../models/userDetails';
 import UserProperty from '../../models/userProperty';
-import UserCases from '../../models/userCases'; // ← ADD THIS IMPORT
+import UserCases from '../../models/userCases';
 import mongoose from 'mongoose';
 
 export async function POST(req) {
@@ -34,59 +34,50 @@ export async function POST(req) {
         ? [properties]
         : [];
 
-    // ← ADD THIS: Update is_claimed field for each property when claim fails
+    // ✅ FIX: Update is_claimed ONLY for the specific properties that failed
     if (propertyList.length > 0) {
       try {
-        // Find the user's case to get the claim_id
-        const userCase = await UserCases.findOne({
-          user_id: new mongoose.Types.ObjectId(userId)
-        });
-
-        if (userCase) {
-          // Update all properties for this user to mark them as claimed
-          // This is a fallback - mark all properties with is_claimed: true
-          // when the claim submission fails
-          await UserProperty.updateMany(
-            { 
-              user_id: new mongoose.Types.ObjectId(userId),
-              // Only update properties that are NOT already claimed
-              is_claimed: { $ne: true }
-            },
-            { $set: { is_claimed: true } }
-          );
-          console.log(`✅ Updated is_claimed for all properties of user ${userId}`);
-        }
-
-        // Alternative: Update by property IDs if they're in the payload
+        // Get property IDs from the property list
         const propertyIds = propertyList
           .map(p => p.propertyId || p.property_id)
           .filter(Boolean);
-        
+
+        // Get claim IDs from the property list
+        const claimIds = propertyList
+          .map(p => p.claimId || p.claim_id)
+          .filter(Boolean);
+
+        // ✅ IMPORTANT: Update ONLY the specific properties in the list
+        // NOT all properties for the user!
         if (propertyIds.length > 0) {
-          await UserProperty.updateMany(
-            { 
+          const result = await UserProperty.updateMany(
+            {
               property_id: { $in: propertyIds },
               user_id: new mongoose.Types.ObjectId(userId)
             },
             { $set: { is_claimed: true } }
           );
-          console.log(`✅ Updated is_claimed for properties: ${propertyIds.join(', ')}`);
-        }
-
-        // Also update by claim ID if available
-        const claimIds = propertyList
-          .map(p => p.claimId || p.claim_id)
-          .filter(Boolean);
-        
-        if (claimIds.length > 0) {
-          await UserProperty.updateMany(
-            { 
+          console.log(`✅ Updated is_claimed for specific properties: ${propertyIds.join(', ')}`);
+          console.log(`   Matched: ${result.matchedCount}, Modified: ${result.modifiedCount}`);
+        } else if (claimIds.length > 0) {
+          // Fallback: update by claim ID
+          const result = await UserProperty.updateMany(
+            {
               claim_id: { $in: claimIds },
               user_id: new mongoose.Types.ObjectId(userId)
             },
             { $set: { is_claimed: true } }
           );
           console.log(`✅ Updated is_claimed for claim IDs: ${claimIds.join(', ')}`);
+          console.log(`   Matched: ${result.matchedCount}, Modified: ${result.modifiedCount}`);
+        } else {
+          // If we have properties but no IDs, try to match by address or other fields
+          console.warn('⚠️ No property IDs or claim IDs found in the property list');
+          console.log('   Property list:', JSON.stringify(propertyList, null, 2));
+          
+          // ❌ REMOVED: The fallback that updates ALL properties
+          // Instead, log the issue but don't update anything
+          console.warn('⚠️ Skipping is_claimed update - no valid identifiers found');
         }
 
       } catch (updateError) {
@@ -94,6 +85,8 @@ export async function POST(req) {
         // Don't fail the email send if update fails
         // Just log the error and continue
       }
+    } else {
+      console.log('ℹ️ No properties in list, skipping is_claimed update');
     }
 
     // Brand palette (from catchmycash.com)
