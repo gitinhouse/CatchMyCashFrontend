@@ -34,9 +34,138 @@ export async function POST(req) {
         ? [properties]
         : [];
 
-    // ⚠️ UPDATE REMOVED: The RDP file now handles the is_claimed update
-    // The update logic has been moved to the RDP file (app.py) where it
-    // updates the database when duplicate/claimed properties are detected.
+    // ============================================================
+    // ✅ FIX: Update is_claimed for properties that failed
+    // ============================================================
+    if (propertyList.length > 0) {
+      try {
+        // Get property IDs from the property list
+        const propertyIds = propertyList
+          .map(p => p.propertyId || p.property_id || p.PropertyId)
+          .filter(Boolean);
+
+        // Get claim IDs from the property list
+        const claimIds = propertyList
+          .map(p => p.claimId || p.claim_id || p.ClaimId)
+          .filter(Boolean);
+
+        console.log(`🔍 Extracted property IDs: ${propertyIds.join(', ')}`);
+        console.log(`🔍 Extracted claim IDs: ${claimIds.join(', ')}`);
+
+        let updateSuccess = false;
+
+        // Try updating by property IDs first
+        if (propertyIds.length > 0) {
+          console.log(`📝 Updating properties by property_id: ${propertyIds.join(', ')}`);
+          
+          // First check if properties exist
+          const existingProps = await UserProperty.find({
+            property_id: { $in: propertyIds },
+            user_id: new mongoose.Types.ObjectId(userId)
+          });
+          
+          console.log(`📊 Found ${existingProps.length} properties in database`);
+          
+          if (existingProps.length > 0) {
+            const result = await UserProperty.updateMany(
+              {
+                property_id: { $in: propertyIds },
+                user_id: new mongoose.Types.ObjectId(userId)
+              },
+              { $set: { is_claimed: true } }
+            );
+            
+            console.log(`✅ Updated is_claimed for properties: ${propertyIds.join(', ')}`);
+            console.log(`   Matched: ${result.matchedCount}, Modified: ${result.modifiedCount}`);
+            
+            if (result.modifiedCount > 0) {
+              updateSuccess = true;
+            }
+          } else {
+            console.log(`⚠️ No properties found with these IDs in database`);
+          }
+        }
+
+        // If property ID update didn't work, try claim IDs
+        if (!updateSuccess && claimIds.length > 0) {
+          console.log(`📝 Updating properties by claim_id: ${claimIds.join(', ')}`);
+          
+          const result = await UserProperty.updateMany(
+            {
+              claim_id: { $in: claimIds },
+              user_id: new mongoose.Types.ObjectId(userId)
+            },
+            { $set: { is_claimed: true } }
+          );
+          
+          console.log(`✅ Updated is_claimed for claim IDs: ${claimIds.join(', ')}`);
+          console.log(`   Matched: ${result.matchedCount}, Modified: ${result.modifiedCount}`);
+          
+          if (result.modifiedCount > 0) {
+            updateSuccess = true;
+          }
+        }
+
+        // If still not updated, try updating by user_id and property_ids array in UserCases
+        if (!updateSuccess && propertyIds.length > 0) {
+          console.log(`📝 Trying to update via UserCases model...`);
+          
+          // Find the UserCases document for this user
+          const userCase = await UserCases.findOne({
+            user_id: new mongoose.Types.ObjectId(userId),
+            'property_ids': { $in: propertyIds }
+          });
+          
+          if (userCase) {
+            console.log(`📊 Found UserCases document with property_ids: ${userCase.property_ids}`);
+            
+            // Update UserProperty for each property_id in the UserCases document
+            const casePropertyIds = userCase.property_ids.filter(id => propertyIds.includes(id));
+            
+            if (casePropertyIds.length > 0) {
+              const result = await UserProperty.updateMany(
+                {
+                  property_id: { $in: casePropertyIds },
+                  user_id: new mongoose.Types.ObjectId(userId)
+                },
+                { $set: { is_claimed: true } }
+              );
+              
+              console.log(`✅ Updated via UserCases: Matched: ${result.matchedCount}, Modified: ${result.modifiedCount}`);
+              updateSuccess = true;
+            }
+          }
+        }
+
+        // Final verification
+        if (propertyIds.length > 0) {
+          const verifyUpdate = await UserProperty.find({
+            property_id: { $in: propertyIds },
+            user_id: new mongoose.Types.ObjectId(userId)
+          });
+          
+          console.log(`📊 Verification after update:`);
+          verifyUpdate.forEach(p => {
+            console.log(`   Property ${p.property_id}: is_claimed = ${p.is_claimed}`);
+          });
+          
+          const allUpdated = verifyUpdate.every(p => p.is_claimed === true);
+          if (allUpdated) {
+            console.log(`✅ All properties successfully updated to is_claimed: true`);
+          } else {
+            console.warn(`⚠️ Not all properties were updated!`);
+            const notUpdated = verifyUpdate.filter(p => p.is_claimed !== true);
+            console.warn(`   Properties not updated: ${notUpdated.map(p => p.property_id).join(', ')}`);
+          }
+        }
+
+      } catch (updateError) {
+        console.error('❌ Error updating is_claimed field:', updateError);
+        // Don't fail the email send if update fails
+      }
+    } else {
+      console.log('ℹ️ No properties in list, skipping is_claimed update');
+    }
 
     // Brand palette (from catchmycash.com)
     const COLORS = {
