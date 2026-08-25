@@ -46,25 +46,31 @@ export async function POST(req) {
           // Update all properties for this user to mark them as claimed
           // This is a fallback - mark all properties with is_claimed: true
           // when the claim submission fails
-          await UserProperty.updateMany(
-            { 
-              user_id: new mongoose.Types.ObjectId(userId),
-              // Only update properties that are NOT already claimed
-              is_claimed: { $ne: true }
-            },
-            { $set: { is_claimed: true } }
-          );
-          console.log(`✅ Updated is_claimed for all properties of user ${userId}`);
+          const propertyIds = propertyList
+            .map(p => p.propertyId || p.property_id)
+            .filter(Boolean);
+
+          if (propertyIds.length > 0) {
+            await UserProperty.updateMany(
+              {
+                property_id: { $in: propertyIds },
+                user_id: new mongoose.Types.ObjectId(userId)
+              },
+              { $set: { is_claimed: true } }
+            );
+            console.log(`✅ Updated is_claimed for specific properties: ${propertyIds.join(', ')}`);
+          }
+          console.log(`✅ Updated is_claimed for specific properties of user ${userId}`);
         }
 
         // Alternative: Update by property IDs if they're in the payload
         const propertyIds = propertyList
           .map(p => p.propertyId || p.property_id)
           .filter(Boolean);
-        
+
         if (propertyIds.length > 0) {
           await UserProperty.updateMany(
-            { 
+            {
               property_id: { $in: propertyIds },
               user_id: new mongoose.Types.ObjectId(userId)
             },
@@ -77,10 +83,10 @@ export async function POST(req) {
         const claimIds = propertyList
           .map(p => p.claimId || p.claim_id)
           .filter(Boolean);
-        
+
         if (claimIds.length > 0) {
           await UserProperty.updateMany(
-            { 
+            {
               claim_id: { $in: claimIds },
               user_id: new mongoose.Types.ObjectId(userId)
             },
@@ -113,15 +119,15 @@ export async function POST(req) {
     let detailsCards = '';
     propertyList.forEach((property, index) => {
       let rows = '';
-      
+
       // Check for address in various possible field names
-      const address = property?.address || 
-                      property?.Address || 
-                      property?.propertyAddress || 
-                      property?.formattedAddress ||
-                      property?.streetAddress ||
-                      '';
-      
+      const address = property?.address ||
+        property?.Address ||
+        property?.propertyAddress ||
+        property?.formattedAddress ||
+        property?.streetAddress ||
+        '';
+
       if (address) {
         rows += `
           <tr>
@@ -129,7 +135,7 @@ export async function POST(req) {
             <td style="padding: 6px 0; color: ${COLORS.charcoal}; font-size: 14px; font-weight: 700; font-family: Arial, Helvetica, sans-serif;">${address}</td>
           </tr>`;
       }
-      
+
       const claimId = property?.claimId || property?.claim_id || property?.ClaimId || '';
       if (claimId) {
         rows += `
@@ -153,14 +159,13 @@ export async function POST(req) {
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${COLORS.cream}" style="background-color:${COLORS.cream}; border: 1px solid ${COLORS.border}; border-radius: 8px; margin-bottom: 14px;">
             <tr>
               <td style="padding: 16px 20px;">
-                ${
-                  propertyList.length > 1
-                    ? `
+                ${propertyList.length > 1
+            ? `
                 <p style="margin:0 0 10px; color:${COLORS.red}; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; font-family: Arial, Helvetica, sans-serif;">
                   Property ${index + 1}
                 </p>`
-                    : ''
-                }
+            : ''
+          }
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                   ${rows}
                 </table>
@@ -267,7 +272,7 @@ ${errorMessage || 'Something went wrong. Please try again.'}
       const address = property?.address || property?.Address || property?.propertyAddress || '';
       const claimId = property?.claimId || property?.claim_id || property?.ClaimId || '';
       const propertyId = property?.propertyId || property?.property_id || property?.PropertyId || '';
-      
+
       if (address || claimId || propertyId) {
         textContent +=
           propertyList.length > 1 ? `\nProperty ${index + 1}:` : '';
