@@ -34,37 +34,17 @@ export async function POST(req) {
         ? [properties]
         : [];
 
-    // ← ADD THIS: Update is_claimed field for each property when claim fails
+    // Update is_claimed ONLY for the specific properties included in this request
     if (propertyList.length > 0) {
       try {
-        // Find the user's case to get the claim_id
-        const userCase = await UserCases.findOne({
-          user_id: new mongoose.Types.ObjectId(userId)
-        });
-
-        if (userCase) {
-          // Update all properties for this user to mark them as claimed
-          // This is a fallback - mark all properties with is_claimed: true
-          // when the claim submission fails
-          await UserProperty.updateMany(
-            { 
-              user_id: new mongoose.Types.ObjectId(userId),
-              // Only update properties that are NOT already claimed
-              is_claimed: { $ne: true }
-            },
-            { $set: { is_claimed: true } }
-          );
-          console.log(`✅ Updated is_claimed for all properties of user ${userId}`);
-        }
-
-        // Alternative: Update by property IDs if they're in the payload
+        // Update by property IDs if they're in the payload
         const propertyIds = propertyList
           .map(p => p.propertyId || p.property_id)
           .filter(Boolean);
-        
+
         if (propertyIds.length > 0) {
           await UserProperty.updateMany(
-            { 
+            {
               property_id: { $in: propertyIds },
               user_id: new mongoose.Types.ObjectId(userId)
             },
@@ -77,10 +57,10 @@ export async function POST(req) {
         const claimIds = propertyList
           .map(p => p.claimId || p.claim_id)
           .filter(Boolean);
-        
+
         if (claimIds.length > 0) {
           await UserProperty.updateMany(
-            { 
+            {
               claim_id: { $in: claimIds },
               user_id: new mongoose.Types.ObjectId(userId)
             },
