@@ -171,6 +171,7 @@ export default function MyAccountPage() {
     const [activeTab, setActiveTab] = useState({});
     const [userName, setUserName] = useState('');
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [retryStatuses, setRetryStatuses] = useState({});
 
     const fetchCases = useCallback(async () => {
         try {
@@ -198,6 +199,22 @@ export default function MyAccountPage() {
             const list = Array.isArray(data?.data) ? data.data : [];
             setCases(list);
 
+            const statuses = {};
+            for (const c of list) {
+                if (c.case_id) {
+                    try {
+                        const res = await fetch(`/api/claims/retry-status?case_id=${c.case_id}`);
+                        const status = await res.json();
+                        if (!status.error) {
+                            statuses[c.case_id] = status;
+                        }
+                    } catch (err) {
+                        // silent fail
+                    }
+                }
+            }
+            setRetryStatuses(statuses);
+
             const firstWithName = list.find((c) => c?.user_info?.first_name);
             if (firstWithName) {
                 setUserName(firstWithName.user_info.first_name);
@@ -210,6 +227,31 @@ export default function MyAccountPage() {
             setLoading(false);
         }
     }, [router]);
+
+
+    useEffect(() => {
+    const interval = setInterval(() => {
+        cases.forEach(async (c) => {
+            if (c.case_id && retryStatuses[c.case_id]?.claim_retryable) {
+                try {
+                    const res = await fetch(`/api/claims/retry-status?case_id=${c.case_id}`);
+                    const status = await res.json();
+                    if (!status.error) {
+                        setRetryStatuses(prev => ({
+                            ...prev,
+                            [c.case_id]: status
+                        }));
+                    }
+                } catch (err) {
+                    // silent fail
+                }
+            }
+        });
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+}, [cases]);
+
 
     useEffect(() => {
         fetchCases();
@@ -571,10 +613,155 @@ export default function MyAccountPage() {
 
                                                 {tab === 'status' && (
                                                     <div className="space-y-6 text-sm">
-                                                        {/* Checklist */}
 
-                                                        {/* Next step card — matches "Continue Filing" pattern */}
-                                                        {status.resumeStep ? (
+                                                        {/* ✅ RETRY IN PROGRESS - Automatic retry message */}
+                                                        {retryStatuses[caseItem.case_id]?.claim_retryable &&
+                                                            !retryStatuses[caseItem.case_id]?.claim_retry_exhausted && (
+                                                                <div className="bg-[#FFF8E1] border border-[#FFB300] rounded-xl p-4">
+                                                                    <div className="flex items-start gap-3">
+                                                                        <div className="w-8 h-8 bg-[#FFB300] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                                            <Clock className="h-4 w-4 text-white" />
+                                                                        </div>
+                                                                        <div className="flex-1">
+                                                                            <p className="font-semibold text-[#0A0A0A]">🔄 Automatic Retry in Progress</p>
+                                                                            <p className="text-[#4A4A4A] mt-1">
+                                                                                {(() => {
+                                                                                    const attempts = retryStatuses[caseItem.case_id]?.claim_retry_count || 0;
+                                                                                    const maxAttempts = retryStatuses[caseItem.case_id]?.claim_max_retries || 3;
+                                                                                    const remaining = maxAttempts - attempts;
+                                                                                    const errorType = retryStatuses[caseItem.case_id]?.claim_error_type;
+
+                                                                                    if (remaining <= 0) {
+                                                                                        return "We're reviewing your claim. You'll get an update soon.";
+                                                                                    }
+
+                                                                                    if (errorType === 'technical_failure') {
+                                                                                        return `We encountered a temporary issue. We'll automatically retry (${remaining} attempt${remaining > 1 ? 's' : ''} remaining). This may take up to 20-30 minutes.`;
+                                                                                    }
+
+                                                                                    if (errorType === 'submission_uncertain') {
+                                                                                        return "Your claim may have been submitted. We're verifying the status and will update you shortly.";
+                                                                                    }
+
+                                                                                    return `Processing your claim (attempt ${attempts}/${maxAttempts})... This may take up to 20-30 minutes.`;
+                                                                                })()}
+                                                                            </p>
+                                                                            {retryStatuses[caseItem.case_id]?.claim_next_retry_at && (
+                                                                                <p className="text-xs text-[#888888] mt-2 font-['JetBrains_Mono']">
+                                                                                    <Clock className="h-3 w-3 inline mr-1" />
+                                                                                    Next retry: {new Date(retryStatuses[caseItem.case_id].claim_next_retry_at).toLocaleString()}
+                                                                                </p>
+                                                                            )}
+                                                                            {retryStatuses[caseItem.case_id]?.claim_retry_count > 0 && (
+                                                                                <div className="mt-2">
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <div className="flex-1 h-1.5 bg-[#E8E6E3] rounded-full overflow-hidden">
+                                                                                            <div
+                                                                                                className="h-full bg-[#FFB300] rounded-full transition-all duration-500"
+                                                                                                style={{
+                                                                                                    width: `${Math.min(100, ((retryStatuses[caseItem.case_id]?.claim_retry_count || 0) / (retryStatuses[caseItem.case_id]?.claim_max_retries || 3)) * 100)}%`
+                                                                                                }}
+                                                                                            />
+                                                                                        </div>
+                                                                                        <span className="text-xs text-[#888888] font-['JetBrains_Mono']">
+                                                                                            {retryStatuses[caseItem.case_id]?.claim_retry_count}/{retryStatuses[caseItem.case_id]?.claim_max_retries || 3}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                        {/* ⚠️ RETRY EXHAUSTED - Needs human review */}
+                                                        {retryStatuses[caseItem.case_id]?.claim_retry_exhausted && (
+                                                            <div className="bg-[#FCE9E7] border border-[#E1261C]/30 rounded-xl p-4">
+                                                                <div className="flex items-start gap-3">
+                                                                    <div className="w-8 h-8 bg-[#E1261C] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                                        <AlertCircle className="h-4 w-4 text-white" />
+                                                                    </div>
+                                                                    <div className="flex-1">
+                                                                        <p className="font-semibold text-[#E1261C]">⏳ Claim Under Review</p>
+                                                                        <p className="text-[#4A4A4A] mt-1">
+                                                                            We've encountered some difficulty processing your claim. Our team has been notified and will review it shortly. You'll receive an update via email once it's resolved.
+                                                                        </p>
+                                                                        {retryStatuses[caseItem.case_id]?.claim_error_type && (
+                                                                            <p className="text-xs text-[#888888] mt-2 font-['JetBrains_Mono']">
+                                                                                Error: {retryStatuses[caseItem.case_id].claim_error_type?.replace(/_/g, ' ') || 'Unknown'}
+                                                                                {retryStatuses[caseItem.case_id]?.claim_error_code &&
+                                                                                    ` • Code: ${retryStatuses[caseItem.case_id].claim_error_code}`
+                                                                                }
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* ✅ ALREADY CLAIMED - Terminal state */}
+                                                        {retryStatuses[caseItem.case_id]?.claim_error_type === 'already_claimed' &&
+                                                            !retryStatuses[caseItem.case_id]?.claim_retryable && (
+                                                                <div className="bg-[#E8F5E9] border border-[#4CAF50]/30 rounded-xl p-4">
+                                                                    <div className="flex items-start gap-3">
+                                                                        <div className="w-8 h-8 bg-[#4CAF50] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                                            <CheckCircle2 className="h-4 w-4 text-white" />
+                                                                        </div>
+                                                                        <div className="flex-1">
+                                                                            <p className="font-semibold text-[#0A0A0A]">ℹ️ Already Claimed</p>
+                                                                            <p className="text-[#4A4A4A] mt-1">
+                                                                                This property has already been claimed with this email address. No further action is needed.
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                        {/* ✅ MISSING VALUE - User needs to fix data */}
+                                                        {retryStatuses[caseItem.case_id]?.claim_error_type === 'missing_value' &&
+                                                            !retryStatuses[caseItem.case_id]?.claim_retryable && (
+                                                                <div className="bg-[#FFF3E0] border border-[#FF9800]/30 rounded-xl p-4">
+                                                                    <div className="flex items-start gap-3">
+                                                                        <div className="w-8 h-8 bg-[#FF9800] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                                            <AlertCircle className="h-4 w-4 text-white" />
+                                                                        </div>
+                                                                        <div className="flex-1">
+                                                                            <p className="font-semibold text-[#0A0A0A]">✏️ Information Needed</p>
+                                                                            <p className="text-[#4A4A4A] mt-1">
+                                                                                Some information needs to be corrected before we can process your claim. Please review your claim details and try again.
+                                                                            </p>
+                                                                            <button
+                                                                                onClick={() => router.push(`/?step=documents&case_id=${caseItem._id}`)}
+                                                                                className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all"
+                                                                            >
+                                                                                Fix Information
+                                                                                <ArrowRight className="h-4 w-4" />
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                        {/* ✅ SUBMISSION UNCERTAIN - Needs human review */}
+                                                        {retryStatuses[caseItem.case_id]?.claim_error_type === 'submission_uncertain' &&
+                                                            !retryStatuses[caseItem.case_id]?.claim_retryable && (
+                                                                <div className="bg-[#FFF8E1] border border-[#FFB300]/30 rounded-xl p-4">
+                                                                    <div className="flex items-start gap-3">
+                                                                        <div className="w-8 h-8 bg-[#FFB300] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                                            <Clock className="h-4 w-4 text-white" />
+                                                                        </div>
+                                                                        <div className="flex-1">
+                                                                            <p className="font-semibold text-[#0A0A0A]">⏳ Verifying Claim Status</p>
+                                                                            <p className="text-[#4A4A4A] mt-1">
+                                                                                We're verifying whether your claim was successfully submitted. You'll receive an update shortly.
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                        {/* Original next step card - keep your existing code */}
+                                                        {status.resumeStep && !retryStatuses[caseItem.case_id]?.claim_retryable && (
                                                             <div>
                                                                 <h4 className="font-bold text-[#0A0A0A] mb-1">
                                                                     Action required to continue your claim
@@ -601,17 +788,18 @@ export default function MyAccountPage() {
                                                                     </button>
                                                                 </div>
                                                             </div>
-                                                        ) : (
+                                                        )}
+
+                                                        {/* Completed state */}
+                                                        {!status.resumeStep && !retryStatuses[caseItem.case_id]?.claim_retryable && (
                                                             <div className="bg-[#F0FFF4] border border-[#E1261C]/30 rounded-xl p-5">
                                                                 <p className="font-bold text-[#0A0A0A] mb-1">
                                                                     {caseItem?.status === false
                                                                         ? 'Your claim has been approved'
-                                                                        : 'Your claim is  under review'}
+                                                                        : 'Your claim is under review'}
                                                                 </p>
                                                                 <p className="text-[#4A4A4A]">
-                                                                    {caseItem?.status === false
-                                                                        ? 'No further action needed from you right now.'
-                                                                        : "No further action needed from you right now."}
+                                                                    No further action needed from you right now.
                                                                 </p>
                                                             </div>
                                                         )}
