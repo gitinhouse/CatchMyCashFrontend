@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+'use client';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from './uicomponents/Button';
 import { Card } from './uicomponents/Card';
 import { Badge } from './uicomponents/Badge';
@@ -12,12 +13,15 @@ import {
   Share2,
   Bell,
   Shield,
+  AlertCircle,
 } from 'lucide-react';
 import { useSearchStore } from '../store/searchStore';
 import axios from 'axios';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
+  const router = useRouter();
   const [notifications, setNotifications] = useState(false);
   const [allNotifications, setAllNotifications] = useState([]);
   const [shareAmount, setShareAmount] = useState('');
@@ -28,8 +32,11 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   const [estimatedNet, setEstimatedNet] = useState(0);
   const [milestones, setMilestones] = useState([]);
   const [smsEnabled, setSmsEnabled] = useState(false);
-
-  const caseProgress = 75;
+  const [caseData, setCaseData] = useState(null);
+  const [caseProgress, setCaseProgress] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const {
     userData,
@@ -43,6 +50,122 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
     setOwnPropertyIds,
   } = useSearchStore();
 
+  // ============================================================
+  // ✅ Fetch Case Data from API (MyAccountPage pattern)
+  // ============================================================
+  const fetchCaseData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Get user data from localStorage (like MyAccountPage)
+      const storedLoginRaw = localStorage.getItem('userLogin');
+      const storedLogin = storedLoginRaw ? JSON.parse(storedLoginRaw) : null;
+      const token = storedLogin?.token;
+      const realUserId = storedLogin?.user?.user_id;
+
+      // Also check userData from store
+      const storeUserId = userData?._id;
+
+      // Use whichever userId is available
+      const userId = realUserId || storeUserId;
+
+      if (!userId || !token) {
+        console.log('No user ID or token found, skipping case fetch');
+        setIsLoggedIn(false);
+        setLoading(false);
+        return;
+      }
+
+      setIsLoggedIn(true);
+      console.log('🔍 Fetching case data for user:', userId);
+
+      // ✅ API CALL - Same as MyAccountPage
+      const response = await axios.get(
+        `/api/case?user_id=${userId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      console.log('📦 Case API Response:', response.data);
+
+      if (response.data?.data && response.data.data.length > 0) {
+        const caseData = response.data.data[0];
+        console.log('✅ Case data received:', caseData);
+        setCaseData(caseData);
+        setUserCase(caseData);
+        localStorage.setItem('userCase', JSON.stringify(caseData));
+
+        // Update property IDs
+        if (caseData.property_ids) {
+          setOwnPropertyIds(caseData.property_ids);
+          localStorage.setItem('ownPropertyIds', JSON.stringify(caseData.property_ids));
+        }
+
+        // Calculate progress based on claim_status
+        calculateProgress(caseData);
+      } else {
+        console.log('ℹ️ No case data found for user');
+        setCaseData(null);
+        setCaseProgress(0);
+      }
+    } catch (err) {
+      console.error('❌ Error fetching case data:', err);
+      setError(err.message || 'Failed to load case data');
+      setCaseData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [userData?._id, setUserCase, setOwnPropertyIds]);
+
+  // ============================================================
+  // ✅ Calculate Progress Based on Case Status
+  // ============================================================
+  const calculateProgress = (caseData) => {
+    if (!caseData) return;
+
+    const status = caseData.claim_status;
+    const taskStatus = caseData.claim_process_task_status;
+
+    let progress = 0;
+
+    if (status === 'Success' && taskStatus === 'completed') {
+      progress = 100;
+    } else if (status === 'Failed') {
+      progress = 0;
+    } else if (status === 'Pending') {
+      progress = 50;
+    } else if (taskStatus === 'completed') {
+      progress = 100;
+    } else if (taskStatus === 'failed') {
+      progress = 25;
+    } else {
+      // Check stages
+      const stage = caseData.claim_process_stage || 0;
+      const stageMap = {
+        0: 5,
+        1: 15,
+        2: 30,
+        3: 50,
+        4: 70,
+        5: 85,
+        6: 95
+      };
+      progress = stageMap[stage] || 0;
+    }
+
+    setCaseProgress(progress);
+  };
+
+  // ============================================================
+  // ✅ Fetch on Mount
+  // ============================================================
+  useEffect(() => {
+    fetchCaseData();
+  }, [fetchCaseData]);
+
+  // ============================================================
+  // ✅ Parse Property Amount
+  // ============================================================
   const parsePropertyAmount = (property) => {
     const value = parseFloat(
       property?.amount ??
@@ -56,6 +179,154 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   const getPropertyId = (property) =>
     String(property?.id ?? property?.property_id ?? '');
 
+  // ============================================================
+  // ✅ Calculate Payouts from Case Data
+  // ============================================================
+  useEffect(() => {
+    if (!caseData) return;
+
+    const properties = caseData.user_properties || [];
+    const total = properties.reduce(
+      (sum, property) => sum + parsePropertyAmount(property),
+      0,
+    );
+
+    const fee = Math.round(total * 10) / 100;
+    const net = total - fee;
+
+    setEstimatedPayout(total);
+    setEstimatedFee(fee);
+    setEstimatedNet(net);
+  }, [caseData]);
+
+  // ============================================================
+  // ✅ Generate Milestones from Case Data
+  // ============================================================
+  useEffect(() => {
+    if (!caseData) return;
+
+    const caseStartSource = caseData?.submitted_at || caseData?.createdAt || null;
+    const caseStartDate = new Date(caseStartSource || Date.now());
+
+    const addDays = (date, days) => {
+      const result = new Date(date);
+      result.setDate(result.getDate() + days);
+      return result;
+    };
+
+    const formatDate = (date) => {
+      const d = new Date(date);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const documentationVerifiedDate = addDays(caseStartDate, 15);
+    const stateProcessingQueueDate = addDays(documentationVerifiedDate, 7);
+    const paymentAuthorizationDate = addDays(documentationVerifiedDate, 14);
+
+    const isCompleted = caseData.claim_status === 'Success';
+    const isFailed = caseData.claim_status === 'Failed';
+    const currentStage = caseData.claim_process_stage || 0;
+
+    const baseMilestones = [
+      { name: 'Case Submitted', stage: 0 },
+      { name: 'Initial Review', stage: 1 },
+      { name: 'Documentation Verified', stage: 2 },
+      { name: 'State Processing', stage: 3 },
+      { name: 'Payment Authorization', stage: 4 },
+      { name: 'Funds Distributed', stage: 5 },
+    ];
+
+    const generated = baseMilestones.map((milestone, index) => {
+      let milestoneDate;
+      if (index === 0) {
+        milestoneDate = caseStartDate;
+      } else if (index === 1) {
+        milestoneDate = addDays(caseStartDate, 7);
+      } else if (index === 2) {
+        milestoneDate = documentationVerifiedDate;
+      } else if (index === 3) {
+        milestoneDate = stateProcessingQueueDate;
+      } else if (index === 4) {
+        milestoneDate = paymentAuthorizationDate;
+      } else {
+        milestoneDate = addDays(paymentAuthorizationDate, 7);
+      }
+
+      const isCompleted = isFailed ? false : (index <= currentStage);
+      const isCurrent = isFailed ? false : (index === currentStage && !isCompleted);
+
+      return {
+        name: milestone.name,
+        date: formatDate(milestoneDate),
+        completed: isCompleted,
+        current: isCurrent,
+        estimated: !isCompleted ? formatDate(milestoneDate) : undefined,
+        failed: isFailed && index === 0,
+      };
+    });
+
+    setMilestones(generated);
+  }, [caseData]);
+
+  // ============================================================
+  // ✅ Recent Updates from Case Data
+  // ============================================================
+  const getRecentUpdates = () => {
+    if (!caseData) return [];
+
+    const caseStartDate = new Date(caseData.submitted_at || caseData.createdAt || Date.now());
+    const addDays = (date, days) => {
+      const result = new Date(date);
+      result.setDate(result.getDate() + days);
+      return result;
+    };
+
+    const formatDisplayDate = (date) =>
+      new Date(date).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+
+    const documentationVerifiedDate = addDays(caseStartDate, 15);
+    const stateProcessingQueueDate = addDays(documentationVerifiedDate, 7);
+    const paymentAuthorizationDate = addDays(documentationVerifiedDate, 14);
+    const initialReviewCompletedDate = paymentAuthorizationDate;
+
+    const isSuccess = caseData.claim_status === 'Success';
+    const isFailed = caseData.claim_status === 'Failed';
+    const currentStage = caseData.claim_process_stage || 0;
+
+    const updates = [
+      {
+        title: 'Documentation Verified',
+        date: documentationVerifiedDate,
+        description: 'All your documents have been validated by the state',
+        active: isSuccess || currentStage >= 2,
+      },
+      {
+        title: 'Case Entered State Processing Queue',
+        date: stateProcessingQueueDate,
+        description: 'Your case is now in the official state processing system',
+        active: isSuccess || currentStage >= 3,
+      },
+      {
+        title: 'Initial Review Completed',
+        date: initialReviewCompletedDate,
+        description: "State Controller's office has begun processing your claim",
+        active: isSuccess || currentStage >= 4,
+      },
+    ];
+
+    return updates;
+  };
+
+  // ============================================================
+  // ✅ Existing Functions (unchanged)
+  // ============================================================
   useEffect(() => {
     if (!searchResults) {
       const savedProperty = localStorage.getItem('propertyData');
@@ -94,38 +365,15 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   ]);
 
   useEffect(() => {
-    if (!searchResults || !Array.isArray(searchResults)) return;
-
-    const claimedIds = Array.isArray(ownPropertyIds)
-      ? ownPropertyIds.map(String)
-      : [];
-
-    const claimedProperties =
-      claimedIds.length > 0
-        ? searchResults.filter((property) =>
-          claimedIds.includes(getPropertyId(property)),
-        )
-        : searchResults;
-
-    const total = claimedProperties.reduce(
-      (sum, property) => sum + parsePropertyAmount(property),
-      0,
-    );
-    // Round fee to nearest cent first, then derive net (same as PropertyResults)
-    const fee = Math.round(total * 10) / 100;
-    const net = total - fee;
-
-    setEstimatedPayout(total);
-    setEstimatedFee(fee);
-    setEstimatedNet(net);
-  }, [searchResults, ownPropertyIds]);
-
-  useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        if (!userData?._id) return;
+        const storedLoginRaw = localStorage.getItem('userLogin');
+        const storedLogin = storedLoginRaw ? JSON.parse(storedLoginRaw) : null;
+        const userId = storedLogin?.user?.user_id || userData?._id;
 
-        const res = await axios.get(`/api/notification?userId=${userData._id}`);
+        if (!userId) return;
+
+        const res = await axios.get(`/api/notification?userId=${userId}`);
 
         if (res.data.success) {
           console.log('User notifications:', res.data.data);
@@ -163,78 +411,6 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
       year: 'numeric',
     });
 
-  // Shared case start → both Case Timeline + Recent Updates use this
-  const caseStartSource =
-    userCase?.submitted_at || userCase?.createdAt || null;
-  const caseStartDate = new Date(caseStartSource || Date.now());
-  const documentationVerifiedDate = addDays(caseStartDate, 15);
-  const stateProcessingQueueDate = addDays(documentationVerifiedDate, 7);
-  // Same date as Case Timeline → Payment Authorization
-  const paymentAuthorizationDate = addDays(documentationVerifiedDate, 14);
-  const initialReviewCompletedDate = paymentAuthorizationDate;
-
-  const recentUpdates = [
-    {
-      title: 'Documentation Verified',
-      date: documentationVerifiedDate,
-      description: 'All your documents have been validated by the state',
-      active: true,
-    },
-    {
-      title: 'Case Entered State Processing Queue',
-      date: stateProcessingQueueDate,
-      description:
-        'Your case is now in the official state processing system',
-      active: false,
-    },
-    {
-      title: 'Initial Review Completed',
-      date: initialReviewCompletedDate,
-      description:
-        "State Controller's office has begun processing your claim",
-      active: false,
-    },
-  ];
-
-  const baseMilestones = [
-    'Case Submitted',
-    'Initial Review',
-    'Documentation Verified',
-    'State Processing',
-    'Payment Authorization',
-    'Funds Distributed',
-  ];
-
-  useEffect(() => {
-    const generated = baseMilestones.map((name, index) => {
-      let milestoneDate;
-      if (name === 'Case Submitted') {
-        milestoneDate = caseStartDate;
-      } else if (name === 'Initial Review') {
-        milestoneDate = addDays(caseStartDate, 7);
-      } else if (name === 'Documentation Verified') {
-        milestoneDate = documentationVerifiedDate;
-      } else if (name === 'State Processing') {
-        milestoneDate = stateProcessingQueueDate;
-      } else if (name === 'Payment Authorization') {
-        // Same date Recent Updates uses for "Initial Review Completed"
-        milestoneDate = paymentAuthorizationDate;
-      } else {
-        // Funds Distributed: one week after payment authorization
-        milestoneDate = addDays(paymentAuthorizationDate, 7);
-      }
-
-      return {
-        name,
-        date: formatDate(milestoneDate),
-        completed: index < 3,
-        current: index === 3,
-        estimated: index >= 3 ? formatDate(milestoneDate) : undefined,
-      };
-    });
-    setMilestones(generated);
-  }, [caseStartSource]);
-
   const handleShareSuccess = () => {
     if (shareAmount && parseFloat(shareAmount) > 0) {
       setHasShared(true);
@@ -254,14 +430,16 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
 
   const handleNotificationClick = async (notificationId) => {
     try {
+      const storedLoginRaw = localStorage.getItem('userLogin');
+      const storedLogin = storedLoginRaw ? JSON.parse(storedLoginRaw) : null;
+      const userId = storedLogin?.user?.user_id || userData?._id;
+
       const res = await axios.put(`/api/notification?id=${notificationId}`, {
         status: true,
       });
 
       if (res.data.success) {
-        const updated = await axios.get(
-          `/api/notification?userId=${userData._id}`,
-        );
+        const updated = await axios.get(`/api/notification?userId=${userId}`);
         if (updated.data.success) {
           setAllNotifications(updated.data.data);
           setNotifications(updated.data.data.length > 0);
@@ -298,6 +476,59 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
     if (url) window.open(url, '_blank');
   };
 
+  // ============================================================
+  // ✅ Get data for display
+  // ============================================================
+  const recentUpdates = getRecentUpdates();
+  const caseNumber = caseData?.case_id || 'CM-2024-001234';
+  const claimStatus = caseData?.claim_status || 'Pending';
+  const isSuccess = claimStatus === 'Success';
+  const isFailed = claimStatus === 'Failed';
+
+  // ✅ Check if any properties are already claimed
+  const properties = caseData?.user_properties || [];
+  const hasClaimedProperties = properties.some(p => p.is_claimed === true);
+  const claimedCount = properties.filter(p => p.is_claimed === true).length;
+  const availableCount = properties.filter(p => p.is_claimed !== true).length;
+
+  // ============================================================
+  // ✅ Loading State
+  // ============================================================
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F7F5F2] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#E1261C] mx-auto mb-4"></div>
+          <p className="text-[#4A4A4A]">Loading your case data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
+  // ✅ No Data State
+  // ============================================================
+  if (!caseData) {
+    return (
+      <div className="min-h-screen bg-[#F7F5F2] flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-[#E1261C] text-5xl mb-4">📋</div>
+          <h3 className="text-xl font-bold text-[#0A0A0A] mb-2">No Active Case Found</h3>
+          <p className="text-[#4A4A4A]">You don't have any active case. Start by searching for unclaimed property.</p>
+          <button
+            onClick={() => router.push('/?step=search')}
+            className="mt-4 px-6 py-2 bg-[#E1261C] text-white rounded-lg hover:bg-[#B11912]"
+          >
+            Search for Property
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
+  // ✅ Render
+  // ============================================================
   return (
     <div className="min-h-screen bg-[#F7F5F2] pt-4">
       {/* Header */}
@@ -305,24 +536,23 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <Link
-                href="/"
-              >
+              <Link href="/">
                 <h1 className="text-3xl font-bold text-[#0A0A0A] font-['Fraunces']">
                   CatchMyCash
                 </h1>
               </Link>
               <p className="text-[#4A4A4A] mt-1 font-['JetBrains_Mono'] text-sm">
-                Case #CM-2024-001234
+                Case #{caseNumber}
               </p>
             </div>
             <div className="flex items-center space-x-3 flex-wrap gap-2">
               <button
                 onClick={handleSmsToggle}
-                className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg transition-all ${smsEnabled
+                className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
+                  smsEnabled
                     ? 'bg-[#E1261C] text-white shadow-sm'
                     : 'border border-[#E8E6E3] text-[#0A0A0A] hover:bg-[#FCE9E7]'
-                  }`}
+                }`}
               >
                 <span className="text-base">📱</span>
                 <span className="hidden sm:inline">
@@ -340,8 +570,9 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setNotifications(!notifications)}
-                  className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg transition-all border border-[#E8E6E3] hover:bg-[#FCE9E7] ${notifications ? 'bg-[#FCE9E7]' : ''
-                    }`}
+                  className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg transition-all border border-[#E8E6E3] hover:bg-[#FCE9E7] ${
+                    notifications ? 'bg-[#FCE9E7]' : ''
+                  }`}
                 >
                   <Bell className="h-4 w-4 text-[#E1261C]" />
                   <span className="hidden sm:inline">Notifications</span>
@@ -389,7 +620,61 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Progress Overview - Red Themed */}
+        {/* Case Status Banner */}
+        <div className={`mb-6 p-4 rounded-xl border ${
+          isSuccess ? 'bg-green-50 border-green-200' :
+          isFailed ? 'bg-red-50 border-red-200' :
+          'bg-yellow-50 border-yellow-200'
+        }`}>
+          <div className="flex items-center gap-3">
+            {isSuccess ? (
+              <CheckCircle className="h-6 w-6 text-green-600" />
+            ) : isFailed ? (
+              <Clock className="h-6 w-6 text-red-600" />
+            ) : (
+              <Clock className="h-6 w-6 text-yellow-600" />
+            )}
+            <div>
+              <p className="font-semibold text-[#0A0A0A]">
+                Status: {claimStatus}
+              </p>
+              <p className="text-sm text-[#4A4A4A]">
+                {isSuccess ? 'Your claim has been successfully processed!' :
+                 isFailed ? 'Your claim failed. Please contact support.' :
+                 'Your claim is being processed'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* ✅ Warning Banner for Already Claimed Properties */}
+        {hasClaimedProperties && (
+          <div className="mb-6 p-4 bg-[#FCE9E7] border border-[#E1261C]/30 rounded-xl">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-[#E1261C] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <AlertCircle className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[#E1261C]">
+                  ⚠️ {claimedCount} Properit{claimedCount > 1 ? 'ies' : 'y'} Already Claimed
+                </p>
+                <p className="text-sm text-[#4A4A4A] mt-1">
+                  {claimedCount} of {properties.length} properties have already been claimed by another user and cannot be claimed again.
+                </p>
+                {availableCount > 0 && (
+                  <p className="text-sm text-[#E1261C] mt-1">
+                    ✅ {availableCount} properit{availableCount > 1 ? 'ies' : 'y'} are still available to claim.
+                  </p>
+                )}
+                <p className="text-xs text-[#888888] mt-1 font-['JetBrains_Mono']">
+                  Claimed Property IDs: {properties.filter(p => p.is_claimed === true).map(p => p.property_id).join(', ')}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Progress Overview */}
         <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 mb-8 shadow-md relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
           <div className="flex items-center justify-between mb-6">
@@ -399,8 +684,12 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                 Progress
               </span>
             </h2>
-            <Badge className="bg-[#E1261C] text-white border-none">
-              In Progress
+            <Badge className={`${
+              isSuccess ? 'bg-green-600' :
+              isFailed ? 'bg-red-600' :
+              'bg-[#E1261C]'
+            } text-white border-none`}>
+              {isSuccess ? 'Completed' : isFailed ? 'Failed' : 'In Progress'}
             </Badge>
           </div>
 
@@ -415,12 +704,18 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
             </div>
             <div className="w-full h-2 bg-[#E8E6E3] rounded-full overflow-hidden mb-4">
               <div
-                className="h-full bg-gradient-to-r from-[#E1261C] to-[#B11912] transition-all duration-300 rounded-full"
+                className={`h-full transition-all duration-300 rounded-full ${
+                  isSuccess ? 'bg-green-600' :
+                  isFailed ? 'bg-red-600' :
+                  'bg-gradient-to-r from-[#E1261C] to-[#B11912]'
+                }`}
                 style={{ width: `${caseProgress}%` }}
               />
             </div>
             <p className="text-sm text-[#4A4A4A]">
-              Your case is progressing well. Estimated completion in 3-4 weeks.
+              {isSuccess ? '✅ Your claim has been successfully processed!' :
+               isFailed ? '❌ Your claim failed. Please contact support.' :
+               'Your case is progressing well. Estimated completion in 3-4 weeks.'}
             </p>
           </div>
 
@@ -434,6 +729,9 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
+              </p>
+              <p className="text-xs text-[#4A4A4A] mt-1">
+                {properties.length} properit{properties.length !== 1 ? 'ies' : 'y'} found
               </p>
             </div>
             <div className="bg-[#F0EEEB] p-4 rounded-lg">
@@ -461,7 +759,7 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
           </div>
         </div>
 
-        {/* Milestone Timeline - Red Themed */}
+        {/* Milestone Timeline */}
         <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 mb-8 shadow-md relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
           <h3 className="text-lg font-bold text-[#0A0A0A] mb-6 font-['Fraunces']">
@@ -469,132 +767,154 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
             <span className="text-[#E1261C] italic font-normal">Timeline</span>
           </h3>
           <div className="space-y-4">
-            {milestones.map((milestone, index) => (
-              <div key={index} className="flex items-center">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 flex-shrink-0 ${milestone.completed
-                      ? 'bg-[#003f2f]'
-                      : milestone.current
-                        ? 'bg-[#E1261C] animate-pulse'
-                        : 'bg-[#D4D4D4]'
+            {milestones.length > 0 ? (
+              milestones.map((milestone, index) => (
+                <div key={index} className="flex items-center">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 flex-shrink-0 ${
+                      milestone.completed
+                        ? 'bg-[#003f2f]'
+                        : milestone.current
+                          ? 'bg-[#E1261C] animate-pulse'
+                          : milestone.failed
+                            ? 'bg-red-600'
+                            : 'bg-[#D4D4D4]'
                     }`}
-                >
-                  {milestone.completed ? (
-                    <CheckCircle className="h-5 w-5 text-white" />
-                  ) : milestone.current ? (
-                    <Clock className="h-5 w-5 text-white" />
-                  ) : (
-                    <span className="text-white font-bold font-['JetBrains_Mono'] text-sm">
-                      {index + 1}
-                    </span>
+                  >
+                    {milestone.completed ? (
+                      <CheckCircle className="h-5 w-5 text-white" />
+                    ) : milestone.current ? (
+                      <Clock className="h-5 w-5 text-white" />
+                    ) : milestone.failed ? (
+                      <span className="text-white font-bold">✕</span>
+                    ) : (
+                      <span className="text-white font-bold font-['JetBrains_Mono'] text-sm">
+                        {index + 1}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h4
+                      className={`font-medium ${
+                        milestone.completed
+                          ? 'text-[#0A0A0A]'
+                          : milestone.current
+                            ? 'text-[#E1261C]'
+                            : milestone.failed
+                              ? 'text-red-600'
+                              : 'text-[#888888]'
+                      }`}
+                    >
+                      {milestone.name}
+                    </h4>
+                    <p className="text-sm text-[#4A4A4A]">
+                      {milestone.completed
+                        ? `Completed ${milestone.date}`
+                        : milestone.current
+                          ? `In progress - Est. ${milestone.estimated}`
+                          : milestone.failed
+                            ? 'Failed - Please contact support'
+                            : `Estimated ${milestone.estimated}`}
+                    </p>
+                  </div>
+                  {milestone.current && (
+                    <Badge className="bg-[#E1261C] text-white border-none ml-2">
+                      Current
+                    </Badge>
+                  )}
+                  {milestone.failed && (
+                    <Badge className="bg-red-600 text-white border-none ml-2">
+                      Failed
+                    </Badge>
                   )}
                 </div>
-                <div className="flex-1">
-                  <h4
-                    className={`font-medium ${milestone.completed
-                        ? 'text-[#0A0A0A]'
-                        : milestone.current
-                          ? 'text-[#E1261C]'
-                          : 'text-[#888888]'
-                      }`}
-                  >
-                    {milestone.name}
-                  </h4>
-                  <p className="text-sm text-[#4A4A4A]">
-                    {milestone.completed
-                      ? `Completed ${milestone.date}`
-                      : milestone.current
-                        ? `In progress - Est. ${milestone.estimated}`
-                        : `Estimated ${milestone.estimated}`}
-                  </p>
-                </div>
-                {milestone.current && (
-                  <Badge className="bg-[#E1261C] text-white border-none ml-2">
-                    Current
-                  </Badge>
-                )}
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-[#4A4A4A] text-center py-4">No milestones available</p>
+            )}
           </div>
         </div>
 
-        {/* Share Success Story - Red/Yellow Themed */}
-        <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 mb-8 shadow-md relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
-          <div className="flex items-center mb-4">
-            <div className="w-10 h-10 bg-[#FCE9E7] rounded-full flex items-center justify-center mr-3">
-              <Share2 className="h-5 w-5 text-[#E1261C]" />
+        {/* Share Success Story - Only show if success */}
+        {isSuccess && (
+          <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 mb-8 shadow-md relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
+            <div className="flex items-center mb-4">
+              <div className="w-10 h-10 bg-[#FCE9E7] rounded-full flex items-center justify-center mr-3">
+                <Share2 className="h-5 w-5 text-[#E1261C]" />
+              </div>
+              <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
+                Share Your{' '}
+                <span className="text-[#E1261C] italic font-normal">
+                  Success & Earn More!
+                </span>
+              </h3>
             </div>
-            <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
-              Share Your{' '}
-              <span className="text-[#E1261C] italic font-normal">
-                Success & Earn More!
-              </span>
-            </h3>
-          </div>
 
-          {!hasShared ? (
-            <div>
-              <p className="text-[#4A4A4A] mb-4">
-                Once you receive your money, share your success story and earn
-                1% of any new customer recoveries from your referral link!
-              </p>
+            {!hasShared ? (
+              <div>
+                <p className="text-[#4A4A4A] mb-4">
+                  Once you receive your money, share your success story and earn
+                  1% of any new customer recoveries from your referral link!
+                </p>
 
-              <div className="bg-[#FCE9E7] p-4 rounded-lg border border-[#E8E6E3]">
-                <h4 className="font-medium text-[#0A0A0A] mb-2 font-['JetBrains_Mono']">
-                  Preview Your Success Post:
-                </h4>
-                <div className="text-sm text-[#4A4A4A] italic bg-white p-3 rounded-lg">
-                  "Just recovered $[amount] in unclaimed property with
-                  @CatchMyCash! The process was so easy - they handled
-                  everything while I just waited for my check. Check if you have
-                  money waiting: [your_referral_link]"
+                <div className="bg-[#FCE9E7] p-4 rounded-lg border border-[#E8E6E3]">
+                  <h4 className="font-medium text-[#0A0A0A] mb-2 font-['JetBrains_Mono']">
+                    Preview Your Success Post:
+                  </h4>
+                  <div className="text-sm text-[#4A4A4A] italic bg-white p-3 rounded-lg">
+                    "Just recovered ${estimatedNet.toFixed(2)} in unclaimed property with
+                    @CatchMyCash! The process was so easy - they handled
+                    everything while I just waited for my check. Check if you have
+                    money waiting: [your_referral_link]"
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-col sm:flex-row items-center gap-3">
+                  <input
+                    type="number"
+                    placeholder="$ Amount you received"
+                    value={shareAmount}
+                    onChange={(e) => setShareAmount(e.target.value)}
+                    className="w-full sm:flex-1 px-4 py-2 border-2 border-[#E8E6E3] rounded-lg text-[#0A0A0A] placeholder-[#888888] focus:border-[#E1261C] focus:outline-none transition-all"
+                  />
+                  <button
+                    onClick={handleShareSuccess}
+                    disabled={!shareAmount}
+                    className={`w-full sm:w-auto px-6 py-2 font-semibold rounded-lg transition-all ${
+                      shareAmount
+                        ? 'bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg'
+                        : 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
+                    }`}
+                  >
+                    Create My Referral Link
+                  </button>
                 </div>
               </div>
-
-              <div className="mt-4 flex flex-col sm:flex-row items-center gap-3">
-                <input
-                  type="number"
-                  placeholder="$ Amount you received"
-                  value={shareAmount}
-                  onChange={(e) => setShareAmount(e.target.value)}
-                  className="w-full sm:flex-1 px-4 py-2 border-2 border-[#E8E6E3] rounded-lg text-[#0A0A0A] placeholder-[#888888] focus:border-[#E1261C] focus:outline-none transition-all"
-                />
+            ) : (
+              <div className="text-center">
+                <div className="w-16 h-16 bg-[#FCE9E7] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="h-8 w-8 text-[#E1261C]" />
+                </div>
+                <h4 className="font-bold text-[#0A0A0A] mb-2 font-['Fraunces']">
+                  Success Story Shared!
+                </h4>
+                <p className="text-[#4A4A4A] mb-4">
+                  You'll earn 1% of any recoveries from people who use your
+                  referral link.
+                </p>
                 <button
-                  onClick={handleShareSuccess}
-                  disabled={!shareAmount}
-                  className={`w-full sm:w-auto px-6 py-2 font-semibold rounded-lg transition-all ${shareAmount
-                      ? 'bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg'
-                      : 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
-                    }`}
+                  onClick={onCreateReferral}
+                  className="bg-[#E1261C] hover:bg-[#B11912] text-white px-6 py-3 font-semibold rounded-lg transition-all shadow-md hover:shadow-lg"
                 >
-                  Create My Referral Link
+                  View My Referral Dashboard
                 </button>
               </div>
-            </div>
-          ) : (
-            <div className="text-center">
-              <div className="w-16 h-16 bg-[#FCE9E7] rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="h-8 w-8 text-[#E1261C]" />
-              </div>
-              <h4 className="font-bold text-[#0A0A0A] mb-2 font-['Fraunces']">
-                Success Story Shared!
-              </h4>
-              <p className="text-[#4A4A4A] mb-4">
-                You'll earn 1% of any recoveries from people who use your
-                referral link.
-              </p>
-              <button
-                onClick={onCreateReferral}
-                className="bg-[#E1261C] hover:bg-[#B11912] text-white px-6 py-3 font-semibold rounded-lg transition-all shadow-md hover:shadow-lg"
-              >
-                View My Referral Dashboard
-              </button>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
-        {/* Recent Updates - Red Themed */}
+        {/* Recent Updates */}
         <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 shadow-md relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
           <h3 className="text-lg font-bold text-[#0A0A0A] mb-4 font-['Fraunces']">
@@ -602,20 +922,25 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
             <span className="text-[#E1261C] italic font-normal">Updates</span>
           </h3>
           <div className="space-y-3">
-            {recentUpdates.map((update) => (
-              <div key={update.title} className="flex items-start">
-                <div
-                  className={`w-2 h-2 rounded-full mt-2 mr-3 ${update.active ? 'bg-[#E1261C]' : 'bg-[#003f2f]'
+            {recentUpdates.length > 0 ? (
+              recentUpdates.map((update) => (
+                <div key={update.title} className="flex items-start">
+                  <div
+                    className={`w-2 h-2 rounded-full mt-2 mr-3 ${
+                      update.active ? 'bg-[#E1261C]' : 'bg-[#003f2f]'
                     }`}
-                ></div>
-                <div className="w-[90%]">
-                  <p className="font-medium text-[#0A0A0A]">{update.title}</p>
-                  <p className="text-sm text-[#4A4A4A]">
-                    {formatDisplayDate(update.date)} - {update.description}
-                  </p>
+                  ></div>
+                  <div className="w-[90%]">
+                    <p className="font-medium text-[#0A0A0A]">{update.title}</p>
+                    <p className="text-sm text-[#4A4A4A]">
+                      {formatDisplayDate(update.date)} - {update.description}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-[#4A4A4A] text-center py-4">No updates available</p>
+            )}
           </div>
         </div>
 
