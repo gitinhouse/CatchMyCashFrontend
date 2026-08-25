@@ -76,8 +76,8 @@ function deriveCaseStatus(caseItem) {
             label: 'Approved',
             tone: 'approved',
             resumeStep: null,
-            stepTitle: 'Claim Approved',
-            stepDescription: 'Your claim has been successfully approved by the State Controller\'s Office',
+            stepTitle: 'Claim Under Review',
+            stepDescription: 'Your Claim is in Under Review',
             checklist: { isProcessed: true, canContinue: false }
         };
     }

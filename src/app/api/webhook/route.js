@@ -34,60 +34,9 @@ export async function POST(req) {
         ? [properties]
         : [];
 
-    // ✅ FIX: Update is_claimed ONLY for the specific properties that failed
-    if (propertyList.length > 0) {
-      try {
-        // Get property IDs from the property list
-        const propertyIds = propertyList
-          .map(p => p.propertyId || p.property_id)
-          .filter(Boolean);
-
-        // Get claim IDs from the property list
-        const claimIds = propertyList
-          .map(p => p.claimId || p.claim_id)
-          .filter(Boolean);
-
-        // ✅ IMPORTANT: Update ONLY the specific properties in the list
-        // NOT all properties for the user!
-        if (propertyIds.length > 0) {
-          const result = await UserProperty.updateMany(
-            {
-              property_id: { $in: propertyIds },
-              user_id: new mongoose.Types.ObjectId(userId)
-            },
-            { $set: { is_claimed: true } }
-          );
-          console.log(`✅ Updated is_claimed for specific properties: ${propertyIds.join(', ')}`);
-          console.log(`   Matched: ${result.matchedCount}, Modified: ${result.modifiedCount}`);
-        } else if (claimIds.length > 0) {
-          // Fallback: update by claim ID
-          const result = await UserProperty.updateMany(
-            {
-              claim_id: { $in: claimIds },
-              user_id: new mongoose.Types.ObjectId(userId)
-            },
-            { $set: { is_claimed: true } }
-          );
-          console.log(`✅ Updated is_claimed for claim IDs: ${claimIds.join(', ')}`);
-          console.log(`   Matched: ${result.matchedCount}, Modified: ${result.modifiedCount}`);
-        } else {
-          // If we have properties but no IDs, try to match by address or other fields
-          console.warn('⚠️ No property IDs or claim IDs found in the property list');
-          console.log('   Property list:', JSON.stringify(propertyList, null, 2));
-          
-          // ❌ REMOVED: The fallback that updates ALL properties
-          // Instead, log the issue but don't update anything
-          console.warn('⚠️ Skipping is_claimed update - no valid identifiers found');
-        }
-
-      } catch (updateError) {
-        console.error('❌ Error updating is_claimed field:', updateError);
-        // Don't fail the email send if update fails
-        // Just log the error and continue
-      }
-    } else {
-      console.log('ℹ️ No properties in list, skipping is_claimed update');
-    }
+    // ⚠️ UPDATE REMOVED: The RDP file now handles the is_claimed update
+    // The update logic has been moved to the RDP file (app.py) where it
+    // updates the database when duplicate/claimed properties are detected.
 
     // Brand palette (from catchmycash.com)
     const COLORS = {
