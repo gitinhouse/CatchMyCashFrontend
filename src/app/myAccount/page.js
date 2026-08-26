@@ -250,7 +250,7 @@ export default function MyAccountPage() {
     }, 30000); // 30 seconds
 
     return () => clearInterval(interval);
-}, [cases]);
+}, [cases, retryStatuses]);
 
 
     useEffect(() => {
@@ -632,8 +632,7 @@ export default function MyAccountPage() {
                                                                                     const errorType = retryStatuses[caseItem.case_id]?.claim_error_type;
 
                                                                                     if (remaining <= 0) {
-                                                                                        return "We're reviewing your claim. You'll get an update soon.";
-                                                                                    }
+                                                                                        return "We&apos;re reviewing your claim. You&apos;ll get an update soon.";                                                                                    }
 
                                                                                     if (errorType === 'technical_failure') {
                                                                                         return `We encountered a temporary issue. We'll automatically retry (${remaining} attempt${remaining > 1 ? 's' : ''} remaining). This may take up to 20-30 minutes.`;
@@ -684,7 +683,7 @@ export default function MyAccountPage() {
                                                                     <div className="flex-1">
                                                                         <p className="font-semibold text-[#E1261C]">⏳ Claim Under Review</p>
                                                                         <p className="text-[#4A4A4A] mt-1">
-                                                                            We've encountered some difficulty processing your claim. Our team has been notified and will review it shortly. You'll receive an update via email once it's resolved.
+                                                                            We&apos;ve encountered some difficulty processing your claim. Our team has been notified and will review it shortly. You&apos;ll receive an update via email once it&apos;s resolved.
                                                                         </p>
                                                                         {retryStatuses[caseItem.case_id]?.claim_error_type && (
                                                                             <p className="text-xs text-[#888888] mt-2 font-['JetBrains_Mono']">
@@ -753,7 +752,7 @@ export default function MyAccountPage() {
                                                                         <div className="flex-1">
                                                                             <p className="font-semibold text-[#0A0A0A]">⏳ Verifying Claim Status</p>
                                                                             <p className="text-[#4A4A4A] mt-1">
-                                                                                We're verifying whether your claim was successfully submitted. You'll receive an update shortly.
+                                                                                We&apos;re verifying whether your claim was successfully submitted. You&apos;ll receive an update shortly.
                                                                             </p>
                                                                         </div>
                                                                     </div>
