@@ -52,7 +52,7 @@ function deriveCaseStatus(caseItem) {
             tone: 'action',
             resumeStep: null, // No step to continue
             stepTitle: 'Properties Already Claimed',
-            stepDescription: 'Properties already been claimed by another user. Please search for new properties.',
+            stepDescription: 'All properties have already been claimed by another user. Please search for new properties.',
             checklist: { allClaimed: true, canContinue: false }
         };
     }
@@ -230,27 +230,27 @@ export default function MyAccountPage() {
 
 
     useEffect(() => {
-    const interval = setInterval(() => {
-        cases.forEach(async (c) => {
-            if (c.case_id && retryStatuses[c.case_id]?.claim_retryable) {
-                try {
-                    const res = await fetch(`/api/claims/retry-status?case_id=${c.case_id}`);
-                    const status = await res.json();
-                    if (!status.error) {
-                        setRetryStatuses(prev => ({
-                            ...prev,
-                            [c.case_id]: status
-                        }));
+        const interval = setInterval(() => {
+            cases.forEach(async (c) => {
+                if (c.case_id && retryStatuses[c.case_id]?.claim_retryable) {
+                    try {
+                        const res = await fetch(`/api/claims/retry-status?case_id=${c.case_id}`);
+                        const status = await res.json();
+                        if (!status.error) {
+                            setRetryStatuses(prev => ({
+                                ...prev,
+                                [c.case_id]: status
+                            }));
+                        }
+                    } catch (err) {
+                        // silent fail
                     }
-                } catch (err) {
-                    // silent fail
                 }
-            }
-        });
-    }, 30000); // 30 seconds
+            });
+        }, 30000); // 30 seconds
 
-    return () => clearInterval(interval);
-}, [cases, retryStatuses]);
+        return () => clearInterval(interval);
+    }, [cases, retryStatuses]);
 
 
     useEffect(() => {
@@ -613,195 +613,130 @@ export default function MyAccountPage() {
 
                                                 {tab === 'status' && (
                                                     <div className="space-y-6 text-sm">
+                                                        {(() => {
+                                                            const retryStatus = retryStatuses[caseItem.case_id];
+                                                            const allClaimed = caseItem.user_properties?.every(p => p.is_claimed === true);
+                                                            const someClaimed = caseItem.user_properties?.some(p => p.is_claimed === true);
 
-                                                        {/* ✅ RETRY IN PROGRESS - Automatic retry message */}
-                                                        {retryStatuses[caseItem.case_id]?.claim_retryable &&
-                                                            !retryStatuses[caseItem.case_id]?.claim_retry_exhausted && (
-                                                                <div className="bg-[#FFF8E1] border border-[#FFB300] rounded-xl p-4">
-                                                                    <div className="flex items-start gap-3">
-                                                                        <div className="w-8 h-8 bg-[#FFB300] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                                                            <Clock className="h-4 w-4 text-white" />
-                                                                        </div>
-                                                                        <div className="flex-1">
-                                                                            <p className="font-semibold text-[#0A0A0A]">🔄 Automatic Retry in Progress</p>
-                                                                            <p className="text-[#4A4A4A] mt-1">
-                                                                                {(() => {
-                                                                                    const attempts = retryStatuses[caseItem.case_id]?.claim_retry_count || 0;
-                                                                                    const maxAttempts = retryStatuses[caseItem.case_id]?.claim_max_retries || 3;
-                                                                                    const remaining = maxAttempts - attempts;
-                                                                                    const errorType = retryStatuses[caseItem.case_id]?.claim_error_type;
+                                                            // 🔥 RULE 1: Retry active hai toh SIRF processing message dikhao
+                                                            if (retryStatus?.claim_retryable) {
+                                                                const attempt = (retryStatus.claim_retry_count || 0) + 1;
+                                                                const maxAttempts = retryStatus.claim_max_retries || 3;
 
-                                                                                    if (remaining <= 0) {
-                                                                                        return "We&apos;re reviewing your claim. You&apos;ll get an update soon.";                                                                                    }
-
-                                                                                    if (errorType === 'technical_failure') {
-                                                                                        return `We encountered a temporary issue. We'll automatically retry (${remaining} attempt${remaining > 1 ? 's' : ''} remaining). This may take up to 20-30 minutes.`;
-                                                                                    }
-
-                                                                                    if (errorType === 'submission_uncertain') {
-                                                                                        return "Your claim may have been submitted. We're verifying the status and will update you shortly.";
-                                                                                    }
-
-                                                                                    return `Processing your claim (attempt ${attempts}/${maxAttempts})... This may take up to 20-30 minutes.`;
-                                                                                })()}
-                                                                            </p>
-                                                                            {retryStatuses[caseItem.case_id]?.claim_next_retry_at && (
-                                                                                <p className="text-xs text-[#888888] mt-2 font-['JetBrains_Mono']">
-                                                                                    <Clock className="h-3 w-3 inline mr-1" />
-                                                                                    Next retry: {new Date(retryStatuses[caseItem.case_id].claim_next_retry_at).toLocaleString()}
+                                                                return (
+                                                                    <div className="bg-[#FFF8E1] border border-[#FFB300] rounded-xl p-4">
+                                                                        <div className="flex items-start gap-3">
+                                                                            <div className="w-8 h-8 bg-[#FFB300] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                                                <Clock className="h-4 w-4 text-white animate-pulse" />
+                                                                            </div>
+                                                                            <div className="flex-1">
+                                                                                <p className="font-semibold text-[#0A0A0A]">
+                                                                                    ⏳ Processing Your Claim {attempt > 1 && `- Attempt ${attempt} of ${maxAttempts}`}
                                                                                 </p>
-                                                                            )}
-                                                                            {retryStatuses[caseItem.case_id]?.claim_retry_count > 0 && (
-                                                                                <div className="mt-2">
-                                                                                    <div className="flex items-center gap-2">
-                                                                                        <div className="flex-1 h-1.5 bg-[#E8E6E3] rounded-full overflow-hidden">
-                                                                                            <div
-                                                                                                className="h-full bg-[#FFB300] rounded-full transition-all duration-500"
-                                                                                                style={{
-                                                                                                    width: `${Math.min(100, ((retryStatuses[caseItem.case_id]?.claim_retry_count || 0) / (retryStatuses[caseItem.case_id]?.claim_max_retries || 3)) * 100)}%`
-                                                                                                }}
-                                                                                            />
-                                                                                        </div>
-                                                                                        <span className="text-xs text-[#888888] font-['JetBrains_Mono']">
-                                                                                            {retryStatuses[caseItem.case_id]?.claim_retry_count}/{retryStatuses[caseItem.case_id]?.claim_max_retries || 3}
-                                                                                        </span>
-                                                                                    </div>
+                                                                                <p className="text-[#4A4A4A] mt-1">
+                                                                                    {attempt === 1
+                                                                                        ? 'Your claim is being submitted. This may take a few minutes.'
+                                                                                        : `Your claim is still being processed. Attempt ${attempt} of ${maxAttempts}.`}
+                                                                                </p>
+                                                                                <div className="mt-3 flex items-center gap-2">
+                                                                                    <div className="w-4 h-4 border-2 border-[#E1261C] border-t-transparent rounded-full animate-spin" />
+                                                                                    <span className="text-xs text-[#E1261C]">Processing...</span>
                                                                                 </div>
-                                                                            )}
+                                                                            </div>
                                                                         </div>
                                                                     </div>
-                                                                </div>
-                                                            )}
+                                                                );
+                                                            }
 
-                                                        {/* ⚠️ RETRY EXHAUSTED - Needs human review */}
-                                                        {retryStatuses[caseItem.case_id]?.claim_retry_exhausted && (
-                                                            <div className="bg-[#FCE9E7] border border-[#E1261C]/30 rounded-xl p-4">
-                                                                <div className="flex items-start gap-3">
-                                                                    <div className="w-8 h-8 bg-[#E1261C] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                                                        <AlertCircle className="h-4 w-4 text-white" />
+                                                            // 🔥 RULE 2: Retry exhausted - show failure
+                                                            if (retryStatus?.claim_retry_exhausted) {
+                                                                return (
+                                                                    <div className="bg-[#FCE9E7] border border-[#E1261C]/40 rounded-xl p-5">
+                                                                        <div className="flex items-start gap-3">
+                                                                            <div className="w-8 h-8 bg-[#E1261C] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                                                <AlertCircle className="h-4 w-4 text-white" />
+                                                                            </div>
+                                                                            <div>
+                                                                                <p className="font-bold text-[#0A0A0A]">❌ Submission Failed</p>
+                                                                                <p className="text-[#4A4A4A] mt-1">
+                                                                                    We tried {retryStatus.claim_max_retries || 3} times. Please try again.
+                                                                                </p>
+                                                                                <button
+                                                                                    onClick={() => handleContinueFiling(caseItem)}
+                                                                                    className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all"
+                                                                                >
+                                                                                    Try Again
+                                                                                    <ArrowRight className="h-4 w-4" />
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
-                                                                    <div className="flex-1">
-                                                                        <p className="font-semibold text-[#E1261C]">⏳ Claim Under Review</p>
+                                                                );
+                                                            }
+
+                                                            // 🔥 RULE 3: Retry khatam hone ke BAAD hi "Already Claimed" dikhao
+                                                            if (allClaimed) {
+                                                                return (
+                                                                    <div className="bg-[#FCE9E7] border border-[#E1261C]/30 rounded-xl p-5">
+                                                                        <div className="flex items-start gap-3">
+                                                                            <div className="w-8 h-8 bg-[#E1261C] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                                                <AlertCircle className="h-4 w-4 text-white" />
+                                                                            </div>
+                                                                            <div>
+                                                                                <p className="font-bold text-[#0A0A0A]">⚠️ All Properties Already Claimed</p>
+                                                                                <p className="text-[#4A4A4A] mt-1">
+                                                                                    All properties have already been claimed by another user.
+                                                                                </p>
+                                                                                <button
+                                                                                    onClick={() => router.push('/?step=search')}
+                                                                                    className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all"
+                                                                                >
+                                                                                    Search New Properties
+                                                                                    <ArrowRight className="h-4 w-4" />
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            }
+
+                                                            // 🔥 RULE 4: Some claimed (only when retry done)
+                                                            if (someClaimed && !allClaimed) {
+                                                                return (
+                                                                    <div className="bg-[#FFF8E1] border border-[#FFB300]/40 rounded-xl p-5">
+                                                                        <p className="font-bold text-[#0A0A0A]">⚠️ Some Properties Already Claimed</p>
                                                                         <p className="text-[#4A4A4A] mt-1">
-                                                                            We&apos;ve encountered some difficulty processing your claim. Our team has been notified and will review it shortly. You&apos;ll receive an update via email once it&apos;s resolved.
+                                                                            Some properties are already claimed. You can continue with available ones.
                                                                         </p>
-                                                                        {retryStatuses[caseItem.case_id]?.claim_error_type && (
-                                                                            <p className="text-xs text-[#888888] mt-2 font-['JetBrains_Mono']">
-                                                                                Error: {retryStatuses[caseItem.case_id].claim_error_type?.replace(/_/g, ' ') || 'Unknown'}
-                                                                                {retryStatuses[caseItem.case_id]?.claim_error_code &&
-                                                                                    ` • Code: ${retryStatuses[caseItem.case_id].claim_error_code}`
-                                                                                }
-                                                                            </p>
-                                                                        )}
+                                                                        <button
+                                                                            onClick={() => handleContinueFiling(caseItem)}
+                                                                            className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all"
+                                                                        >
+                                                                            Continue Filing
+                                                                            <ArrowRight className="h-4 w-4" />
+                                                                        </button>
+                                                                    </div>
+                                                                );
+                                                            }
+
+                                                            // 🔥 RULE 5: Default - show next step
+                                                            return (
+                                                                <div>
+                                                                    <h4 className="font-bold text-[#0A0A0A] mb-1">Next Step</h4>
+                                                                    <div className="bg-[#F7F5F2] border border-[#E8E6E3] rounded-xl p-5">
+                                                                        <p className="font-bold text-[#0A0A0A] mb-1">{status.stepTitle}</p>
+                                                                        <p className="text-[#4A4A4A] mb-4">{status.stepDescription}</p>
+                                                                        <button
+                                                                            onClick={() => handleContinueFiling(caseItem)}
+                                                                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all"
+                                                                        >
+                                                                            Continue Filing
+                                                                            <ArrowRight className="h-4 w-4" />
+                                                                        </button>
                                                                     </div>
                                                                 </div>
-                                                            </div>
-                                                        )}
-
-                                                        {/* ✅ ALREADY CLAIMED - Terminal state */}
-                                                        {retryStatuses[caseItem.case_id]?.claim_error_type === 'already_claimed' &&
-                                                            !retryStatuses[caseItem.case_id]?.claim_retryable && (
-                                                                <div className="bg-[#E8F5E9] border border-[#4CAF50]/30 rounded-xl p-4">
-                                                                    <div className="flex items-start gap-3">
-                                                                        <div className="w-8 h-8 bg-[#4CAF50] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                                                            <CheckCircle2 className="h-4 w-4 text-white" />
-                                                                        </div>
-                                                                        <div className="flex-1">
-                                                                            <p className="font-semibold text-[#0A0A0A]">ℹ️ Already Claimed</p>
-                                                                            <p className="text-[#4A4A4A] mt-1">
-                                                                                This property has already been claimed with this email address. No further action is needed.
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            )}
-
-                                                        {/* ✅ MISSING VALUE - User needs to fix data */}
-                                                        {retryStatuses[caseItem.case_id]?.claim_error_type === 'missing_value' &&
-                                                            !retryStatuses[caseItem.case_id]?.claim_retryable && (
-                                                                <div className="bg-[#FFF3E0] border border-[#FF9800]/30 rounded-xl p-4">
-                                                                    <div className="flex items-start gap-3">
-                                                                        <div className="w-8 h-8 bg-[#FF9800] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                                                            <AlertCircle className="h-4 w-4 text-white" />
-                                                                        </div>
-                                                                        <div className="flex-1">
-                                                                            <p className="font-semibold text-[#0A0A0A]">✏️ Information Needed</p>
-                                                                            <p className="text-[#4A4A4A] mt-1">
-                                                                                Some information needs to be corrected before we can process your claim. Please review your claim details and try again.
-                                                                            </p>
-                                                                            <button
-                                                                                onClick={() => router.push(`/?step=documents&case_id=${caseItem._id}`)}
-                                                                                className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all"
-                                                                            >
-                                                                                Fix Information
-                                                                                <ArrowRight className="h-4 w-4" />
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            )}
-
-                                                        {/* ✅ SUBMISSION UNCERTAIN - Needs human review */}
-                                                        {retryStatuses[caseItem.case_id]?.claim_error_type === 'submission_uncertain' &&
-                                                            !retryStatuses[caseItem.case_id]?.claim_retryable && (
-                                                                <div className="bg-[#FFF8E1] border border-[#FFB300]/30 rounded-xl p-4">
-                                                                    <div className="flex items-start gap-3">
-                                                                        <div className="w-8 h-8 bg-[#FFB300] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                                                            <Clock className="h-4 w-4 text-white" />
-                                                                        </div>
-                                                                        <div className="flex-1">
-                                                                            <p className="font-semibold text-[#0A0A0A]">⏳ Verifying Claim Status</p>
-                                                                            <p className="text-[#4A4A4A] mt-1">
-                                                                                We&apos;re verifying whether your claim was successfully submitted. You&apos;ll receive an update shortly.
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            )}
-
-                                                        {/* Original next step card - keep your existing code */}
-                                                        {status.resumeStep && !retryStatuses[caseItem.case_id]?.claim_retryable && (
-                                                            <div>
-                                                                <h4 className="font-bold text-[#0A0A0A] mb-1">
-                                                                    Action required to continue your claim
-                                                                </h4>
-                                                                <p className="text-[#4A4A4A] mb-4">
-                                                                    Your claim is not finished yet. Complete the next step to keep things moving.
-                                                                </p>
-                                                                <div className="bg-[#F7F5F2] border border-[#E8E6E3] rounded-xl p-5">
-                                                                    <p className="text-xs uppercase text-[#888888] font-['JetBrains_Mono'] mb-1">
-                                                                        Next step
-                                                                    </p>
-                                                                    <p className="font-bold text-[#0A0A0A] mb-1">
-                                                                        {status.stepTitle}
-                                                                    </p>
-                                                                    <p className="text-[#4A4A4A] mb-4">
-                                                                        {status.stepDescription}
-                                                                    </p>
-                                                                    <button
-                                                                        onClick={() => handleContinueFiling(caseItem)}
-                                                                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm"
-                                                                    >
-                                                                        Continue Filing
-                                                                        <ArrowRight className="h-4 w-4" />
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                        {/* Completed state */}
-                                                        {!status.resumeStep && !retryStatuses[caseItem.case_id]?.claim_retryable && (
-                                                            <div className="bg-[#F0FFF4] border border-[#E1261C]/30 rounded-xl p-5">
-                                                                <p className="font-bold text-[#0A0A0A] mb-1">
-                                                                    {caseItem?.status === false
-                                                                        ? 'Your claim has been approved'
-                                                                        : 'Your claim is under review'}
-                                                                </p>
-                                                                <p className="text-[#4A4A4A]">
-                                                                    No further action needed from you right now.
-                                                                </p>
-                                                            </div>
-                                                        )}
+                                                            );
+                                                        })()}
                                                     </div>
                                                 )}
                                             </div>
