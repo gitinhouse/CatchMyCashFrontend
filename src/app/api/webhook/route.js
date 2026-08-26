@@ -34,65 +34,7 @@ export async function POST(req) {
         ? [properties]
         : [];
 
-    // Update is_claimed ONLY for the specific properties included in this request
-    if (propertyList.length > 0) {
-      try {
-        // Update by property IDs if they're in the payload
-        let propertyIds = propertyList
-          .map(p => p.propertyId || p.property_id)
-          .filter(Boolean);
-
-        // Fallback: "already claimed" style webhooks don't send propertyId
-        // inside the properties array (only address + empty claimId).
-        // The real IDs are mentioned in errorMessage, e.g. "(14897584, 12980802)".
-        // Extract them from there so is_claimed still gets updated correctly.
-        if (propertyIds.length === 0 && errorMessage) {
-          const idsFromMessage = [...new Set(errorMessage.match(/\b\d{5,}\b/g) || [])];
-          if (idsFromMessage.length > 0) {
-            propertyIds = idsFromMessage;
-            console.log(`ℹ️ No propertyId in payload, extracted from errorMessage: ${propertyIds.join(', ')}`);
-          }
-        }
-
-        if (propertyIds.length > 0) {
-          // Match both string and numeric property_id storage just in case
-          const numericIds = propertyIds
-            .map(id => Number(id))
-            .filter(n => !Number.isNaN(n));
-
-          await UserProperty.updateMany(
-            {
-              property_id: { $in: [...propertyIds, ...numericIds] },
-              user_id: new mongoose.Types.ObjectId(userId)
-            },
-            { $set: { is_claimed: true } }
-          );
-          console.log(`✅ Updated is_claimed for properties: ${propertyIds.join(', ')}`);
-        }
-
-        // Also update by claim ID if available
-        const claimIds = propertyList
-          .map(p => p.claimId || p.claim_id)
-          .filter(Boolean);
-
-        if (claimIds.length > 0) {
-          await UserProperty.updateMany(
-            {
-              claim_id: { $in: claimIds },
-              user_id: new mongoose.Types.ObjectId(userId)
-            },
-            { $set: { is_claimed: true } }
-          );
-          console.log(`✅ Updated is_claimed for claim IDs: ${claimIds.join(', ')}`);
-        }
-
-      } catch (updateError) {
-        console.error('❌ Error updating is_claimed field:', updateError);
-        // Don't fail the email send if update fails
-        // Just log the error and continue
-      }
-    }
-
+   
     // Brand palette (from catchmycash.com)
     const COLORS = {
       cream: '#f7f4ee',

@@ -28,6 +28,22 @@ const getInputErrorClass = (hasError) =>
     ? 'border-[#E1261C] bg-[#FCE9E7] ring-2 ring-[#E1261C]/20'
     : 'border-[#E8E6E3]';
 
+const CLAIMANT_RELATIONSHIPS = [
+  { value: 'MYSELF', label: 'Myself - Individual' },
+  { value: 'BUSINESS - CORP', label: 'Business - Corporation' },
+  { value: 'BUSINESS - PARTNERSHIP', label: 'Business - Partnership' },
+  { value: 'BUSINESS - LLC', label: 'Business - LLC' },
+  { value: 'BUSINESS - SOLE PROPIETOR', label: 'Business - Sole Proprietor' },
+  { value: 'HEIR - TRUST', label: 'Heir - Trust' },
+  { value: 'HEIR - WILL', label: 'Heir - Will' },
+  { value: 'HEIR - COURT APPOINTED REP', label: 'Heir - Court Appointed Rep' },
+  { value: 'HEIR - FINAL DECREE (BENEFICIARY)', label: 'Heir - Final Decree (Beneficiary)' },
+  { value: 'HEIR - INTESTATE', label: 'Heir - Intestate' },
+  { value: 'HOLDER REIMBURSEMENT', label: 'Holder Reimbursement' },
+  { value: 'GOVERNMENT AGENCY', label: 'Government Agency' },
+  { value: 'BANKRUPTCY TRUSTEE', label: 'Bankruptcy Trustee' },
+];
+
 const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -44,6 +60,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
     currentEmployer: '',
     formerEmployers: '',
     previousAddresses: '',
+    claimantRelationship: 'MYSELF',
   });
   const [errorModal, setErrorModal] = useState({
     show: false,
@@ -69,6 +86,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
     zipCode: '',
     dateOfBirth: '',
     ssn: '',
+    claimantRelationship: '', 
   });
   const [apiError, setApiError] = useState('');
   const [agreeSMS, setAgreeSMS] = useState(false);
@@ -331,6 +349,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
       'address',
       'city',
       'zipCode',
+      'claimantRelationship', 
     ];
     const firstErrorField = fieldOrder.find((field) => errorMap[field]);
     if (!firstErrorField) return;
@@ -359,6 +378,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
       zipCode: 'ZIP code is required.',
       dateOfBirth: 'Date of birth is required.',
       ssn: 'SSN is required.',
+      claimantRelationship: 'Claimant relationship is required.',
     };
 
     Object.entries(requiredFields).forEach(([field, message]) => {
@@ -460,6 +480,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
         company_name: formData.currentEmployer,
         formal_employer: formData.formerEmployers,
         previous_address: formData.previousAddresses,
+        claimant_relationship: formData.claimantRelationship,
       };
       const payloadData = {
         userEmail: formData.email,
@@ -490,6 +511,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
           taxIdentifierType: 'Individual',
           sourceOfClaim: '1',
           assistedByFinder: false,
+          claimantRelationship: formData.claimantRelationship,
         },
         max_concurrent: 1,
         max_search_pages: 1,
@@ -1004,6 +1026,37 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                       </span>
                     </h3>
                   </div>
+                </div>
+
+
+                {/* Claimant Relationship - Add this in the Additional Information section */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
+                    Claimant Relationship *
+                  </label>
+                  <select
+                    value={formData.claimantRelationship}
+                    onChange={(e) => {
+                      handleInputChange('claimantRelationship', e.target.value);
+                      // Clear any related errors
+                      setErrors((prev) => ({ ...prev, claimantRelationship: '' }));
+                    }}
+                    className={`w-full text-[#0A0A0A] border-2 rounded-lg px-4 py-2.5 focus:border-[#E1261C] focus:outline-none transition-all bg-white ${errors.claimantRelationship
+                        ? 'border-[#E1261C] bg-[#FCE9E7] ring-2 ring-[#E1261C]/20'
+                        : 'border-[#E8E6E3]'
+                      }`}
+                  >
+                    {CLAIMANT_RELATIONSHIPS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.claimantRelationship && (
+                    <p className="text-[#E1261C] text-xs mt-1 font-medium">
+                      {errors.claimantRelationship}
+                    </p>
+                  )}
                 </div>
 
                 <div className="md:col-span-2">
