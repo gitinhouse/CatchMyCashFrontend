@@ -14,6 +14,7 @@ import {
   Bell,
   Shield,
   AlertCircle,
+  LayoutDashboard,
 } from 'lucide-react';
 import { useSearchStore } from '../store/searchStore';
 import axios from 'axios';
@@ -206,6 +207,7 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
     if (!caseData) return;
 
     const caseStartSource = caseData?.submitted_at || caseData?.createdAt || null;
+    const hasCaseStartDate = Boolean(caseStartSource);
     const caseStartDate = new Date(caseStartSource || Date.now());
 
     const addDays = (date, days) => {
@@ -226,7 +228,6 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
     const stateProcessingQueueDate = addDays(documentationVerifiedDate, 7);
     const paymentAuthorizationDate = addDays(documentationVerifiedDate, 14);
 
-    const isCompleted = caseData.claim_status === 'Success';
     const isFailed = caseData.claim_status === 'Failed';
     const currentStage = caseData.claim_process_stage || 0;
 
@@ -260,10 +261,12 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
 
       return {
         name: milestone.name,
-        date: formatDate(milestoneDate),
+        date: hasCaseStartDate ? formatDate(milestoneDate) : null,
         completed: isCompleted,
         current: isCurrent,
-        estimated: !isCompleted ? formatDate(milestoneDate) : undefined,
+        estimated: !isCompleted
+          ? (hasCaseStartDate ? formatDate(milestoneDate) : 'Date not available yet')
+          : undefined,
         failed: isFailed && index === 0,
       };
     });
@@ -277,7 +280,10 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   const getRecentUpdates = () => {
     if (!caseData) return [];
 
-    const caseStartDate = new Date(caseData.submitted_at || caseData.createdAt || Date.now());
+    const caseStartSource = caseData.submitted_at || caseData.createdAt || null;
+    const hasCaseStartDate = Boolean(caseStartSource);
+    const caseStartDate = new Date(caseStartSource || Date.now());
+
     const addDays = (date, days) => {
       const result = new Date(date);
       result.setDate(result.getDate() + days);
@@ -297,25 +303,24 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
     const initialReviewCompletedDate = paymentAuthorizationDate;
 
     const isSuccess = caseData.claim_status === 'Success';
-    const isFailed = caseData.claim_status === 'Failed';
     const currentStage = caseData.claim_process_stage || 0;
 
     const updates = [
       {
         title: 'Documentation Verified',
-        date: documentationVerifiedDate,
+        dateLabel: hasCaseStartDate ? formatDisplayDate(documentationVerifiedDate) : 'Date not available yet',
         description: 'All your documents have been validated by the state',
         active: isSuccess || currentStage >= 2,
       },
       {
         title: 'Case Entered State Processing Queue',
-        date: stateProcessingQueueDate,
+        dateLabel: hasCaseStartDate ? formatDisplayDate(stateProcessingQueueDate) : 'Date not available yet',
         description: 'Your case is now in the official state processing system',
         active: isSuccess || currentStage >= 3,
       },
       {
         title: 'Initial Review Completed',
-        date: initialReviewCompletedDate,
+        dateLabel: hasCaseStartDate ? formatDisplayDate(initialReviewCompletedDate) : 'Date not available yet',
         description: "State Controller's office has begun processing your claim",
         active: isSuccess || currentStage >= 4,
       },
@@ -548,11 +553,10 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
             <div className="flex items-center space-x-3 flex-wrap gap-2">
               <button
                 onClick={handleSmsToggle}
-                className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                  smsEnabled
-                    ? 'bg-[#E1261C] text-white shadow-sm'
-                    : 'border border-[#E8E6E3] text-[#0A0A0A] hover:bg-[#FCE9E7]'
-                }`}
+                className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg transition-all ${smsEnabled
+                  ? 'bg-[#E1261C] text-white shadow-sm'
+                  : 'border border-[#E8E6E3] text-[#0A0A0A] hover:bg-[#FCE9E7]'
+                  }`}
               >
                 <span className="text-base">📱</span>
                 <span className="hidden sm:inline">
@@ -567,12 +571,19 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                 <span className="hidden sm:inline">Leaderboard</span>
               </button>
 
+              <button
+                onClick={() => router.push('/myAccount')}
+                className="flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg border border-[#E8E6E3] text-[#0A0A0A] hover:bg-[#FCE9E7] transition-all"
+              >
+                <LayoutDashboard className="h-4 w-4 text-[#E1261C]" />
+                <span className="hidden sm:inline">My Dashboard</span>
+              </button>
+
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setNotifications(!notifications)}
-                  className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg transition-all border border-[#E8E6E3] hover:bg-[#FCE9E7] ${
-                    notifications ? 'bg-[#FCE9E7]' : ''
-                  }`}
+                  className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg transition-all border border-[#E8E6E3] hover:bg-[#FCE9E7] ${notifications ? 'bg-[#FCE9E7]' : ''
+                    }`}
                 >
                   <Bell className="h-4 w-4 text-[#E1261C]" />
                   <span className="hidden sm:inline">Notifications</span>
@@ -621,11 +632,10 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Case Status Banner */}
-        <div className={`mb-6 p-4 rounded-xl border ${
-          isSuccess ? 'bg-green-50 border-green-200' :
+        <div className={`mb-6 p-4 rounded-xl border ${isSuccess ? 'bg-green-50 border-green-200' :
           isFailed ? 'bg-red-50 border-red-200' :
-          'bg-yellow-50 border-yellow-200'
-        }`}>
+            'bg-yellow-50 border-yellow-200'
+          }`}>
           <div className="flex items-center gap-3">
             {isSuccess ? (
               <CheckCircle className="h-6 w-6 text-green-600" />
@@ -639,9 +649,9 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                 Status: {claimStatus}
               </p>
               <p className="text-sm text-[#4A4A4A]">
-                {isSuccess ? 'Your claim has been successfully processed!' :
-                 isFailed ? 'Your claim failed. Please contact support.' :
-                 'Your claim is being processed'}
+                {isSuccess ? 'Your claim has been successfully initiated.!' :
+                  isFailed ? 'Your claim failed. Please contact support.' :
+                    'Your claim is being initiated.'}
               </p>
             </div>
           </div>
@@ -684,11 +694,10 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                 Progress
               </span>
             </h2>
-            <Badge className={`${
-              isSuccess ? 'bg-green-600' :
+            <Badge className={`${isSuccess ? 'bg-green-600' :
               isFailed ? 'bg-red-600' :
-              'bg-[#E1261C]'
-            } text-white border-none`}>
+                'bg-[#E1261C]'
+              } text-white border-none`}>
               {isSuccess ? 'Completed' : isFailed ? 'Failed' : 'In Progress'}
             </Badge>
           </div>
@@ -704,18 +713,17 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
             </div>
             <div className="w-full h-2 bg-[#E8E6E3] rounded-full overflow-hidden mb-4">
               <div
-                className={`h-full transition-all duration-300 rounded-full ${
-                  isSuccess ? 'bg-green-600' :
+                className={`h-full transition-all duration-300 rounded-full ${isSuccess ? 'bg-green-600' :
                   isFailed ? 'bg-red-600' :
-                  'bg-gradient-to-r from-[#E1261C] to-[#B11912]'
-                }`}
+                    'bg-gradient-to-r from-[#E1261C] to-[#B11912]'
+                  }`}
                 style={{ width: `${caseProgress}%` }}
               />
             </div>
             <p className="text-sm text-[#4A4A4A]">
-              {isSuccess ? '✅ Your claim has been successfully processed!' :
-               isFailed ? '❌ Your claim failed. Please contact support.' :
-               'Your case is progressing well. Estimated completion in 3-4 weeks.'}
+              {isSuccess ? '✅ Your claim has been successfully initiated.!' :
+                isFailed ? '❌ Your claim failed. Please contact support.' :
+                  'Your case is progressing well. Estimated completion in 3-4 weeks.'}
             </p>
           </div>
 
@@ -771,15 +779,14 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
               milestones.map((milestone, index) => (
                 <div key={index} className="flex items-center">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 flex-shrink-0 ${
-                      milestone.completed
-                        ? 'bg-[#003f2f]'
-                        : milestone.current
-                          ? 'bg-[#E1261C] animate-pulse'
-                          : milestone.failed
-                            ? 'bg-red-600'
-                            : 'bg-[#D4D4D4]'
-                    }`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 flex-shrink-0 ${milestone.completed
+                      ? 'bg-[#003f2f]'
+                      : milestone.current
+                        ? 'bg-[#E1261C] animate-pulse'
+                        : milestone.failed
+                          ? 'bg-red-600'
+                          : 'bg-[#D4D4D4]'
+                      }`}
                   >
                     {milestone.completed ? (
                       <CheckCircle className="h-5 w-5 text-white" />
@@ -795,21 +802,20 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                   </div>
                   <div className="flex-1">
                     <h4
-                      className={`font-medium ${
-                        milestone.completed
-                          ? 'text-[#0A0A0A]'
-                          : milestone.current
-                            ? 'text-[#E1261C]'
-                            : milestone.failed
-                              ? 'text-red-600'
-                              : 'text-[#888888]'
-                      }`}
+                      className={`font-medium ${milestone.completed
+                        ? 'text-[#0A0A0A]'
+                        : milestone.current
+                          ? 'text-[#E1261C]'
+                          : milestone.failed
+                            ? 'text-red-600'
+                            : 'text-[#888888]'
+                        }`}
                     >
                       {milestone.name}
                     </h4>
                     <p className="text-sm text-[#4A4A4A]">
                       {milestone.completed
-                        ? `Completed ${milestone.date}`
+                        ? (milestone.date ? `Completed ${milestone.date}` : 'Completed')
                         : milestone.current
                           ? `In progress - Est. ${milestone.estimated}`
                           : milestone.failed
@@ -881,11 +887,10 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                   <button
                     onClick={handleShareSuccess}
                     disabled={!shareAmount}
-                    className={`w-full sm:w-auto px-6 py-2 font-semibold rounded-lg transition-all ${
-                      shareAmount
-                        ? 'bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg'
-                        : 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
-                    }`}
+                    className={`w-full sm:w-auto px-6 py-2 font-semibold rounded-lg transition-all ${shareAmount
+                      ? 'bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg'
+                      : 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
+                      }`}
                   >
                     Create My Referral Link
                   </button>
@@ -926,14 +931,13 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
               recentUpdates.map((update) => (
                 <div key={update.title} className="flex items-start">
                   <div
-                    className={`w-2 h-2 rounded-full mt-2 mr-3 ${
-                      update.active ? 'bg-[#E1261C]' : 'bg-[#003f2f]'
-                    }`}
+                    className={`w-2 h-2 rounded-full mt-2 mr-3 ${update.active ? 'bg-[#E1261C]' : 'bg-[#003f2f]'
+                      }`}
                   ></div>
                   <div className="w-[90%]">
                     <p className="font-medium text-[#0A0A0A]">{update.title}</p>
                     <p className="text-sm text-[#4A4A4A]">
-                      {formatDisplayDate(update.date)} - {update.description}
+                      {update.dateLabel} - {update.description}
                     </p>
                   </div>
                 </div>

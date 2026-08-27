@@ -333,8 +333,8 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     if (hasRedirectedToTracking.current) return false;
     if (!areRequiredDocsComplete(userDocs)) return false;
 
-    hasRedirectedToTracking.current = true;
-    onNext();
+    // hasRedirectedToTracking.current = true;
+    // onNext();
     return true;
   };
 
@@ -424,9 +424,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
             setAgreementDocuSignComplete(true);
           }
 
-          if (redirectToTrackingIfComplete(allDocs)) {
-            return;
-          }
+          redirectToTrackingIfComplete(allDocs);
 
           const uploadedIds = [];
           if (allDocs.proof_id) uploadedIds.push('id');
@@ -527,9 +525,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       );
 
       // All docs already on file → skip re-submit and go to Case Tracking
-      if (redirectToTrackingIfComplete(userDocs)) {
-        return;
-      }
+      redirectToTrackingIfComplete(userDocs);
 
       if (
         caseData?.claim_process_task_status === '' ||
