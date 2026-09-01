@@ -110,7 +110,7 @@ function deriveCaseStatus(caseItem) {
             label: 'Action Required',
             tone: 'action',
             resumeStep: 'documents',
-            stepTitle: 'Document Verification Failed',
+            stepTitle: 'Document Verification Failed. Please retry and upload your documents again.',
             stepDescription: caseItem?.document_upload_message
                 ? `Document verification failed: ${caseItem.document_upload_message} Please retry and upload your documents again.`
                 : 'Document verification failed. Please retry and upload your documents again.',
