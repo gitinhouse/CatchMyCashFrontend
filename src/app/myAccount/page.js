@@ -637,6 +637,17 @@ export default function MyAccountPage() {
             }
         } catch (err) {
             console.error('Failed to load cases:', err);
+
+            // ← ADD: expired/invalid token → clear session and send to login,
+            // instead of showing a generic error the user can't act on.
+            if (err?.response?.status === 401) {
+                localStorage.removeItem('userLogin');
+                window.dispatchEvent(new Event('authChange')); // keeps SiteHeader in sync
+                setIsLoggedIn(false);
+                router.replace('/userLogin');
+                return;
+            }
+
             setErrorMsg('Could not load your claims. Please try again.');
             setCases([]);
         } finally {
