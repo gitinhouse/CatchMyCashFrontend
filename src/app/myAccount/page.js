@@ -623,6 +623,7 @@ export default function MyAccountPage() {
 
     useEffect(() => {
         const interval = setInterval(() => {
+            // Existing: poll claim retry-status for retryable claims
             cases.forEach(async (c) => {
                 if (c.case_id && retryStatuses[c.case_id]?.claim_retryable) {
                     try {
@@ -639,10 +640,20 @@ export default function MyAccountPage() {
                     }
                 }
             });
-        }, 30000); // 30 seconds
+
+            // ← NEW: if any case is still verifying documents, re-fetch case list
+            // so a webhook-driven status change (processing → failed/completed)
+            // shows up without a manual page refresh.
+            const hasProcessingUpload = cases.some(
+                (c) => c.document_upload_task_status === 'processing',
+            );
+            if (hasProcessingUpload) {
+                fetchCases();
+            }
+        }, 10000); // ← CHANGE: 10s instead of 30s, so the status flips quickly while "Verifying"
 
         return () => clearInterval(interval);
-    }, [cases, retryStatuses]);
+    }, [cases, retryStatuses, fetchCases]);
 
 
     useEffect(() => {
