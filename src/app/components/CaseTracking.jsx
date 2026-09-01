@@ -101,9 +101,6 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
           setOwnPropertyIds(caseData.property_ids);
           localStorage.setItem('ownPropertyIds', JSON.stringify(caseData.property_ids));
         }
-
-        // Calculate progress based on claim_status
-        calculateProgress(caseData);
       } else {
         console.log('ℹ️ No case data found for user');
         setCaseData(null);
@@ -117,45 +114,6 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
       setLoading(false);
     }
   }, [userData?._id, setUserCase, setOwnPropertyIds]);
-
-  // ============================================================
-  // ✅ Calculate Progress Based on Case Status
-  // ============================================================
-  const calculateProgress = (caseData) => {
-    if (!caseData) return;
-
-    const status = caseData.claim_status;
-    const taskStatus = caseData.claim_process_task_status;
-
-    let progress = 0;
-
-    if (status === 'Success' && taskStatus === 'completed') {
-      progress = 100;
-    } else if (status === 'Failed') {
-      progress = 0;
-    } else if (status === 'Pending') {
-      progress = 50;
-    } else if (taskStatus === 'completed') {
-      progress = 100;
-    } else if (taskStatus === 'failed') {
-      progress = 25;
-    } else {
-      // Check stages
-      const stage = caseData.claim_process_stage || 0;
-      const stageMap = {
-        0: 5,
-        1: 15,
-        2: 30,
-        3: 50,
-        4: 70,
-        5: 85,
-        6: 95
-      };
-      progress = stageMap[stage] || 0;
-    }
-
-    setCaseProgress(progress);
-  };
 
   // ============================================================
   // ✅ Fetch on Mount
@@ -201,77 +159,143 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   }, [caseData]);
 
   // ============================================================
-  // ✅ Generate Milestones from Case Data
+  // ✅ Generate Milestones + Progress from REAL case status fields
+  //
+  // Pipeline: property selection → user info → claim filed with the
+  // state (claim_process_task_status / claim_status) → document
+  // verification (document_upload_task_status) → under state review
+  // → approved. Each milestone's state (completed / current / failed)
+  // is derived directly from backend fields instead of guessed date
+  // offsets.
+  //
+  // Progress is the share of milestones completed (current = half
+  // credit) — EXCEPT when document verification has failed, in which
+  // case progress is fixed at 75%.
   // ============================================================
   useEffect(() => {
-    if (!caseData) return;
+    if (!caseData) {
+      setMilestones([]);
+      setCaseProgress(0);
+      return;
+    }
 
-    const caseStartSource = caseData?.submitted_at || caseData?.createdAt || null;
+    const properties = caseData.user_properties || [];
+    const hasProperties = properties.length > 0;
+    const hasUserInfo = !!caseData.user_details?.[0];
+    const docs = caseData.user_docs?.[0] || {};
+    const hasUploadedDocs = !!(docs.proof_id || docs.ssn_id || docs.adress_proof);
+
+    const claimProcessStatus = caseData.claim_process_task_status; // 'completed' | 'failed' | 'queued' | ''
+    const claimStatus = caseData.claim_status; // 'Success' | 'Pending' | 'Failed'
+    const claimFiled = claimProcessStatus === 'completed' && claimStatus === 'Success';
+    const claimFilingFailed = claimStatus === 'Failed' || claimProcessStatus === 'failed';
+
+    const uploadStatus = caseData.document_upload_task_status; // 'processing' | 'failed' | 'completed' | undefined
+    const uploadCompleted = uploadStatus === 'completed';
+    const uploadFailed = uploadStatus === 'failed';
+    const uploadProcessing = uploadStatus === 'processing';
+
+    const submittedForReview = Boolean(caseData.submitted_at) && uploadCompleted;
+
+    // "Approved" mirrors status === false meaning approved.
+    const isApproved = caseData.status === false;
+
+    const caseStartSource = caseData.submitted_at || caseData.createdAt || null;
     const hasCaseStartDate = Boolean(caseStartSource);
-    const caseStartDate = new Date(caseStartSource || Date.now());
+    const formatDisplayDate = (date) =>
+      new Date(date).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    const caseCreatedLabel = hasCaseStartDate
+      ? formatDisplayDate(caseData.createdAt || caseStartSource)
+      : null;
 
-    const addDays = (date, days) => {
-      const result = new Date(date);
-      result.setDate(result.getDate() + days);
-      return result;
-    };
+    const built = [];
 
-    const formatDate = (date) => {
-      const d = new Date(date);
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-
-    const documentationVerifiedDate = addDays(caseStartDate, 15);
-    const stateProcessingQueueDate = addDays(documentationVerifiedDate, 7);
-    const paymentAuthorizationDate = addDays(documentationVerifiedDate, 14);
-
-    const isFailed = caseData.claim_status === 'Failed';
-    const currentStage = caseData.claim_process_stage || 0;
-
-    const baseMilestones = [
-      { name: 'Case Submitted', stage: 0 },
-      { name: 'Initial Review', stage: 1 },
-      { name: 'Documentation Verified', stage: 2 },
-      { name: 'State Processing', stage: 3 },
-      { name: 'Payment Authorization', stage: 4 },
-      { name: 'Funds Distributed', stage: 5 },
-    ];
-
-    const generated = baseMilestones.map((milestone, index) => {
-      let milestoneDate;
-      if (index === 0) {
-        milestoneDate = caseStartDate;
-      } else if (index === 1) {
-        milestoneDate = addDays(caseStartDate, 7);
-      } else if (index === 2) {
-        milestoneDate = documentationVerifiedDate;
-      } else if (index === 3) {
-        milestoneDate = stateProcessingQueueDate;
-      } else if (index === 4) {
-        milestoneDate = paymentAuthorizationDate;
-      } else {
-        milestoneDate = addDays(paymentAuthorizationDate, 7);
-      }
-
-      const isCompleted = isFailed ? false : (index <= currentStage);
-      const isCurrent = isFailed ? false : (index === currentStage && !isCompleted);
-
-      return {
-        name: milestone.name,
-        date: hasCaseStartDate ? formatDate(milestoneDate) : null,
-        completed: isCompleted,
-        current: isCurrent,
-        estimated: !isCompleted
-          ? (hasCaseStartDate ? formatDate(milestoneDate) : 'Date not available yet')
-          : undefined,
-        failed: isFailed && index === 0,
-      };
+    built.push({
+      name: 'Property Selected',
+      completed: hasProperties,
+      current: !hasProperties,
+      failed: false,
+      description: hasProperties
+        ? (caseCreatedLabel ? `Property identified on ${caseCreatedLabel}` : 'Property identified for claim')
+        : 'Select the property you want to claim to get started',
     });
 
-    setMilestones(generated);
+    built.push({
+      name: 'Information Provided',
+      completed: hasUserInfo,
+      current: hasProperties && !hasUserInfo,
+      failed: false,
+      description: hasUserInfo
+        ? 'Your personal details were submitted'
+        : 'Waiting for your personal details',
+    });
+
+    built.push({
+      name: 'Claim Filed with State',
+      completed: claimFiled,
+      current: hasUserInfo && !claimFiled && !claimFilingFailed,
+      failed: claimFilingFailed,
+      description: claimFiled
+        ? `Claim filed successfully${caseData.claim_id ? ` (Claim ID: ${caseData.claim_id})` : ''}`
+        : claimFilingFailed
+          ? 'Claim filing failed. Please contact support.'
+          : "Your claim is being filed with the State Controller's Office",
+    });
+
+    built.push({
+      name: 'Documents Verified',
+      completed: uploadCompleted,
+      current: uploadProcessing,
+      failed: uploadFailed,
+      description: uploadCompleted
+        ? 'All submitted documents were verified'
+        : uploadFailed
+          ? 'Document verification failed. Please retry and upload your documents again.'
+          : uploadProcessing
+            ? "We're verifying your resubmitted documents. This usually takes a few minutes."
+            : claimFiled && !hasUploadedDocs
+              ? 'Waiting for your documents to be uploaded'
+              : 'Not started yet',
+    });
+
+    built.push({
+      name: 'Submitted for State Review',
+      completed: submittedForReview && !isApproved,
+      current: false,
+      failed: false,
+      description: submittedForReview
+        ? "Your claim is under review by the State Controller's Office"
+        : 'Not started yet',
+    });
+
+    built.push({
+      name: 'Claim Approved',
+      completed: isApproved,
+      current: submittedForReview && !isApproved,
+      failed: false,
+      description: isApproved
+        ? 'Your claim has been approved and funds are being processed'
+        : 'Not started yet',
+    });
+
+    setMilestones(built);
+
+    if (uploadFailed) {
+      // Fixed at 75% whenever document verification has failed.
+      setCaseProgress(75);
+    } else {
+      const totalWeight = built.length;
+      const earnedWeight = built.reduce((sum, m) => {
+        if (m.completed) return sum + 1;
+        if (m.current) return sum + 0.5;
+        return sum;
+      }, 0);
+      setCaseProgress(Math.round((earnedWeight / totalWeight) * 100));
+    }
   }, [caseData]);
 
   // ============================================================
@@ -814,13 +838,7 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                       {milestone.name}
                     </h4>
                     <p className="text-sm text-[#4A4A4A]">
-                      {milestone.completed
-                        ? (milestone.date ? `Completed ${milestone.date}` : 'Completed')
-                        : milestone.current
-                          ? `In progress - Est. ${milestone.estimated}`
-                          : milestone.failed
-                            ? 'Failed - Please contact support'
-                            : `Estimated ${milestone.estimated}`}
+                      {milestone.description}
                     </p>
                   </div>
                   {milestone.current && (
