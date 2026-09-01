@@ -346,6 +346,26 @@ export async function POST(req) {
       );
     }
 
+        // ---- NEW: clear any stale failure state before re-attempting ----
+    await UserCases.findOneAndUpdate(
+      { _id: userCase._id },
+      {
+        $set: {
+          document_upload_task_status: 'processing',
+          document_upload_message: '',
+          document_upload_error_type: null,
+          document_upload_error_code: null,
+          document_upload_retryable: false,
+          document_upload_retry_exhausted: false,
+          document_upload_last_attempt_at: new Date(),
+        },
+      },
+    );
+    console.log(`${LOG_PREFIX} cleared stale document_upload status before resubmission`, {
+      case_id: userCase._id.toString(),
+    });
+    // ---- end NEW ----
+
     const userDocs = await findUserDocs({
       userId: user_id,
       caseIdParam: case_id,

@@ -44,6 +44,9 @@ function deriveCaseStatus(caseItem) {
     // ← NEW: check for a failed document upload
     const documentUploadFailed = caseItem?.document_upload_task_status === 'failed';
 
+     // ← NEW: check if a re-submission is currently being processed
+    const documentUploadProcessing = caseItem?.document_upload_task_status === 'processing';
+
     // ✅ Check if claim process is actually complete
     const isProcessed = Boolean(
         caseItem?.claim_status === 'Success' &&
@@ -85,6 +88,18 @@ function deriveCaseStatus(caseItem) {
             stepTitle: 'Claim Under Review',
             stepDescription: 'Your Claim is in Under Review',
             checklist: { isProcessed: true, canContinue: false }
+        };
+    }
+
+  // ← NEW PRIORITY: currently reprocessing after resubmission
+    if (documentUploadProcessing) {
+        return {
+            label: 'In Review',
+            tone: 'review',
+            resumeStep: null,
+            stepTitle: 'Verifying Your Documents',
+            stepDescription: 'We\'re verifying your resubmitted documents. This usually takes a few minutes.',
+            checklist: { documentUploadProcessing: true, canContinue: false }
         };
     }
 

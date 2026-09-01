@@ -52,12 +52,12 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link
+                {/* <Link
                   href="/pricing"
                   className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
                 >
                   Pricing
-                </Link>
+                </Link> */}
               </li>
             </ul>
           </div>
