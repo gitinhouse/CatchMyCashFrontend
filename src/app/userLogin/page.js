@@ -147,6 +147,7 @@ useEffect(() => {
       const { data } = await axios.post('/api/login', payload);
       setUserLogin(data);
       localStorage.setItem('userLogin', JSON.stringify(data));
+      window.dispatchEvent(new Event('authChange'));
       console.log(data?.user?.type);
       if (data?.user?.type === 'User') {
         router.push('/?step=documents');

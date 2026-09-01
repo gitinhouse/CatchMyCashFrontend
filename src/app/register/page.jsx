@@ -329,6 +329,7 @@ export default function PrivacyPage() {
       const res = await axios.post('/api/register', payloadData);
       setUserLogin(res.data);
       localStorage.setItem('userLogin', JSON.stringify(res.data));
+      window.dispatchEvent(new Event('authChange'));
       router.push('/userLogin');
     } catch (err) {
       console.error('Error saving user properties:', err);

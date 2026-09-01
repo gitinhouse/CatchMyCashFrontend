@@ -3,12 +3,16 @@ import { sendEmailTwilio } from '../../lib/sendgrid';
 import connectToDatabase from '../../lib/mongodb';
 import UserDetails from '../../models/userDetails';
 import UserProperty from '../../models/userProperty';
-import UserCases from '../../models/userCases'; // ← ADD THIS IMPORT
+import UserCases from '../../models/userCases';
 import mongoose from 'mongoose';
 
 export async function POST(req) {
   try {
-    const { userId, subject, errorMessage, properties } = await req.json();
+    const {
+      userId, subject, errorMessage, properties,
+      status, error_type, error_code, retryable, retry_exhausted,
+      process: processName, claim_id, task_id,
+    } = await req.json(); // ← add the extra fields from the payload
 
     if (!userId || !subject || !errorMessage) {
       return NextResponse.json(
@@ -26,6 +30,30 @@ export async function POST(req) {
     if (!userDetails) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 });
     }
+
+    // ---- NEW: sync UserCases so the dashboard reflects reality ----
+    if (processName === 'document_upload') {
+      const isSuccess = status === 'success';
+      const updateFields = {
+        document_upload_task_status: isSuccess ? 'completed' : 'failed',
+        document_upload_message: isSuccess ? '' : (errorMessage || 'Document verification failed.'),
+        document_upload_error_type: isSuccess ? null : (error_type || 'technical_failure'),
+        document_upload_error_code: isSuccess ? null : (error_code || null),
+        document_upload_retryable: !!retryable,
+        document_upload_retry_exhausted: !!retry_exhausted,
+        document_upload_last_attempt_at: new Date(),
+      };
+
+      const filter = task_id
+        ? { document_upload_task_id: task_id }
+        : claim_id
+          ? { claim_id }
+          : { user_id: new mongoose.Types.ObjectId(userId) };
+
+      const updated = await UserCases.findOneAndUpdate(filter, { $set: updateFields }, { new: true });
+      console.log('[webhook] UserCases sync', { matched: !!updated, filter, updateFields });
+    }
+    // ---- end NEW ----
 
     // Normalize: accept either a single object or an array of properties
     const propertyList = Array.isArray(properties)

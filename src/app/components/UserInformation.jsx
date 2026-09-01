@@ -526,6 +526,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
         userLoginRes = await axios.post('/api/register', payloadData);
         setUserLogin(userLoginRes.data);
         localStorage.setItem('userLogin', JSON.stringify(userLoginRes.data));
+        window.dispatchEvent(new Event('authChange'));
       } catch (err) {
         const msg =
           err.response?.data?.message ||
