@@ -676,6 +676,7 @@ const ClaimProgressModal = ({ claim, onClose }) => {
     });
 
     // Step 6: Claim Submitted
+    const uploadFailed = claim?.document_upload_task_status === 'failed'; // ← ADD
     const isSubmitted = Boolean(
       claim?.submitted_at ||
       claim?.document_upload_task_status === 'completed' ||
@@ -685,9 +686,14 @@ const ClaimProgressModal = ({ claim, onClose }) => {
     steps.push({
       id: 6,
       title: 'Claim Submitted',
-      description: 'Claim submitted for review',
-      completed: isSubmitted,
-      icon: Clock,
+      description: uploadFailed // ← CHANGE
+        ? (claim?.document_upload_message
+          ? `Document verification failed: ${claim.document_upload_message}`
+          : 'Document verification failed. Please retry and upload your documents again.')
+        : 'Claim submitted for review',
+      completed: isSubmitted && !uploadFailed, // ← CHANGE: never show "complete" while failed
+      failed: uploadFailed, // ← ADD
+      icon: uploadFailed ? AlertTriangle : Clock, // ← CHANGE (AlertTriangle already imported in this file)
     });
 
     // Step 7: Approved/Completed
@@ -778,8 +784,8 @@ const ClaimProgressModal = ({ claim, onClose }) => {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`pb-3 text-sm font-medium border-b-2 transition-all ${activeTab === tab.id
-                    ? 'border-[#E1261C] text-[#E1261C]'
-                    : 'border-transparent text-[#4A4A4A] hover:text-[#0A0A0A]'
+                  ? 'border-[#E1261C] text-[#E1261C]'
+                  : 'border-transparent text-[#4A4A4A] hover:text-[#0A0A0A]'
                   }`}
               >
                 {tab.label}
@@ -795,16 +801,22 @@ const ClaimProgressModal = ({ claim, onClose }) => {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className={`flex items-start gap-4 p-4 rounded-xl border transition-all ${step.completed
+                  className={`flex items-start gap-4 p-4 rounded-xl border transition-all ${step.failed // ← ADD this branch first
+                    ? 'bg-[#FCE9E7] border-[#E1261C]/40'
+                    : step.completed
                       ? 'bg-[#F0FFF4] border-[#00C896]/30'
                       : 'bg-[#F7F5F2] border-[#E8E6E3] opacity-70'
                     }`}
                 >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${step.completed
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${step.failed // ← ADD this branch first
+                    ? 'bg-[#E1261C] text-white'
+                    : step.completed
                       ? 'bg-[#00C896] text-white'
                       : 'bg-[#D4D4D4] text-[#888888]'
                     }`}>
-                    {step.completed ? (
+                    {step.failed ? ( // ← ADD
+                      <AlertTriangle className="h-5 w-5" />
+                    ) : step.completed ? (
                       <CheckCircle2 className="h-5 w-5" />
                     ) : (
                       <step.icon className="h-5 w-5" />
@@ -812,17 +824,22 @@ const ClaimProgressModal = ({ claim, onClose }) => {
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h4 className={`font-semibold ${step.completed ? 'text-[#0A0A0A]' : 'text-[#888888]'
+                      <h4 className={`font-semibold ${step.failed ? 'text-[#E1261C]' : step.completed ? 'text-[#0A0A0A]' : 'text-[#888888]'
                         }`}>
                         {step.title}
                       </h4>
-                      {step.completed && (
+                      {step.completed && !step.failed && (
                         <span className="text-[#00C896] text-xs font-['JetBrains_Mono']">
                           ✓ Complete
                         </span>
                       )}
+                      {step.failed && ( // ← ADD
+                        <span className="text-[#E1261C] text-xs font-['JetBrains_Mono']">
+                          ✗ Failed
+                        </span>
+                      )}
                     </div>
-                    <p className={`text-sm ${step.completed ? 'text-[#4A4A4A]' : 'text-[#888888]'
+                    <p className={`text-sm ${step.failed ? 'text-[#E1261C]' : step.completed ? 'text-[#4A4A4A]' : 'text-[#888888]'
                       }`}>
                       {step.description}
                     </p>

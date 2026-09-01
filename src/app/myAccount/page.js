@@ -10,6 +10,7 @@ import {
     CheckCircle2,
     Clock,
     ArrowRight,
+    AlertTriangle,
     AlertCircle,
     X,
     Users
@@ -35,7 +36,7 @@ function deriveCaseStatus(caseItem) {
     // ✅ Check if the user has actually uploaded documents
     const hasUploadedDocs = !!(docs.proof_id || docs.ssn_id || docs.adress_proof || docs.agreement_doc);
 
-     // ✅ Check if the claim was actually submitted
+    // ✅ Check if the claim was actually submitted
     const hasSubmitted = Boolean(
         caseItem?.submitted_at &&
         caseItem?.document_upload_task_status === 'completed'
@@ -44,7 +45,7 @@ function deriveCaseStatus(caseItem) {
     // ← NEW: check for a failed document upload
     const documentUploadFailed = caseItem?.document_upload_task_status === 'failed';
 
-     // ← NEW: check if a re-submission is currently being processed
+    // ← NEW: check if a re-submission is currently being processed
     const documentUploadProcessing = caseItem?.document_upload_task_status === 'processing';
 
     // ✅ Check if claim process is actually complete
@@ -91,7 +92,7 @@ function deriveCaseStatus(caseItem) {
         };
     }
 
-  // ← NEW PRIORITY: currently reprocessing after resubmission
+    // ← NEW PRIORITY: currently reprocessing after resubmission
     if (documentUploadProcessing) {
         return {
             label: 'In Review',
@@ -103,7 +104,7 @@ function deriveCaseStatus(caseItem) {
         };
     }
 
-     // ← NEW PRIORITY: document verification/upload failed — needs retry
+    // ← NEW PRIORITY: document verification/upload failed — needs retry
     if (documentUploadFailed) {
         return {
             label: 'Action Required',
@@ -215,10 +216,12 @@ const ClaimProgressModal = ({ claim, onClose }) => {
         0
     );
 
+    // Derive claim progress steps
     const getProgressSteps = () => {
         const docs = claim?.user_docs?.[0] || {};
         const steps = [];
 
+        // Step 1: Property Selected
         steps.push({
             id: 1,
             title: 'Property Selected',
@@ -227,6 +230,7 @@ const ClaimProgressModal = ({ claim, onClose }) => {
             icon: DollarSign,
         });
 
+        // Step 2: User Information
         steps.push({
             id: 2,
             title: 'User Information',
@@ -235,6 +239,7 @@ const ClaimProgressModal = ({ claim, onClose }) => {
             icon: Users,
         });
 
+        // Step 3: Documents Uploaded
         const hasDocs = !!docs.proof_id || !!docs.ssn_id || !!docs.adress_proof;
         steps.push({
             id: 3,
@@ -244,6 +249,7 @@ const ClaimProgressModal = ({ claim, onClose }) => {
             icon: FileText,
         });
 
+        // Step 4: Investigator Signed
         const hasInvestigatorSigned = typeof docs.signed_doc === 'string' &&
             docs.signed_doc.includes('signed-document');
         steps.push({
@@ -254,6 +260,7 @@ const ClaimProgressModal = ({ claim, onClose }) => {
             icon: FileText,
         });
 
+        // Step 5: Agreement Signed
         const hasAgreementForm = (typeof docs.filled_agreement_doc === 'string' &&
             docs.filled_agreement_doc.includes('FilledAgreement_form')) ||
             (typeof docs.signed_doc === 'string' &&
@@ -266,6 +273,8 @@ const ClaimProgressModal = ({ claim, onClose }) => {
             icon: FileText,
         });
 
+        // Step 6: Claim Submitted
+        const uploadFailed = claim?.document_upload_task_status === 'failed';
         const isSubmitted = Boolean(
             claim?.submitted_at ||
             claim?.document_upload_task_status === 'completed' ||
@@ -275,11 +284,15 @@ const ClaimProgressModal = ({ claim, onClose }) => {
         steps.push({
             id: 6,
             title: 'Claim Submitted',
-            description: 'Claim submitted for review',
-            completed: isSubmitted,
-            icon: Clock,
+            description: uploadFailed
+                ? 'Document verification failed. Please retry and upload your documents again.' // ← CHANGE: always generic, no raw message
+                : 'Claim submitted for review',
+            completed: isSubmitted && !uploadFailed,
+            failed: uploadFailed,
+            icon: uploadFailed ? AlertTriangle : Clock,
         });
 
+        // Step 7: Approved/Completed
         const isApproved = claim?.status === false;
         steps.push({
             id: 7,
@@ -384,16 +397,22 @@ const ClaimProgressModal = ({ claim, onClose }) => {
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: index * 0.1 }}
-                                    className={`flex items-start gap-4 p-4 rounded-xl border transition-all ${step.completed
-                                        ? 'bg-[#F0FFF4] border-[#00C896]/30'
-                                        : 'bg-[#F7F5F2] border-[#E8E6E3] opacity-70'
+                                    className={`flex items-start gap-4 p-4 rounded-xl border transition-all ${step.failed // ← ADD this branch first
+                                        ? 'bg-[#FCE9E7] border-[#E1261C]/40'
+                                        : step.completed
+                                            ? 'bg-[#F0FFF4] border-[#00C896]/30'
+                                            : 'bg-[#F7F5F2] border-[#E8E6E3] opacity-70'
                                         }`}
                                 >
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${step.completed
-                                        ? 'bg-[#00C896] text-white'
-                                        : 'bg-[#D4D4D4] text-[#888888]'
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${step.failed // ← ADD this branch first
+                                        ? 'bg-[#E1261C] text-white'
+                                        : step.completed
+                                            ? 'bg-[#00C896] text-white'
+                                            : 'bg-[#D4D4D4] text-[#888888]'
                                         }`}>
-                                        {step.completed ? (
+                                        {step.failed ? ( // ← ADD
+                                            <AlertTriangle className="h-5 w-5" />
+                                        ) : step.completed ? (
                                             <CheckCircle2 className="h-5 w-5" />
                                         ) : (
                                             <step.icon className="h-5 w-5" />
@@ -401,17 +420,22 @@ const ClaimProgressModal = ({ claim, onClose }) => {
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2">
-                                            <h4 className={`font-semibold ${step.completed ? 'text-[#0A0A0A]' : 'text-[#888888]'
+                                            <h4 className={`font-semibold ${step.failed ? 'text-[#E1261C]' : step.completed ? 'text-[#0A0A0A]' : 'text-[#888888]'
                                                 }`}>
                                                 {step.title}
                                             </h4>
-                                            {step.completed && (
+                                            {step.completed && !step.failed && (
                                                 <span className="text-[#00C896] text-xs font-['JetBrains_Mono']">
                                                     ✓ Complete
                                                 </span>
                                             )}
+                                            {step.failed && ( // ← ADD
+                                                <span className="text-[#E1261C] text-xs font-['JetBrains_Mono']">
+                                                    ✗ Failed
+                                                </span>
+                                            )}
                                         </div>
-                                        <p className={`text-sm ${step.completed ? 'text-[#4A4A4A]' : 'text-[#888888]'
+                                        <p className={`text-sm ${step.failed ? 'text-[#E1261C]' : step.completed ? 'text-[#4A4A4A]' : 'text-[#888888]'
                                             }`}>
                                             {step.description}
                                         </p>
