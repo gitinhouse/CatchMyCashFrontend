@@ -456,6 +456,7 @@ export async function GET(req) {
           claim_id: 1,
           claim_process_task_status: 1,
           document_upload_task_status: 1,
+          document_upload_message: 1,
           submitted_at: 1,
           property_ids: 1,
           createdAt: 1,

@@ -24,7 +24,7 @@ export const SiteHeader = () => {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const { goToSearch } = useSearchStore();
-  
+
   // 🔹 ADD: Check if user is logged in
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [userName, setUserName] = React.useState('');
@@ -58,11 +58,13 @@ export const SiteHeader = () => {
 
     // Listen for storage changes (in case user logs in/out in another tab)
     window.addEventListener('storage', checkLoginStatus);
-    
+    window.addEventListener('authChange', checkLoginStatus); // ← ADD this line
+
     return () => {
       window.removeEventListener('storage', checkLoginStatus);
+      window.removeEventListener('authChange', checkLoginStatus); // ← ADD this line
     };
-  }, []);
+  }, [pathname]); // ← CHANGE: was [], now re-checks on every route change
 
   const handleLogin = async () => {
     router.push('/userLogin');
@@ -74,6 +76,7 @@ export const SiteHeader = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('userLogin');
+    window.dispatchEvent(new Event('authChange'));
     setIsLoggedIn(false);
     setUserName('');
     router.push('/');
@@ -109,8 +112,8 @@ export const SiteHeader = () => {
               key={item.name}
               href={item.path}
               className={`text-xs lg:text-sm font-medium whitespace-nowrap transition-colors ${pathname === item.path
-                  ? 'text-[#0A0A0A]'
-                  : 'text-[#4A4A4A] hover:text-[#0A0A0A]'
+                ? 'text-[#0A0A0A]'
+                : 'text-[#4A4A4A] hover:text-[#0A0A0A]'
                 }`}
             >
               {item.name}
@@ -124,7 +127,7 @@ export const SiteHeader = () => {
             >
               Search Now
             </button>
-            
+
             {/* 🔹 MODIFIED: Conditional rendering for Login/Dashboard */}
             {isLoggedIn ? (
               <>
@@ -184,7 +187,7 @@ export const SiteHeader = () => {
             >
               Search Now
             </button>
-            
+
             {/* 🔹 MODIFIED: Conditional rendering for Login/Dashboard in mobile */}
             {isLoggedIn ? (
               <>

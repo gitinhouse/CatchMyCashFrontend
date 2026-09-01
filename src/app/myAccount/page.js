@@ -35,11 +35,14 @@ function deriveCaseStatus(caseItem) {
     // ✅ Check if the user has actually uploaded documents
     const hasUploadedDocs = !!(docs.proof_id || docs.ssn_id || docs.adress_proof || docs.agreement_doc);
 
-    // ✅ Check if the claim was actually submitted
+     // ✅ Check if the claim was actually submitted
     const hasSubmitted = Boolean(
         caseItem?.submitted_at &&
         caseItem?.document_upload_task_status === 'completed'
     );
+
+    // ← NEW: check for a failed document upload
+    const documentUploadFailed = caseItem?.document_upload_task_status === 'failed';
 
     // ✅ Check if claim process is actually complete
     const isProcessed = Boolean(
@@ -84,6 +87,21 @@ function deriveCaseStatus(caseItem) {
             checklist: { isProcessed: true, canContinue: false }
         };
     }
+
+     // ← NEW PRIORITY: document verification/upload failed — needs retry
+    if (documentUploadFailed) {
+        return {
+            label: 'Action Required',
+            tone: 'action',
+            resumeStep: 'documents',
+            stepTitle: 'Document Verification Failed',
+            stepDescription: caseItem?.document_upload_message
+                ? `Document verification failed: ${caseItem.document_upload_message} Please retry and upload your documents again.`
+                : 'Document verification failed. Please retry and upload your documents again.',
+            checklist: { documentUploadFailed: true, canContinue: true }
+        };
+    }
+
 
     // ✅ PRIORITY 4: Claim submitted but not processed
     if (hasSubmitted && !isProcessed) {
