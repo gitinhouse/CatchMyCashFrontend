@@ -664,6 +664,31 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
           localStorage.setItem('userCase', JSON.stringify(response.data));
           setUserCase(response.data);
 
+          // ← ADD: attribute this new case back to whoever referred this user
+          const referralCode = localStorage.getItem('referralCode');
+          if (referralCode) {
+            try {
+              const linkRes = await axios.get(`/api/referral-link?code=${referralCode}`);
+              const { user_id: referrerId, case_id: referrerCaseId } = linkRes.data;
+
+              // Don't let someone "refer themselves"
+              if (String(referrerId) !== String(userId)) {
+                await axios.post('/api/referral', {
+                  user_id: referrerId,
+                  case_id: referrerCaseId,
+                  referral_code: referralCode,
+                  linked_user: userId,
+                  comission: 0, // updated later once the referred user's payout is known
+                });
+              }
+
+              localStorage.removeItem('referralCode');
+            } catch (referralErr) {
+              console.error('Error attributing referral:', referralErr);
+              // non-fatal — don't block this user's own case creation
+            }
+          }
+
           const docsPayload = {
             user_id: userId,
             case_id: response.data._id,
