@@ -910,7 +910,7 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                     }}
                     onKeyDown={(e) => {
                       // Prevent minus sign, 'e' (exponential), and other special characters
-                      if (e.key === '-' || e.key === 'Minus' || e.key === 'e' || e.key === 'E') {
+                      if (e.key === '-' || e.key === '+' || e.key === 'Minus' || e.key === 'e' || e.key === 'E') {
                         e.preventDefault();
                       }
                     }}
