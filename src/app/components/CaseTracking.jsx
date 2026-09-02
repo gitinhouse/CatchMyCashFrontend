@@ -903,18 +903,32 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                     value={shareAmount}
                     onChange={(e) => {
                       const val = e.target.value;
+                      // Allow empty string or positive numbers only
                       if (val === '' || parseFloat(val) >= 0) {
                         setShareAmount(val);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      // Prevent minus sign, 'e' (exponential), and other special characters
+                      if (e.key === '-' || e.key === 'Minus' || e.key === 'e' || e.key === 'E') {
+                        e.preventDefault();
+                      }
+                    }}
+                    onPaste={(e) => {
+                      // Prevent pasting negative values
+                      const pasted = e.clipboardData.getData('text');
+                      if (pasted.includes('-')) {
+                        e.preventDefault();
                       }
                     }}
                     className="w-full sm:flex-1 px-4 py-2 border-2 border-[#E8E6E3] rounded-lg text-[#0A0A0A] placeholder-[#888888] focus:border-[#E1261C] focus:outline-none transition-all"
                   />
                   <button
                     onClick={handleShareSuccess}
-                    disabled={!shareAmount}
-                    className={`w-full sm:w-auto px-6 py-2 font-semibold rounded-lg transition-all ${shareAmount
-                      ? 'bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg'
-                      : 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
+                    disabled={!shareAmount || parseFloat(shareAmount) <= 0}
+                    className={`w-full sm:w-auto px-6 py-2 font-semibold rounded-lg transition-all ${shareAmount && parseFloat(shareAmount) > 0
+                        ? 'bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg'
+                        : 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
                       }`}
                   >
                     Create My Referral Link
