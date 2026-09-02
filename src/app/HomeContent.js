@@ -243,11 +243,19 @@ export default function Home() {
   } = useSearchStore();
 
   const [filledFields, setFilledFields] = React.useState(0);
+  const [activeReferralCode, setActiveReferralCode] = React.useState('');
   const hasRestoredSession = React.useRef(false);
 
   useEffect(() => {
     setFilledFields(0);
   }, [currentStep]);
+
+  useEffect(() => {
+  if (!activeReferralCode) {
+    const saved = localStorage.getItem('activeReferralCode');
+    if (saved) setActiveReferralCode(saved);
+  }
+}, [activeReferralCode]);
 
   // Restore login session after browser reload and send returning users to documents
 
@@ -345,11 +353,20 @@ export default function Home() {
       tracking: (
         <CaseTracking
           onViewLeaderboard={() => handleStepChange('leaderboard')}
-          onCreateReferral={() => handleStepChange('referral')}
+          onCreateReferral={(code) => {           // ← CHANGE: capture the code
+            setActiveReferralCode(code);
+             localStorage.setItem('activeReferralCode', code);
+            handleStepChange('referral');
+          }}
         />
       ),
       leaderboard: <Leaderboard onBack={() => handleStepChange('tracking')} />,
-      referral: <ReferralSystem onBack={() => handleStepChange('tracking')} />,
+      referral: (
+        <ReferralSystem
+          referralCode={activeReferralCode}        // ← CHANGE: pass it down
+          onBack={() => handleStepChange('tracking')}
+        />
+      ),
     };
 
     return (

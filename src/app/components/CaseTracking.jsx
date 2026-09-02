@@ -38,6 +38,9 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
+  const [shareError, setShareError] = useState('');
+
 
   const {
     userData,
@@ -440,9 +443,24 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
       year: 'numeric',
     });
 
-  const handleShareSuccess = () => {
-    if (shareAmount && parseFloat(shareAmount) > 0) {
+  const handleShareSuccess = async () => {
+    if (!shareAmount || parseFloat(shareAmount) <= 0) return;
+    try {
+      setShareError('');
+      const storedLoginRaw = localStorage.getItem('userLogin');
+      const storedLogin = storedLoginRaw ? JSON.parse(storedLoginRaw) : null;
+      const userId = storedLogin?.user?.user_id || userData?._id;
+
+      const res = await axios.post('/api/referral-link', {
+        user_id: userId,
+        case_id: caseData?._id,
+      });
+
+      setReferralCode(res.data.referral_code);
       setHasShared(true);
+    } catch (err) {
+      console.error('Error creating referral link:', err);
+      setShareError('Could not create your referral link. Please try again.');
     }
   };
 
@@ -927,8 +945,8 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                     onClick={handleShareSuccess}
                     disabled={!shareAmount || parseFloat(shareAmount) <= 0}
                     className={`w-full sm:w-auto px-6 py-2 font-semibold rounded-lg transition-all ${shareAmount && parseFloat(shareAmount) > 0
-                        ? 'bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg'
-                        : 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
+                      ? 'bg-[#E1261C] text-white hover:bg-[#B11912] shadow-md hover:shadow-lg'
+                      : 'bg-[#D4D4D4] text-[#888888] cursor-not-allowed'
                       }`}
                   >
                     Create My Referral Link
@@ -947,8 +965,7 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                   You'll earn 1% of any recoveries from people who use your
                   referral link.
                 </p>
-                <button
-                  onClick={onCreateReferral}
+                <button onClick={() => onCreateReferral(referralCode)}
                   className="bg-[#E1261C] hover:bg-[#B11912] text-white px-6 py-3 font-semibold rounded-lg transition-all shadow-md hover:shadow-lg"
                 >
                   View My Referral Dashboard
