@@ -897,9 +897,16 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                 <div className="mt-4 flex flex-col sm:flex-row items-center gap-3">
                   <input
                     type="number"
+                    min="0"
+                    step="0.01"
                     placeholder="$ Amount you received"
                     value={shareAmount}
-                    onChange={(e) => setShareAmount(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '' || parseFloat(val) >= 0) {
+                        setShareAmount(val);
+                      }
+                    }}
                     className="w-full sm:flex-1 px-4 py-2 border-2 border-[#E8E6E3] rounded-lg text-[#0A0A0A] placeholder-[#888888] focus:border-[#E1261C] focus:outline-none transition-all"
                   />
                   <button
