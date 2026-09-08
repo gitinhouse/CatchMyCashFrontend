@@ -1,10 +1,15 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useSearchStore } from '../store/searchStore';
 
 export default function Footer() {
+  const pathname = usePathname();
   const { goToSearch } = useSearchStore();
+
+  // The admin console renders its own chrome.
+  if (pathname?.startsWith('/admin')) return null;
 
   return (
     <footer className="bg-[#0A0A0A] text-white pt-16 pb-6">

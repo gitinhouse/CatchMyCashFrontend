@@ -152,7 +152,7 @@ useEffect(() => {
       if (data?.user?.type === 'User') {
         router.push('/?step=documents');
       } else {
-        router.push('/allUsers');
+        router.push('/admin');
       }
     } catch (error) {
       console.error(error);
