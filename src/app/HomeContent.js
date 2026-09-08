@@ -94,6 +94,9 @@ export const SiteHeader = () => {
     { name: 'Contact', path: '/contact' },
   ];
 
+  // The admin console renders its own chrome.
+  if (pathname?.startsWith('/admin')) return null;
+
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-[#E8E6E3] shadow-sm">
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between gap-3">
