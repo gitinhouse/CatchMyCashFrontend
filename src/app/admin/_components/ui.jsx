@@ -262,7 +262,7 @@ export function Th({ children, sortKey, sort, onSort, align = 'left', className 
     >
       <span className="inline-flex items-center gap-1">
         {children}
-        {active && (
+        {active && sort?.dir && (
           <span className="text-[#E1261C]">{sort.dir === 'asc' ? '▲' : '▼'}</span>
         )}
       </span>
