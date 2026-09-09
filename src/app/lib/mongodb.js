@@ -43,29 +43,26 @@ if (!cached) {
 }
 
 async function connectToDatabase() {
-  // Check if connection already exists and is open
-  if (cached.conn && cached.conn.readyState === 1) {
+  if (cached.conn && mongoose.connection.readyState === 1) {
     return cached.conn;
   }
 
-  // If connection is closed, reset
-  if (cached.conn && cached.conn.readyState !== 1) {
+  if (cached.conn && mongoose.connection.readyState !== 1) {
     cached.conn = null;
     cached.promise = null;
   }
 
   if (!cached.promise) {
-    // ✅ FIX: Add .asPromise() before .then()
-    cached.promise = mongoose.createConnection(MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000,
-    }).asPromise().then((connection) => {
-      console.log('Default database connected successfully');
-      return connection;
-    });
+    cached.promise = mongoose
+      .connect(MONGO_URI, {
+        serverSelectionTimeoutMS: 5000,
+      })
+      .then((m) => {
+        console.log('Default database connected successfully');
+        return m.connection;
+      });
   }
-  
+
   cached.conn = await cached.promise;
   return cached.conn;
 }
