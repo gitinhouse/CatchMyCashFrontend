@@ -40,3 +40,4 @@ export function getUserModel(connection) {
   }
   return connection.model('UserInformation', UserSchema);
 }
+export default User;
