@@ -40,4 +40,7 @@ export function getUserModel(connection) {
   }
   return connection.model('UserInformation', UserSchema);
 }
+
+const User = mongoose.models.UserInformation || mongoose.model("UserInformation", UserSchema);
+
 export default User;
