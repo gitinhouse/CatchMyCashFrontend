@@ -530,7 +530,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
       } catch (err) {
         const msg =
           err.response?.data?.message ||
-          'This email is already registered. Please use a different email or log in.';
+          'Please use a different email or log in.';
         setErrorModal({
           show: true,
           title: 'Registration Failed',

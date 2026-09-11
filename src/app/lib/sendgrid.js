@@ -21,6 +21,7 @@ export async function sendEmailTwilio({ to, subject, text, html, replyTo }) {
 
   try {
     await sgMail.send(msg);
+    console.log('✅ EMAIL SENT SUCCESSFULLY');
     return { success: true };
   } catch (error) {
     console.error('SendGrid Error:', error?.response?.body || error);

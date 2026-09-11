@@ -180,11 +180,7 @@ export async function POST(req) {
 
     if (existingUser) {
       console.log('✅ User already exists in default database');
-      return NextResponse.json({
-        success: true,
-        message: 'User already exists',
-        data: existingUser
-      });
+      return NextResponse.json(existingUser, { status: 200 });
     }
 
     const newUser = await User.create({
