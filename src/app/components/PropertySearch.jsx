@@ -57,7 +57,7 @@ const PropertySearch = ({ onNext, onBack, onFieldFilled }) => {
   const [lastNameError, setLastNameError] = useState('');
   const { setUserData, setSearchResults } = useSearchStore();
   const [addressError, setAddressError] = useState('');
-  const progressIntervalRef = useRef(null); 
+  const progressIntervalRef = useRef(null);
   //
   // const setAddressRef = useRef(setAddress);
   // const setCityRef = useRef(setCity);
@@ -261,7 +261,7 @@ const PropertySearch = ({ onNext, onBack, onFieldFilled }) => {
       zip_code: '16005', //zipCode.trim(),
     };
 
-   setIsSearching(true);
+    setIsSearching(true);
     window.scrollTo(0, 0);
     setShowBrowser(true);
     setSearchProgress(0);
@@ -317,8 +317,14 @@ const PropertySearch = ({ onNext, onBack, onFieldFilled }) => {
 
       if (matchedProperties.length > 0) {
         const { data } = await axios.post('/api/users', payload);
-        setUserData(data);
-        localStorage.setItem('userData', JSON.stringify(data));
+
+        // ✅ Make sure we extract the actual user data
+        const userDataToStore = data.data || data;  // Handle both response shapes
+
+        setUserData(userDataToStore);
+        localStorage.setItem('userData', JSON.stringify(userDataToStore));
+
+        console.log('✅ User data saved:', userDataToStore._id);
       }
 
       setTimeout(() => {
@@ -343,9 +349,9 @@ const PropertySearch = ({ onNext, onBack, onFieldFilled }) => {
           databasesSearched: 52,
           addressMatches: totalMatched,
         });
-      }, 800); 
+      }, 800);
     } catch (error) {
-      clearInterval(progressIntervalRef.current); 
+      clearInterval(progressIntervalRef.current);
       console.error(error);
       setValidationError(
         'There was a problem submitting your search. Please try again.',

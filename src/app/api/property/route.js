@@ -7,6 +7,8 @@ export async function POST(req) {
   try {
     const { user_id, properties } = await req.json();
 
+    console.log("user_id,properties,properties.length", user_id, properties, properties.length);
+
     if (!user_id || !properties || !properties.length) {
       return NextResponse.json(
         { error: "Invalid request data" },
@@ -43,10 +45,22 @@ export async function POST(req) {
         status: false,
       }));
 
+    // if (!newProperties.length) {
+    //   return NextResponse.json(
+    //     { error: "All properties Claim already exist" },
+    //     { status: 400 }
+    //   );
+    // }
+
+    // ✅ If all properties already exist, just return success (no error)
     if (!newProperties.length) {
       return NextResponse.json(
-        { error: "All properties Claim already exist" },
-        { status: 400 }
+        {
+          message: "All properties already exist",
+          insertedCount: 0,
+          existingCount: properties.length,
+        },
+        { status: 200 }
       );
     }
 
