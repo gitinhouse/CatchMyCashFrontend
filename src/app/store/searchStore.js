@@ -1,6 +1,7 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
-export const useSearchStore = create((set, get) => ({
+export const useSearchStore = create(persist((set, get) => ({
   // Existing state
   userData: null,
   searchResults: null,
@@ -107,4 +108,25 @@ export const useSearchStore = create((set, get) => ({
       get().navigateToStep(previousStep);
     }
   },
-}));
+}),
+  {
+    name: 'catchmycash-search-store', // localStorage key
+    storage: createJSONStorage(() => localStorage),
+    // Don't persist transient UI flags — only persist the data that matters
+    partialize: (state) => ({
+      userData: state.userData,
+      searchResults: state.searchResults,
+      ownPropertyIds: state.ownPropertyIds,
+      userAgreement: state.userAgreement,
+      userDocument: state.userDocument,
+      userSignedAgreement: state.userSignedAgreement,
+      userAllDocs: state.userAllDocs,
+      userCase: state.userCase,
+      userLogin: state.userLogin,
+      currentStep: state.currentStep,
+      propertyData: state.propertyData,
+      // isTransitioning intentionally excluded
+    }),
+  },
+),
+);

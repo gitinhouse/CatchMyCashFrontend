@@ -366,6 +366,16 @@ useEffect(() => {
                   )}
                 </motion.div>
 
+                  <div className="text-right -mt-2">
+                    <button
+                      type="button"
+                      onClick={() => router.push('/forgotPassword')}
+                      className="text-sm text-[#E1261C] hover:text-[#B11912] font-medium transition-colors"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+
                 {/* Submit Button */}
                 <motion.div
                   whileHover={isFormValid ? { scale: 1.02 } : {}}

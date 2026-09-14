@@ -135,58 +135,108 @@ export async function POST(req) {
       existingUser = await UserLogin.findOne({ userEmail });
     }
 
-    // ================= UPDATE EXISTING USER =================
-    if (existingUser) {
-      const newPassword = generateRandomPassword(10);
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
+    // // ================= UPDATE EXISTING USER =================
+    // if (existingUser) {
+    //   const newPassword = generateRandomPassword(10);
+    //   const hashedPassword = await bcrypt.hash(newPassword, 10);
 
+    //   existingUser.user_id = user_id;
+    //   existingUser.userEmail = userEmail;
+    //   existingUser.userType = userType || existingUser.userType;
+    //   existingUser.userPassword = hashedPassword;
+
+    //   await existingUser.save();
+
+    //   const credentialsHTML = `
+    //     <table style="width:100%; border-collapse:collapse; margin-top:20px;">
+    //       <tr>
+    //         <td style="padding:10px; border:1px solid #eaeaea; background:#f9fafb;"><strong>Email:</strong></td>
+    //         <td style="padding:10px; border:1px solid #eaeaea;">${userEmail}</td>
+    //       </tr>
+    //       <tr>
+    //         <td style="padding:10px; border:1px solid #eaeaea; background:#f9fafb;"><strong>Password:</strong></td>
+    //         <td style="padding:10px; border:1px solid #eaeaea;">${newPassword}</td>
+    //       </tr>
+    //     </table>
+
+    //     <p style="margin-top:20px;">
+    //       <a href="https://catchmycash.com/userLogin"
+    //          style="color:#E1261C; text-decoration:none; font-weight:bold;">
+    //         Login to CatchMyCash
+    //       </a>
+    //     </p>
+    //   `;
+
+    //   await sendEmailTwilio({
+    //     to: userEmail,
+    //     subject: "Your CatchMyCash Login Details",
+    //     text: `Email: ${userEmail}\nPassword: ${newPassword}\nLogin: https://catchmycash.com/userLogin`,
+    //     html: `
+    //       <p>Hi ${userEmail},</p>
+    //       <p>Your account already exists. We've updated your login password.</p>
+    //       ${credentialsHTML}
+    //     `,
+    //   });
+
+    //   await createNotification(
+    //     existingUser.user_id,
+    //     "Login details",
+    //     "An email has been sent to your registered Email ID with your login details."
+    //   );
+
+    //   return NextResponse.json(
+    //     {
+    //       message: "User updated successfully. Login details sent.",
+    //       user: {
+    //         id: existingUser._id,
+    //         email: existingUser.userEmail,
+    //         user_id: existingUser.user_id,
+    //         type: existingUser.userType,
+    //         user_type: "Existing",
+    //       },
+    //     },
+    //     { status: 200 }
+    //   );
+    // }
+
+    // ================= EXISTING USER =================
+    if (existingUser) {
+      // Just update user_id/userType if needed — DO NOT touch the password
       existingUser.user_id = user_id;
       existingUser.userEmail = userEmail;
-      existingUser.userType = userType || existingUser.userType;
-      existingUser.userPassword = hashedPassword;
+
 
       await existingUser.save();
 
-      const credentialsHTML = `
-        <table style="width:100%; border-collapse:collapse; margin-top:20px;">
-          <tr>
-            <td style="padding:10px; border:1px solid #eaeaea; background:#f9fafb;"><strong>Email:</strong></td>
-            <td style="padding:10px; border:1px solid #eaeaea;">${userEmail}</td>
-          </tr>
-          <tr>
-            <td style="padding:10px; border:1px solid #eaeaea; background:#f9fafb;"><strong>Password:</strong></td>
-            <td style="padding:10px; border:1px solid #eaeaea;">${newPassword}</td>
-          </tr>
-        </table>
-
-        <p style="margin-top:20px;">
-          <a href="https://catchmycash.com/userLogin"
-             style="color:#E1261C; text-decoration:none; font-weight:bold;">
-            Login to CatchMyCash
-          </a>
-        </p>
-      `;
-
       await sendEmailTwilio({
         to: userEmail,
-        subject: "Your CatchMyCash Login Details",
-        text: `Email: ${userEmail}\nPassword: ${newPassword}\nLogin: https://catchmycash.com/userLogin`,
+        subject: "Your CatchMyCash Account",
+        text: `Hi, you already have an account with us. Please check your previous email for your login credentials, or log in at https://catchmycash.com/userLogin. If you've forgotten your password, use the "Forgot Password" option on the login page.`,
         html: `
           <p>Hi ${userEmail},</p>
-          <p>Your account already exists. We've updated your login password.</p>
-          ${credentialsHTML}
+          <p>We found that you already have an account with CatchMyCash.</p>
+          <p>Please check your previous email for your login credentials (email and password).</p>
+          <p style="margin-top:20px;">
+            <a href="https://catchmycash.com/userLogin"
+               style="color:#E1261C; text-decoration:none; font-weight:bold;">
+              Login to CatchMyCash
+            </a>
+          </p>
+          <p style="margin-top:10px; color:#4A4A4A; font-size:13px;">
+            If you've forgotten your password, use the "Forgot Password" option on the login page.
+          </p>
         `,
       });
 
       await createNotification(
         existingUser.user_id,
-        "Login details",
-        "An email has been sent to your registered Email ID with your login details."
+        "Account Found",
+        "You already have an account. Please check your previous email for your login details."
       );
 
       return NextResponse.json(
         {
-          message: "User updated successfully. Login details sent.",
+          message: "Existing user found. Please check your previous email for login details.",
           user: {
             id: existingUser._id,
             email: existingUser.userEmail,
