@@ -86,7 +86,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
     zipCode: '',
     dateOfBirth: '',
     ssn: '',
-    claimantRelationship: '', 
+    claimantRelationship: '',
   });
   const [apiError, setApiError] = useState('');
   const [agreeSMS, setAgreeSMS] = useState(false);
@@ -349,7 +349,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
       'address',
       'city',
       'zipCode',
-      'claimantRelationship', 
+      'claimantRelationship',
     ];
     const firstErrorField = fieldOrder.find((field) => errorMap[field]);
     if (!firstErrorField) return;
@@ -365,6 +365,12 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (loading) return;
+
+    // ADD THIS GUARD — right at the top, before any other validation
+    if (!userData?._id) {
+      setApiError('Your session data was lost. Please go back and search again.');
+      return;
+    }
 
     let newErrors = {};
 
@@ -1043,8 +1049,8 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                       setErrors((prev) => ({ ...prev, claimantRelationship: '' }));
                     }}
                     className={`w-full text-[#0A0A0A] border-2 rounded-lg px-4 py-2.5 focus:border-[#E1261C] focus:outline-none transition-all bg-white ${errors.claimantRelationship
-                        ? 'border-[#E1261C] bg-[#FCE9E7] ring-2 ring-[#E1261C]/20'
-                        : 'border-[#E8E6E3]'
+                      ? 'border-[#E1261C] bg-[#FCE9E7] ring-2 ring-[#E1261C]/20'
+                      : 'border-[#E8E6E3]'
                       }`}
                   >
                     {CLAIMANT_RELATIONSHIPS.map((option) => (

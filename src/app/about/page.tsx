@@ -138,7 +138,7 @@ export default function AboutPage() {
               </h4>
               <p className="text-[#4A4A4A] leading-relaxed">
                 Every claim we file follows the California State{' '}
-                {"Controller's"}
+                {"Controller's"}{' '}
                 Office requirements. {"We're"} transparent about what we are: a
                 private service that helps you claim {"what's"} already yours.
               </p>
