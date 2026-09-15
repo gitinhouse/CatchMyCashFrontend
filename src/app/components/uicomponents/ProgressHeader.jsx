@@ -94,7 +94,8 @@ const ProgressHeader = ({ currentStep, filledFields = 0 }) => {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="fixed top-0 left-0 right-0 z-99 bg-white border-b border-[#E8E6E3] shadow-md"
+
+          className="fixed top-0 left-0 right-0 z-[200] bg-white border-b border-[#E8E6E3] shadow-md"
         >
           <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
             <div className="flex items-center justify-between mb-2 flex-wrap gap-2">

@@ -626,15 +626,17 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
     }
   };
 
+  useEffect(() => {
+    if (!loading) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [loading]);
+
   return (
     <div className="min-h-screen bg-[#F7F5F2] pt-5 relative">
       {loading && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center z-50"
-        >
+        <div className="fixed inset-x-0 bottom-0 top-[76px] sm:top-[88px] z-[150] flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm overscroll-contain">
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
@@ -646,7 +648,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
           <p className="text-[#4A4A4A]">
             Please wait while we process your request.
           </p>
-        </motion.div>
+        </div>
       )}
       <style>{`
         .pac-container {
@@ -1226,7 +1228,7 @@ const ErrorModal = ({ show, title, message, onClose }) => {
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-4">
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/40 px-4">
       <div className="bg-white border border-[#E8E6E3] rounded-xl shadow-lg max-w-md w-full p-6 relative animate-in fade-in zoom-in duration-200">
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 bg-[#FCE9E7] rounded-full flex items-center justify-center shrink-0">
