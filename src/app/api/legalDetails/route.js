@@ -56,16 +56,30 @@ async function upsertUserCaseWithClaimSubmission(user_id, claimSubmission) {
       }
     : {};
 
-  const existingCase = await UserCases.findOne({ user_id });
+  // Every claim submission gets its own case with its own case number.
+  //
+  // This used to reuse the claimant's existing case and $set the new
+  // property_ids over the old ones, so a second submission was absorbed into
+  // the first case and the dashboard showed a single case holding every
+  // property the claimant had ever submitted.
+  if (claimSubmission) {
+    const case_id = await generateCaseNumber();
+
+    return UserCases.create({
+      user_id,
+      case_id,
+      status: true,
+      ...claimFields,
+    });
+  }
+
+  // No submission payload — this is a partial save or a resubmit of the details
+  // step, so attach to the most recent case rather than opening an empty one.
+  const existingCase = await UserCases.findOne({ user_id }).sort({
+    createdAt: -1,
+  });
 
   if (existingCase) {
-    if (claimSubmission) {
-      return UserCases.findOneAndUpdate(
-        { user_id },
-        { $set: claimFields },
-        { new: true },
-      );
-    }
     return existingCase;
   }
 
@@ -75,7 +89,6 @@ async function upsertUserCaseWithClaimSubmission(user_id, claimSubmission) {
     user_id,
     case_id,
     status: true,
-    ...claimFields,
   });
 }
 

@@ -32,11 +32,14 @@ export async function POST(req) {
       );
     }
 
-    const existingCase = await UserCases.findOne({ user_id });
+    // A claimant can now have several cases, so resolve the most recent one.
+    const existingCase = await UserCases.findOne({ user_id }).sort({
+      createdAt: -1,
+    });
     if (existingCase) {
       if (normalizedPropertyIds.length > 0) {
         const updatedCase = await UserCases.findOneAndUpdate(
-          { user_id },
+          { _id: existingCase._id },
           { $set: { property_ids: normalizedPropertyIds } },
           { new: true },
         );

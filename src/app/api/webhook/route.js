@@ -50,7 +50,13 @@ export async function POST(req) {
           ? { claim_id }
           : { user_id: new mongoose.Types.ObjectId(userId) };
 
-      const updated = await UserCases.findOneAndUpdate(filter, { $set: updateFields }, { new: true });
+      // A claimant can have several cases, so the user_id fallback must land on
+      // the most recent one rather than whichever Mongo returns first.
+      const updated = await UserCases.findOneAndUpdate(
+        filter,
+        { $set: updateFields },
+        { new: true, sort: { createdAt: -1 } },
+      );
       console.log('[webhook] UserCases sync', { matched: !!updated, filter, updateFields });
     }
     // ---- end NEW ----

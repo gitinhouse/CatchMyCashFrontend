@@ -380,7 +380,9 @@ export async function GET(req) {
         { status: 400 },
       );
     }
-    const caseData = await UserCases.findOne({ user_id });
+    const caseData = await UserCases.findOne({ user_id }).sort({
+      createdAt: -1,
+    });
     return NextResponse.json(caseData);
   } catch (error) {
     console.error('GET /api/case error:', error);

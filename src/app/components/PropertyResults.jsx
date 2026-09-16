@@ -61,6 +61,8 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
   const [selectedProperties, setSelectedProperties] = useState([]);
   const [selectedTotalAmount, setSelectedTotalAmount] = useState(0);
   const [showSelectionLimitPopup, setShowSelectionLimitPopup] = useState(false);
+  // Holds the property whose existing claim we are explaining, or null.
+  const [claimExistsPopup, setClaimExistsPopup] = useState(null);
   const [isClaiming, setIsClaiming] = useState(false);
 
   const { userData, ownPropertyIds, setOwnPropertyIds, propertyData: storedPropertyData } = useSearchStore();
@@ -89,6 +91,14 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
   }
 
   const handleCheckboxChange = (propertyId) => {
+    const property = uniqueProperties.find((p) => p.id === propertyId);
+
+    // A claim is already on file for this property, so it cannot be filed again.
+    if (property?.claimInProgress) {
+      setClaimExistsPopup(property);
+      return;
+    }
+
     setSelectedProperties((prev) => {
       if (prev.includes(propertyId)) {
         return prev.filter((id) => id !== propertyId);
@@ -162,6 +172,18 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
 
       if (!selectedProperties.length) {
         alert('Please select at least one property.');
+        setIsClaiming(false);
+        return;
+      }
+
+      // Results may have been sitting on screen while the property was claimed
+      // elsewhere, so re-check before sending anything.
+      const blocked = uniqueProperties.find(
+        (p) => selectedProperties.includes(p.id) && p.claimInProgress,
+      );
+      if (blocked) {
+        setClaimExistsPopup(blocked);
+        setSelectedProperties((prev) => prev.filter((id) => id !== blocked.id));
         setIsClaiming(false);
         return;
       }
@@ -436,7 +458,17 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
                       type="checkbox"
                       checked={selectedProperties.includes(property.id)}
                       onChange={() => handleCheckboxChange(property.id)}
-                      className="mt-2 h-5 w-5 cursor-pointer accent-[#E1261C] shrink-0"
+                      disabled={property.claimInProgress}
+                      aria-label={
+                        property.claimInProgress
+                          ? `${property.id} already has a claim in progress`
+                          : `Select property ${property.id}`
+                      }
+                      className={`mt-2 h-5 w-5 shrink-0 accent-[#E1261C] ${
+                        property.claimInProgress
+                          ? 'cursor-not-allowed opacity-40'
+                          : 'cursor-pointer'
+                      }`}
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center flex-wrap gap-3 mb-2">
@@ -446,6 +478,11 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
                         <span className="bg-[#FCE9E7] text-[#E1261C] text-xs font-semibold px-3 py-1 rounded-full border border-[#E8E6E3]">
                           {property.type}
                         </span>
+                        {property.claimInProgress && (
+                          <span className="bg-[#FFF4E0] text-[#9A6400] text-xs font-semibold px-3 py-1 rounded-full border border-[#F3DFB4]">
+                            Claim already submitted
+                          </span>
+                        )}
                         <motion.span
                           className="text-xl sm:text-2xl font-bold text-[#E1261C] font-['Fraunces'] break-all"
                           animate={{ scale: [1, 1.05, 1] }}
@@ -659,6 +696,43 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
               </p>
               <button
                 onClick={() => setShowSelectionLimitPopup(false)}
+                className="bg-[#E1261C] hover:bg-[#B11912] text-white px-8 py-2.5 rounded-lg transition-all shadow-md hover:shadow-lg"
+              >
+                Close
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {claimExistsPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <motion.div
+            className="w-full max-w-md mx-4 rounded-2xl bg-white border border-[#E8E6E3] shadow-xl p-5 sm:p-6"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+          >
+            <div className="text-center">
+              <div className="w-14 h-14 bg-[#FFF4E0] rounded-full flex items-center justify-center mx-auto mb-3">
+                <AlertTriangle className="h-7 w-7 text-[#9A6400]" />
+              </div>
+              <h2 className="text-2xl font-bold text-[#0A0A0A] mb-2 font-['Fraunces']">
+                Claim Already Submitted
+              </h2>
+              <p className="text-[#4A4A4A] mb-2">
+                A claim has already been filed for property{' '}
+                <span className="font-semibold text-[#0A0A0A]">
+                  {claimExistsPopup.id}
+                </span>
+                , so it cannot be claimed again.
+              </p>
+              <p className="text-[#888888] text-sm mb-6">
+                You can follow its progress from your dashboard. If you believe
+                this is a mistake, please contact support.
+              </p>
+              <button
+                onClick={() => setClaimExistsPopup(null)}
                 className="bg-[#E1261C] hover:bg-[#B11912] text-white px-8 py-2.5 rounded-lg transition-all shadow-md hover:shadow-lg"
               >
                 Close

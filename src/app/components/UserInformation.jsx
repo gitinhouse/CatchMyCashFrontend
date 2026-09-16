@@ -62,6 +62,8 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
     previousAddresses: '',
     claimantRelationship: 'MYSELF',
   });
+  // Set when a signed-in session supplies the email; null for signed-out users.
+  const [lockedEmail, setLockedEmail] = useState(null);
   const [errorModal, setErrorModal] = useState({
     show: false,
     title: '',
@@ -99,6 +101,10 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
   }, []);
 
   const handleInputChange = (field, value) => {
+    // readOnly stops typing, but browser autofill still fires onChange, so the
+    // session email is held here too.
+    if (field === 'email' && lockedEmail) return;
+
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -249,6 +255,31 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
       } catch (e) {
         console.error('Failed to parse propertyData from localStorage', e);
       }
+    }
+  }, []);
+
+  // A signed-in claimant files against the account they are signed in to, so
+  // the email is taken from the session and locked. Signed-out visitors keep
+  // the editable field, which is what creates their account.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('userLogin');
+      if (!raw || raw === 'undefined') return;
+
+      const session = JSON.parse(raw);
+      const sessionEmail = session?.user?.email;
+      if (!session?.token || !sessionEmail) return;
+
+      setLockedEmail(sessionEmail);
+      setFormData((prev) => ({ ...prev, email: sessionEmail }));
+      setErrors((prev) => {
+        if (!prev.email) return prev;
+        const next = { ...prev };
+        delete next.email;
+        return next;
+      });
+    } catch (e) {
+      console.error('Failed to read userLogin from localStorage', e);
     }
   }, []);
 
@@ -529,10 +560,19 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
 
       let userLoginRes;
       try {
-        userLoginRes = await axios.post('/api/register', payloadData);
-        setUserLogin(userLoginRes.data);
-        localStorage.setItem('userLogin', JSON.stringify(userLoginRes.data));
-        window.dispatchEvent(new Event('authChange'));
+        if (lockedEmail) {
+          // Already signed in: the account exists and the session is valid, so
+          // registering again would only re-send the "you already have an
+          // account" mail on every additional claim.
+          userLoginRes = {
+            data: JSON.parse(localStorage.getItem('userLogin')),
+          };
+        } else {
+          userLoginRes = await axios.post('/api/register', payloadData);
+          setUserLogin(userLoginRes.data);
+          localStorage.setItem('userLogin', JSON.stringify(userLoginRes.data));
+          window.dispatchEvent(new Event('authChange'));
+        }
       } catch (err) {
         const msg =
           err.response?.data?.message ||
@@ -863,8 +903,30 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     placeholder="your@email.com"
                     aria-invalid={!!errors.email}
-                    className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${getInputErrorClass(!!errors.email)}`}
+                    readOnly={!!lockedEmail}
+                    aria-readonly={!!lockedEmail}
+                    title={
+                      lockedEmail
+                        ? 'This claim is filed under the account you are signed in to.'
+                        : undefined
+                    }
+                    className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${getInputErrorClass(
+                      !!errors.email,
+                    )} ${
+                      lockedEmail
+                        ? 'bg-[#F0EEEB] text-[#4A4A4A] cursor-not-allowed focus:border-[#E8E6E3]'
+                        : ''
+                    }`}
                   />
+                  {lockedEmail && (
+                    <p className="text-[#888888] text-xs mt-1">
+                      Filing as{' '}
+                      <span className="font-medium text-[#4A4A4A]">
+                        {lockedEmail}
+                      </span>
+                      . Sign out to file under a different email.
+                    </p>
+                  )}
                   {errors.email && (
                     <p className="text-[#E1261C] text-xs mt-1 font-medium">
                       {errors.email}
