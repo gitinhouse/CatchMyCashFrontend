@@ -106,7 +106,9 @@ export const GET = withAdmin(async (req) => {
   if (sign) {
     for (const row of paged) {
       for (const file of row.files) {
-        file.url = await getSignedDocumentUrl(file.stored_value);
+        file.url = await getSignedDocumentUrl(file.stored_value, {
+          field: file.field,
+        });
       }
     }
   }

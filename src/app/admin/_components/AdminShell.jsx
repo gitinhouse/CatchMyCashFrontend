@@ -18,6 +18,8 @@ import {
   X,
 } from 'lucide-react';
 import { adminFetch, getAdminSession, isAdminSession } from '../_lib/api';
+import { clearClientSession } from '../../lib/session';
+import { useSearchStore } from '../../store/searchStore';
 import { initials } from '../_lib/format';
 
 const NAV = [
@@ -60,6 +62,7 @@ export default function AdminShell({ children }) {
   const [authState, setAuthState] = useState('checking'); // checking | ok | denied
   const [attentionCount, setAttentionCount] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { resetAll } = useSearchStore();
 
   useEffect(() => {
     const stored = getAdminSession();
@@ -99,8 +102,8 @@ export default function AdminShell({ children }) {
   }, [pathname]);
 
   const handleLogout = () => {
-    localStorage.removeItem('userLogin');
-    window.dispatchEvent(new Event('authChange'));
+    clearClientSession();
+    resetAll();
     router.push('/userLogin');
   };
 

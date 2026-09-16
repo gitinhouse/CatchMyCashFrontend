@@ -3,7 +3,36 @@ import connectToDatabase from "../../lib/mongodb";
 import UserDetails from "../../models/userDetails";
 import User from "../../models/UserInformation";
 import UserCases from "../../models/userCases";
+import UserProperty from "../../models/userProperty";
 import { generateCaseNumber } from "../../lib/generateCaseNumber";
+
+/**
+ * Link the properties in this submission to the case that was just resolved.
+ *
+ * UserProperty rows are written during property selection, before a case
+ * exists, so case_id was left null and the dashboard had to fall back to
+ * matching on user_id alone — which attached every property a claimant had
+ * ever selected to every one of their cases. Stamping the id here keeps new
+ * data unambiguous.
+ */
+async function linkPropertiesToCase(userCase, userId) {
+  const propertyIds = (userCase?.property_ids || []).map(String).filter(Boolean);
+  if (!userCase?._id || !userId || propertyIds.length === 0) return;
+
+  try {
+    await UserProperty.updateMany(
+      {
+        user_id: userId,
+        property_id: { $in: propertyIds },
+        $or: [{ case_id: null }, { case_id: { $exists: false } }],
+      },
+      { $set: { case_id: userCase._id } },
+    );
+  } catch (error) {
+    // Never fail the submission over a bookkeeping update.
+    console.error('Failed to link properties to case:', error.message);
+  }
+}
 
 async function upsertUserCaseWithClaimSubmission(user_id, claimSubmission) {
   const claimFields = claimSubmission
@@ -103,6 +132,8 @@ export async function POST(req) {
       user_id,
       claimSubmission,
     );
+
+    await linkPropertiesToCase(userCase, user_id);
 
     const newUserDetails = await UserDetails.create({
       user_id,

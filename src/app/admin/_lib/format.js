@@ -1,26 +1,15 @@
+// Always two decimals, matching the toFixed(2) / minimumFractionDigits: 2
+// formatting the claimant-facing pages use. Claim amounts are money and must
+// never be rounded to whole dollars in the admin console.
 const currency = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 0,
-});
-
-const currencyPrecise = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
 
-export function money(value, precise = false) {
-  const n = Number(value) || 0;
-  return precise ? currencyPrecise.format(n) : currency.format(n);
-}
-
-export function compactMoney(value) {
-  const n = Number(value) || 0;
-  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (Math.abs(n) >= 10_000) return `$${Math.round(n / 1000)}K`;
-  return money(n);
+export function money(value) {
+  return currency.format(Number(value) || 0);
 }
 
 export function number(value) {

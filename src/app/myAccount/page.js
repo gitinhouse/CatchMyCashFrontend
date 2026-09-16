@@ -16,6 +16,7 @@ import {
     Users
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { clearClientSession } from '../lib/session';
 
 // ── Helpers: derive a human step from case + docs data ─────────────────────
 function parseAmount(v) {
@@ -641,8 +642,7 @@ export default function MyAccountPage() {
             // ← ADD: expired/invalid token → clear session and send to login,
             // instead of showing a generic error the user can't act on.
             if (err?.response?.status === 401) {
-                localStorage.removeItem('userLogin');
-                window.dispatchEvent(new Event('authChange')); // keeps SiteHeader in sync
+                clearClientSession(); // wipes all stored session data, not just the token
                 setIsLoggedIn(false);
                 router.replace('/userLogin');
                 return;

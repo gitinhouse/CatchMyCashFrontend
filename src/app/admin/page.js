@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import { adminFetch } from './_lib/api';
 import {
-  compactMoney,
   formatDate,
   humanize,
   money,
@@ -215,14 +214,14 @@ export default function AdminDashboardPage() {
           icon={BadgeCheck}
           label="Approved claims"
           value={number(approvedCount)}
-          sub={`${compactMoney(t.recovered_value)} recovered`}
+          sub={`${money(t.recovered_value)} recovered`}
           tone="success"
           href="/admin/cases?status=approved"
         />
         <StatCard
           icon={Banknote}
           label="Pipeline value"
-          value={compactMoney(t.pipeline_value)}
+          value={money(t.pipeline_value)}
           sub={`${number(t.properties_selected)} properties selected`}
           tone="info"
         />

@@ -2,7 +2,12 @@ import { NextResponse } from 'next/server';
 import connectToDatabase from '../../../lib/mongodb';
 import UserCases from '../../../models/userCases';
 import { withAdmin } from '../../../lib/adminAuth';
-import { caseJoinStages, toCaseRow, safeRegex } from '../../../lib/adminQueries';
+import {
+  caseJoinStages,
+  toCaseRow,
+  safeRegex,
+  resolvePollUrl,
+} from '../../../lib/adminQueries';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,7 +68,7 @@ export const GET = withAdmin(async (req) => {
       created_at: row.created_at,
       updated_at: row.updated_at,
       submitted_at: row.submitted_at,
-      poll_url: doc.poll_url || null,
+      poll_url: resolvePollUrl(doc.poll_url),
       claim_pipeline: {
         task_id: row.claim_process_task_id,
         task_status: row.claim_process_task_status,

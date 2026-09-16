@@ -147,7 +147,11 @@ export async function GET(req) {
         {
           $lookup: {
             from: 'userproperties',
-            let: { caseId: '$_id', userId: '$user_id' },
+            let: {
+              caseId: '$_id',
+              userId: '$user_id',
+              propertyIds: { $ifNull: ['$property_ids', []] },
+            },
             pipeline: [
               {
                 $match: {
@@ -158,6 +162,10 @@ export async function GET(req) {
                         $and: [
                           { $eq: [{ $ifNull: ['$case_id', null] }, null] },
                           { $eq: ['$user_id', '$$userId'] },
+                          // Legacy rows carry no case_id, so fall back to the ids this
+                          // case actually submitted. Matching on user_id alone attached
+                          // every property the claimant ever selected to every case.
+                          { $in: ['$property_id', '$$propertyIds'] },
                         ],
                       },
                     ],
@@ -399,7 +407,11 @@ export async function GET(req) {
       {
         $lookup: {
           from: 'userproperties',
-          let: { caseId: '$_id', userId: '$user_id' },
+          let: {
+              caseId: '$_id',
+              userId: '$user_id',
+              propertyIds: { $ifNull: ['$property_ids', []] },
+            },
           pipeline: [
             {
               $match: {
@@ -410,6 +422,10 @@ export async function GET(req) {
                       $and: [
                         { $eq: [{ $ifNull: ['$case_id', null] }, null] },
                         { $eq: ['$user_id', '$$userId'] },
+                        // Legacy rows carry no case_id, so fall back to the ids this
+                        // case actually submitted. Matching on user_id alone attached
+                        // every property the claimant ever selected to every case.
+                        { $in: ['$property_id', '$$propertyIds'] },
                       ],
                     },
                   ],
@@ -482,9 +498,12 @@ export async function GET(req) {
       pipeline.push({ $skip: skip }, { $limit: limit });
     }
 
-    // 🔹 Sort dashboard results newest-first
+    // 🔹 Sort dashboard results newest-first, so the most recent claim and its
+    // properties lead the page. Placed just after the $match rather than at the
+    // head of the pipeline: unshift sorted the whole usercases collection
+    // before filtering it down to this user.
     if (my_user_id) {
-      pipeline.unshift({ $sort: { createdAt: -1 } });
+      pipeline.splice(1, 0, { $sort: { createdAt: -1 } });
     }
 
     let totalRecords = 0;
