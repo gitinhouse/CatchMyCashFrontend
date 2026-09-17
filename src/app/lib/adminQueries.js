@@ -92,10 +92,27 @@ export function toCaseRow(doc, now = new Date()) {
   const info = doc.user_info || {};
   const details = doc.details || {};
 
+  // The processor files one claim per property, so the state's claim numbers
+  // land on the property rows. The case-level claim_id is not always
+  // populated, which is why the console used to read "No Claim ID yet" for
+  // cases that plainly had claims — fall back to the property numbers.
+  const propertyClaimIds = [
+    ...new Set(
+      (doc.user_properties || [])
+        .map((p) => (p.claim_id ? String(p.claim_id).trim() : ''))
+        .filter(Boolean),
+    ),
+  ];
+
   return {
     _id: String(doc._id),
     case_id: doc.case_id,
-    claim_id: doc.claim_id || null,
+    claim_id: doc.claim_id || propertyClaimIds[0] || null,
+    // Every distinct state claim number on this case, for cases that cover
+    // several properties.
+    claim_ids: doc.claim_id
+      ? [...new Set([String(doc.claim_id), ...propertyClaimIds])]
+      : propertyClaimIds,
     automation_id: doc.automation_id || null,
     created_at: doc.createdAt,
     updated_at: doc.updatedAt,

@@ -509,18 +509,69 @@ export async function GET(req) {
   }
 }
 
+/**
+ * Step-by-step tracing for the agreement flow.
+ *
+ * Every stage logs under one correlation id so a run can be followed end to
+ * end in the server logs and the failing step identified, rather than only
+ * seeing the final error.
+ */
+function createAgreementTracer(userId) {
+  const runId = `agr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+  const startedAt = Date.now();
+  let step = 0;
+
+  const emit = (level, name, detail) => {
+    step += 1;
+    const line = {
+      run: runId,
+      step,
+      ms: Date.now() - startedAt,
+      user_id: userId ? String(userId) : null,
+      stage: name,
+      ...(detail || {}),
+    };
+    if (level === 'error') console.error('[agreement]', JSON.stringify(line));
+    else console.log('[agreement]', JSON.stringify(line));
+  };
+
+  return {
+    runId,
+    step: (name, detail) => emit('log', name, detail),
+    fail: (name, detail) => emit('error', name, detail),
+  };
+}
+
 export async function POST(req) {
+  const trace = createAgreementTracer(null);
   try {
     const { user_id } = await req.json();
+    trace.step('request_received', { has_user_id: !!user_id });
 
     if (!user_id) {
       return NextResponse.json({ error: 'user_id is required' }, { status: 400 });
     }
 
     await connectToDatabase();
+    trace.step('db_connected');
 
-    const userDocs = await UserDocs.findOne({ user_id });
+    // A claimant can have several cases, so take the most recent document
+    // record. Without the sort this picked an arbitrary one, and an older case
+    // with no agreement_doc produced a spurious "Agreement document not found".
+    const userDocs = await UserDocs.findOne({ user_id }).sort({ createdAt: -1 });
+    trace.step('user_docs_loaded', {
+      found: !!userDocs,
+      case_id: userDocs?.case_id ? String(userDocs.case_id) : null,
+      has_agreement_doc: !!userDocs?.agreement_doc,
+      agreement_doc: userDocs?.agreement_doc || null,
+    });
+
     if (!userDocs?.agreement_doc) {
+      trace.fail('agreement_doc_missing', {
+        reason: userDocs
+          ? 'document record exists but agreement_doc is empty — the automation server has not delivered it yet'
+          : 'no UserDocs record for this user',
+      });
       return NextResponse.json(
         { error: 'Agreement document not found for this user' },
         { status: 404 },
@@ -531,7 +582,19 @@ export async function POST(req) {
       user_id: toObjectId(user_id),
     }).sort({ createdAt: -1 });
 
+    trace.step('user_details_loaded', {
+      found: !!userDetails,
+      has_email: !!userDetails?.email_id,
+      has_legal_name: !!userDetails?.legal_name,
+    });
+
     if (!userDetails?.email_id || !userDetails?.legal_name) {
+      trace.fail('user_details_incomplete', {
+        missing: [
+          !userDetails?.email_id && 'email_id',
+          !userDetails?.legal_name && 'legal_name',
+        ].filter(Boolean),
+      });
       return NextResponse.json(
         { error: 'User details not found for signing' },
         { status: 404 },
@@ -545,8 +608,15 @@ export async function POST(req) {
       publicUrl,
     } = await resolveAgreementDocument(userDocs.agreement_doc);
 
+    trace.step('agreement_pdf_resolved', {
+      s3_key: s3Key,
+      bytes: pdfBuffer?.length ?? 0,
+      has_signed_url: !!signedUrl,
+    });
+
     const pdfDoc = await PDFDocument.load(pdfBuffer);
     const numberOfPages = pdfDoc.getPageCount();
+    trace.step('pdf_loaded', { pages: numberOfPages });
     const lastPage = String(numberOfPages);
     const layout = await resolveAgreementLayout(pdfBuffer, numberOfPages);
 
@@ -567,6 +637,7 @@ export async function POST(req) {
     const pdfBase64 = pdfBuffer.toString('base64');
 
     const { envelopesApi, accountId } = await createAuthenticatedDocuSignClient();
+    trace.step('docusign_authenticated', { account_id: accountId || null });
 
     const envelopeDefinition = new docusign.EnvelopeDefinition();
     envelopeDefinition.emailSubject = `Please sign your agreement form - ${userDetails.legal_name}`;
@@ -609,11 +680,18 @@ export async function POST(req) {
     envelopeDefinition.recipients = { signers: [signer] };
     envelopeDefinition.status = 'sent';
 
+    trace.step('envelope_prepared', {
+      signer: userDetails.email_id,
+      sign_page: lastPage,
+      text_tabs: tabs.textTabs?.length ?? 0,
+    });
+
     const envelopeResponse = await envelopesApi.createEnvelope(accountId, {
       envelopeDefinition,
     });
 
     const envelopeId = envelopeResponse.envelopeId;
+    trace.step('envelope_created', { envelope_id: envelopeId });
 
     const viewRequest = new docusign.RecipientViewRequest();
     viewRequest.returnUrl = `${getAppBaseUrl()}/signed?envelopeId=${envelopeId}&type=agreement&user_id=${user_id}&case_id=${userDocs.case_id}`;
@@ -630,6 +708,11 @@ export async function POST(req) {
       },
     );
 
+    trace.step('signing_url_created', {
+      envelope_id: envelopeId,
+      has_url: !!recipientView?.url,
+    });
+
     return NextResponse.json({
       success: true,
       signingUrl: recipientView.url,
@@ -640,6 +723,11 @@ export async function POST(req) {
     });
   } catch (err) {
     if (isS3NotFoundError(err)) {
+      trace.fail('agreement_file_missing_in_s3', {
+        bucket: process.env.AGREEMENT_BUCKET_NAME || null,
+        region: process.env.AGREEMENT_AWS_REGION || 'eu-central-1',
+        message: err.message,
+      });
       return NextResponse.json(
         {
           error: err.message || 'Agreement file not found',
@@ -650,6 +738,12 @@ export async function POST(req) {
       );
     }
 
+    trace.fail('unhandled_error', {
+      message: err?.message,
+      docusign_status: err?.response?.status ?? null,
+      docusign_body:
+        err?.response?.body || err?.response?.data || null,
+    });
     return docuSignErrorResponse(err, 'Failed to create agreement envelope');
   }
 }

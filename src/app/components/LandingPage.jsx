@@ -92,7 +92,7 @@ const LandingPage = ({ onNext }) => {
     successRate: 0,
   });
 
-  const [searchClaimId, setSearchClaimId] = useState('');
+  const [searchCaseId, setSearchCaseId] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResult, setSearchResult] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -122,9 +122,11 @@ const LandingPage = ({ onNext }) => {
     router.push('/userLogin');
   };
 
+  // Claimants track by Case ID: it is issued as soon as the case exists,
+  // whereas the state's Claim ID only arrives once the filing is accepted.
   const handleSearchClaim = async () => {
-    if (!searchClaimId.trim()) {
-      setSearchError('Please enter a Claim ID');
+    if (!searchCaseId.trim()) {
+      setSearchError('Please enter a Case ID');
       return;
     }
 
@@ -133,21 +135,22 @@ const LandingPage = ({ onNext }) => {
     setSearchResult(null);
 
     try {
-      // Use the existing endpoint with public=true
       const { data } = await axios.get(
-        `/api/case?claim_id=${searchClaimId.trim()}&public=true`
+        `/api/case?case_number=${encodeURIComponent(
+          searchCaseId.trim(),
+        )}&public=true`,
       );
 
       if (data?.data && data.data.length > 0) {
         setSearchResult(data.data[0]);
         setShowModal(true);
       } else {
-        setSearchError('No claim found with this Claim ID');
+        setSearchError('No claim found with this Case ID');
       }
     } catch (err) {
       console.error('Search error:', err);
       if (err.response?.status === 404) {
-        setSearchError('No claim found with this Claim ID');
+        setSearchError('No claim found with this Case ID');
       } else {
         setSearchError('Failed to search for claim. Please try again.');
       }
@@ -160,7 +163,7 @@ const LandingPage = ({ onNext }) => {
   const closeModal = () => {
     setShowModal(false);
     setSearchResult(null);
-    setSearchClaimId('');
+    setSearchCaseId('');
   };
 
   return (
@@ -253,17 +256,17 @@ const LandingPage = ({ onNext }) => {
             </h3>
           </div>
           <p className="text-sm text-[#4A4A4A] mb-4">
-            Enter your Claim ID to check the progress of your claim
+            Enter your Case ID to check the progress of your claim
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <input
               type="text"
-              value={searchClaimId}
+              value={searchCaseId}
               onChange={(e) => {
-                setSearchClaimId(e.target.value);
+                setSearchCaseId(e.target.value);
                 setSearchError('');
               }}
-              placeholder="Enter Claim ID"
+              placeholder="Enter Case ID (e.g. CM-2026-123456)"
               className="flex-1 px-4 py-3 border border-[#E8E6E3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E1261C] focus:border-transparent transition-all text-[#0A0A0A]"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSearchClaim();
@@ -872,10 +875,12 @@ const ClaimProgressModal = ({ claim, onClose }) => {
                           <p className="text-xs text-[#888888] font-['JetBrains_Mono']">
                             ID: {p.property_id}
                           </p>
-                          {p.claim_id && (
-                            <p className="text-xs text-[#E1261C] font-['JetBrains_Mono'] mt-1">
-                              Claim ID: {p.claim_id}
-                            </p>
+                          {/* Per-property claim number, falling back to the case's own
+                              number for claims filed before per-property ids were stored. */}
+                          {(p.claim_id || claim.claim_id) && (
+                              <p className="text-xs text-[#E1261C] font-['JetBrains_Mono'] mt-1">
+                                Claim ID: {p.claim_id || claim.claim_id}
+                              </p>
                           )}
                         </div>
                         <div className="text-right">

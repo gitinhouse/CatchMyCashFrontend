@@ -10,6 +10,7 @@ import {
   Shield,
   Zap,
   Eye,
+  EyeOff,
   Lock,
   ArrowRight,
   AlertTriangle,
@@ -56,6 +57,7 @@ const ErrorPopup = ({ message, onClose }) => {
 const UserLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [validationError, setValidationError] = useState('');
   const { setUserLogin, resetAll } = useSearchStore();
@@ -317,11 +319,11 @@ useEffect(() => {
                       Password *
                     </label>
                     <InputField
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter Password"
-                      className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${
+                      className={`w-full pr-20 text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg transition-all duration-300 focus:outline-none ${
                         password.trim()
                           ? 'border-[#E1261C]/50 focus:border-[#E1261C]'
                           : 'border-[#E8E6E3] focus:border-[#E1261C]'
@@ -331,11 +333,26 @@ useEffect(() => {
                       }
                       disabled={isSearching}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      disabled={isSearching}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      aria-pressed={showPassword}
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                      className="absolute right-3 top-9 text-[#888888] hover:text-[#E1261C] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
                     {password.trim() && (
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="absolute right-3 top-9 text-[#E1261C]"
+                        className="absolute right-10 top-9 text-[#E1261C]"
                       >
                         ✓
                       </motion.div>

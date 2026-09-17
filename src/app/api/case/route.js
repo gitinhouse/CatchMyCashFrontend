@@ -78,15 +78,32 @@ export async function GET(req) {
     const public_search = searchParams.get('public');
 
     // 🔹 CHECK PUBLIC SEARCH FIRST - BEFORE AUTHENTICATION
-    if (public_search === 'true' && claim_id) {
+    //
+    // Claimants track by their Case ID (CM-YYYY-NNNNNN), which is issued as
+    // soon as the case exists; the state's Claim ID arrives later and is not
+    // something they have to hand. Claim ID is still accepted so older links
+    // keep working.
+    const public_case_number = searchParams.get('case_number');
+
+    if (public_search === 'true' && (claim_id || public_case_number)) {
       await connectToDatabase();
 
       const pipeline = [];
 
-      // Filter by claim_id
-      pipeline.push({
-        $match: { claim_id: claim_id }
-      });
+      if (public_case_number) {
+        // Exact match, case-insensitive, with the input escaped so a typed
+        // regex character cannot alter the query.
+        const escaped = String(public_case_number)
+          .trim()
+          .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        pipeline.push({
+          $match: { case_id: { $regex: `^${escaped}$`, $options: 'i' } },
+        });
+      } else {
+        pipeline.push({
+          $match: { claim_id: claim_id }
+        });
+      }
 
       // Join related collections
       pipeline.push(
@@ -194,7 +211,11 @@ export async function GET(req) {
               },
               {
                 $addFields: {
-                  claim_id: { $arrayElemAt: ['$case_info.claim_id', 0] }
+                  // Prefer the property's own claim number; fall back to the
+                  // case-level one for rows filed before per-property ids existed.
+                  claim_id: {
+                    $ifNull: ['$claim_id', { $arrayElemAt: ['$case_info.claim_id', 0] }],
+                  }
                 }
               },
               {
@@ -239,7 +260,11 @@ export async function GET(req) {
 
       if (results.length === 0) {
         return NextResponse.json(
-          { error: 'No claim found with this Claim ID' },
+          {
+            error: public_case_number
+              ? 'No claim found with this Case ID'
+              : 'No claim found with this Claim ID',
+          },
           { status: 404 }
         );
       }
@@ -454,7 +479,11 @@ export async function GET(req) {
             },
             {
               $addFields: {
-                claim_id: { $arrayElemAt: ['$case_info.claim_id', 0] }
+                // Prefer the property's own claim number; fall back to the
+                // case-level one for rows filed before per-property ids existed.
+                claim_id: {
+                  $ifNull: ['$claim_id', { $arrayElemAt: ['$case_info.claim_id', 0] }],
+                }
               }
             },
             {

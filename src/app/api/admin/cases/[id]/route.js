@@ -138,6 +138,7 @@ export const GET = withAdmin(async (req, ctx) => {
     properties: (doc.user_properties || []).map((p) => ({
       _id: String(p._id),
       property_id: p.property_id,
+      claim_id: p.claim_id || null,
       property_type: p.property_type,
       property_title: p.property_title,
       amount: p.amount,

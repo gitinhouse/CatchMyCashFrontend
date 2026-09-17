@@ -472,9 +472,11 @@ const ClaimProgressModal = ({ claim, onClose }) => {
                                                     <p className="text-xs text-[#888888] font-['JetBrains_Mono']">
                                                         ID: {p.property_id}
                                                     </p>
-                                                    {p.claim_id && (
+                                                    {/* Per-property claim number, falling back to the case's own
+                                                        number for claims filed before per-property ids were stored. */}
+                                                    {(p.claim_id || claim.claim_id) && (
                                                         <p className="text-xs text-[#E1261C] font-['JetBrains_Mono'] mt-1">
-                                                            Claim ID: {p.claim_id}
+                                                          Claim ID: {p.claim_id || claim.claim_id}
                                                         </p>
                                                     )}
                                                 </div>

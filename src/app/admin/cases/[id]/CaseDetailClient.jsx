@@ -131,9 +131,15 @@ export default function CaseDetailClient({ caseId }) {
         }
         title={c.case_id}
         description={
-          c.claim_id
-            ? `State Claim ID ${c.claim_id} · opened ${formatDate(c.created_at)}`
-            : `No Claim ID yet · opened ${formatDate(c.created_at)}`
+          c.claim_ids?.length > 1
+            ? `State Claim IDs ${c.claim_ids.join(', ')} · opened ${formatDate(
+                c.created_at,
+              )}`
+            : c.claim_id
+              ? `State Claim ID ${c.claim_id} · opened ${formatDate(c.created_at)}`
+              : `Awaiting Claim ID from the state · opened ${formatDate(
+                  c.created_at,
+                )}`
         }
         actions={
           <>
@@ -820,6 +826,7 @@ function PropertiesTab({ data }) {
           <thead>
             <tr>
               <Th>Property ID</Th>
+              <Th>Claim ID</Th>
               <Th>Title</Th>
               <Th>Type</Th>
               <Th>Reported</Th>
@@ -834,6 +841,13 @@ function PropertiesTab({ data }) {
                   <Mono className="text-[#E1261C] font-semibold">
                     {p.property_id}
                   </Mono>
+                </Td>
+                <Td>
+                  {p.claim_id ? (
+                    <Mono>{p.claim_id}</Mono>
+                  ) : (
+                    <span className="text-[11px] text-[#B4B0AA]">—</span>
+                  )}
                 </Td>
                 <Td>
                   <span className="text-sm text-[#0A0A0A]">

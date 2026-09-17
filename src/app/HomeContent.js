@@ -19,6 +19,7 @@ import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchStore } from './store/searchStore';
 import { clearClientSession } from './lib/session';
+import NotificationBell from './components/NotificationBell';
 
 export const SiteHeader = () => {
   const router = useRouter();
@@ -135,6 +136,7 @@ export const SiteHeader = () => {
             {/* 🔹 MODIFIED: Conditional rendering for Login/Dashboard */}
             {isLoggedIn ? (
               <>
+                <NotificationBell />
                 <button
                   onClick={handleDashboard}
                   className="inline-flex items-center gap-1.5 px-2 py-1.5 lg:px-5 lg:py-3 bg-[#E1261C] text-white text-xs lg:text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md whitespace-nowrap"
