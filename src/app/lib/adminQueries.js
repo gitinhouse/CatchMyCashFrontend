@@ -10,10 +10,17 @@ import { deriveCaseState } from './claimLifecycle';
  * same fallback the public /api/case route uses.
  */
 export function caseJoinStages() {
-  const scopedLookup = (from, as) => ({
+  // `scopeToPropertyIds` narrows the legacy (null case_id) fallback to the
+  // property ids this case actually submitted. Without it, every property a
+  // claimant ever selected is attached to every one of their cases.
+  const scopedLookup = (from, as, scopeToPropertyIds = false) => ({
     $lookup: {
       from,
-      let: { caseId: '$_id', userId: '$user_id' },
+      let: {
+        caseId: '$_id',
+        userId: '$user_id',
+        propertyIds: { $ifNull: ['$property_ids', []] },
+      },
       pipeline: [
         {
           $match: {
@@ -24,6 +31,9 @@ export function caseJoinStages() {
                   $and: [
                     { $eq: [{ $ifNull: ['$case_id', null] }, null] },
                     { $eq: ['$user_id', '$$userId'] },
+                    ...(scopeToPropertyIds
+                      ? [{ $in: ['$property_id', '$$propertyIds'] }]
+                      : []),
                   ],
                 },
               ],
@@ -48,7 +58,7 @@ export function caseJoinStages() {
     { $unwind: { path: '$user_info', preserveNullAndEmptyArrays: true } },
     scopedLookup('userdetails', 'user_details'),
     scopedLookup('userdocs', 'user_docs'),
-    scopedLookup('userproperties', 'user_properties'),
+    scopedLookup('userproperties', 'user_properties', true),
     {
       $lookup: {
         from: 'userlogins',
@@ -163,4 +173,24 @@ export function toObjectId(value) {
 export function safeRegex(value) {
   const escaped = String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return { $regex: escaped, $options: 'i' };
+}
+
+/**
+ * The automation server may report its poll endpoint as an absolute URL or as
+ * a bare path. A bare path rendered as an href resolves against this site and
+ * goes nowhere, so anchor it to EXTENSION_URL instead.
+ *
+ * @param {string} value Raw `poll_url` from the case record.
+ * @returns {string|null} An absolute URL, or null when there is nothing usable.
+ */
+export function resolvePollUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+
+  if (/^https?:\/\//i.test(raw)) return raw;
+
+  const base = process.env.EXTENSION_URL?.replace(/\/$/, '');
+  if (!base) return null;
+
+  return `${base}/${raw.replace(/^\/+/, '')}`;
 }

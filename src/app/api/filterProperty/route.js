@@ -283,8 +283,96 @@
 import { NextResponse } from 'next/server';
 import connectToPropertyDatabase from '../../lib/mongodb-property';
 import { getPropertyModel } from '../../models/AllPropertyProperty';
+import connectToDatabase from '../../lib/mongodb';
+import UserProperty from '../../models/userProperty';
+import UserCases from '../../models/userCases';
 
 export const runtime = 'nodejs';
+
+/**
+ * Cross-reference search hits against claims in the main database.
+ *
+ * The searchable property catalogue lives in its own database and knows
+ * nothing about claims, so a property already recovered by someone else kept
+ * showing up as available. Properties with a settled claim are dropped; ones
+ * with a claim still in flight stay visible but are flagged so the UI can say
+ * so instead of letting the claimant file a duplicate.
+ *
+ * @param {Array} properties Rows from the property catalogue.
+ * @returns {Promise<{ visible: Array, hiddenCount: number }>}
+ */
+async function applyClaimState(properties) {
+  const ids = properties
+    .map((p) => String(p.property_id ?? '').trim())
+    .filter(Boolean);
+
+  if (ids.length === 0) {
+    return { visible: properties, hiddenCount: 0 };
+  }
+
+  const settled = new Set();
+  const inProgress = new Set();
+
+  try {
+    await connectToDatabase();
+
+    const [claimedRows, relatedCases] = await Promise.all([
+      UserProperty.find({ property_id: { $in: ids }, is_claimed: true })
+        .select('property_id')
+        .lean(),
+      UserCases.find({ property_ids: { $in: ids } })
+        .select('property_ids claim_status status')
+        .lean(),
+    ]);
+
+    for (const row of claimedRows) {
+      settled.add(String(row.property_id));
+    }
+
+    const wanted = new Set(ids);
+    for (const kase of relatedCases) {
+      // `status === false` is how an approved case is marked.
+      const isSettled = kase.claim_status === 'Success' || kase.status === false;
+
+      for (const rawId of kase.property_ids || []) {
+        const propertyId = String(rawId);
+        if (!wanted.has(propertyId)) continue;
+
+        if (isSettled) {
+          settled.add(propertyId);
+          inProgress.delete(propertyId);
+        } else if (!settled.has(propertyId)) {
+          inProgress.add(propertyId);
+        }
+      }
+    }
+  } catch (error) {
+    // A claims-lookup failure must not blank out search results; fall back to
+    // showing everything rather than hiding properties the claimant may own.
+    console.error('[filterProperty] claim lookup failed:', error.message);
+    return { visible: properties, hiddenCount: 0 };
+  }
+
+  const visible = [];
+  let hiddenCount = 0;
+
+  for (const property of properties) {
+    const propertyId = String(property.property_id ?? '').trim();
+
+    if (settled.has(propertyId)) {
+      hiddenCount += 1;
+      continue;
+    }
+
+    visible.push(
+      inProgress.has(propertyId)
+        ? { ...property, claim_in_progress: true }
+        : property,
+    );
+  }
+
+  return { visible, hiddenCount };
+}
 
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -364,7 +452,22 @@ export async function POST(req) {
     const cachedResult = searchCache.get(cacheKey);
     if (cachedResult && Date.now() - cachedResult.timestamp < CACHE_TTL) {
       console.log('✅ Returning cached result');
-      return NextResponse.json(cachedResult.data);
+
+      const { visible, hiddenCount } = await applyClaimState(
+        cachedResult.data.matchedProperties,
+      );
+
+      return NextResponse.json({
+        totalMatched: Math.max(
+          cachedResult.data.totalMatched - hiddenCount,
+          visible.length,
+        ),
+        currentPage: page,
+        pageSize: limit,
+        matchedProperties: visible,
+        alreadyClaimedCount: hiddenCount,
+        searchTime: '0ms (cached)',
+      });
     }
 
     console.log(`🔍 Searching for: ${first_name} ${last_name}`);
@@ -391,18 +494,25 @@ export async function POST(req) {
     console.log(`✅ Found ${totalMatched} results in ${Date.now() - startTime}ms`);
 
     const uniqueMatchedProperties = getUniquePropertiesById(matchedProperties);
+
+    const { visible, hiddenCount } = await applyClaimState(
+      uniqueMatchedProperties,
+    );
+
     const responseData = {
-      totalMatched,
+      totalMatched: Math.max(totalMatched - hiddenCount, visible.length),
       currentPage: page,
       pageSize: limit,
-      matchedProperties: uniqueMatchedProperties,
+      matchedProperties: visible,
+      alreadyClaimedCount: hiddenCount,
       searchTime: `${Date.now() - startTime}ms`,
     };
 
-    // Cache the result
+    // Only the catalogue lookup is cached. Claim state is re-applied on every
+    // request so a property claimed a moment ago stops appearing at once.
     searchCache.set(cacheKey, {
-      data: responseData,
-      timestamp: Date.now()
+      data: { totalMatched, matchedProperties: uniqueMatchedProperties },
+      timestamp: Date.now(),
     });
 
     return NextResponse.json(responseData, { status: 200 });

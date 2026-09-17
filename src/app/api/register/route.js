@@ -127,13 +127,20 @@ export async function POST(req) {
       );
     }
 
-    // 1. Find by user_id first
-    let existingUser = await UserLogin.findOne({ user_id });
+    // A missing or malformed user_id must never reach findOne(): Mongoose drops
+    // undefined values, so findOne({ user_id }) would become findOne({}) and
+    // return an arbitrary account.
+    const userObjectId = Types.ObjectId.isValid(user_id)
+      ? new Types.ObjectId(user_id)
+      : null;
 
-    // 2. If not found, find by email
-    if (!existingUser) {
-      existingUser = await UserLogin.findOne({ userEmail });
-    }
+    // The email being registered is the identity that decides whether this is a
+    // returning user. Matching on user_id first made a brand-new email look
+    // like an existing account whenever the browser still carried a user_id
+    // from an earlier search, so the claimant got the "you already have an
+    // account" mail instead of their welcome mail — and that older account had
+    // its address silently overwritten.
+    const existingUser = await UserLogin.findOne({ userEmail });
 
     // // ================= UPDATE EXISTING USER =================
     // if (existingUser) {
@@ -201,10 +208,14 @@ export async function POST(req) {
 
     // ================= EXISTING USER =================
     if (existingUser) {
-      // Just update user_id/userType if needed — DO NOT touch the password
-      existingUser.user_id = user_id;
-      existingUser.userEmail = userEmail;
-
+      // Same email, so the address needs no change. Re-point the account at the
+      // current search session only when we were given a usable id.
+      if (userObjectId) {
+        existingUser.user_id = userObjectId;
+      }
+      if (userType) {
+        existingUser.userType = userType;
+      }
 
       await existingUser.save();
 
@@ -250,15 +261,32 @@ export async function POST(req) {
     }
 
     // ================= CREATE NEW USER =================
+    // This email has never been registered, so the claimant gets a fresh
+    // account and the normal welcome mail.
     const userPassword = generateRandomPassword(10);
     const hashedPassword = await bcrypt.hash(userPassword, 10);
 
-    const newUser = await UserLogin.create({
-      user_id,
-      userEmail,
-      userPassword: hashedPassword,
-      userType: userType || "User",
-    });
+    // UserLogin.user_id is unique, so a search session that already produced a
+    // login under a different address is moved to the new one instead of
+    // failing on the index.
+    const sessionAccount = userObjectId
+      ? await UserLogin.findOne({ user_id: userObjectId })
+      : null;
+
+    let newUser;
+    if (sessionAccount) {
+      sessionAccount.userEmail = userEmail;
+      sessionAccount.userPassword = hashedPassword;
+      sessionAccount.userType = userType || sessionAccount.userType;
+      newUser = await sessionAccount.save();
+    } else {
+      newUser = await UserLogin.create({
+        user_id: userObjectId,
+        userEmail,
+        userPassword: hashedPassword,
+        userType: userType || "User",
+      });
+    }
 
     const token = jwt.sign(
       {
@@ -303,7 +331,7 @@ export async function POST(req) {
     });
 
     await createNotification(
-      user_id,
+      newUser.user_id,
       "Login details",
       "An email has been sent to your registered Email ID with your login details."
     );
@@ -352,7 +380,9 @@ export async function GET(req) {
         { status: 400 },
       );
     }
-    const caseData = await UserCases.findOne({ user_id });
+    const caseData = await UserCases.findOne({ user_id }).sort({
+      createdAt: -1,
+    });
     return NextResponse.json(caseData);
   } catch (error) {
     console.error('GET /api/case error:', error);

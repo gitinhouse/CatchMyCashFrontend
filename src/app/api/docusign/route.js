@@ -159,14 +159,47 @@ export async function POST(req) {
     initialHere2.xPosition = '330';
     initialHere2.yPosition = '370';
 
+    // One InitialHere per claimed property, laid out down page 2 onwards.
+    //
+    // These used to be stacked unconditionally at 180 + index * 170 on page 2,
+    // so the 5th property landed at y=860 on a 792pt page and DocuSign rejected
+    // the envelope with "Tab InitialHere is located off of page 2". Measure the
+    // real page height and flow onto the next page instead of running off the
+    // bottom.
     const dynamicInitialTabs = [];
-    if (numberOfPages >= 2) {
-      allProperty?.forEach((property, index) => {
+    if (numberOfPages >= 2 && allProperty?.length) {
+      const INITIAL_START_Y = 180;
+      const INITIAL_ROW_SPACING = 170;
+      // Leaves room for the tab glyph itself so it cannot clip the page edge.
+      const INITIAL_BOTTOM_MARGIN = 60;
+
+      // pdf-lib pages are zero-indexed; page 2 is index 1.
+      const { height: pageHeight } = pdfDoc.getPage(1).getSize();
+      const usableHeight = pageHeight - INITIAL_START_Y - INITIAL_BOTTOM_MARGIN;
+      const rowsPerPage = Math.max(
+        1,
+        Math.floor(usableHeight / INITIAL_ROW_SPACING) + 1,
+      );
+
+      allProperty.forEach((property, index) => {
+        const pageOffset = Math.floor(index / rowsPerPage);
+        const targetPage = 2 + pageOffset;
+
+        // Never address a page the document does not have.
+        if (targetPage > numberOfPages) {
+          console.warn(
+            `[docusign] Skipping InitialHere for property ${index + 1}: page ${targetPage} exceeds document length ${numberOfPages}`,
+          );
+          return;
+        }
+
         const initialHere = new docusign.InitialHere();
         initialHere.documentId = '1';
-        initialHere.pageNumber = '2';
+        initialHere.pageNumber = String(targetPage);
         initialHere.xPosition = '80';
-        initialHere.yPosition = String(180 + index * 170);
+        initialHere.yPosition = String(
+          INITIAL_START_Y + (index % rowsPerPage) * INITIAL_ROW_SPACING,
+        );
         dynamicInitialTabs.push(initialHere);
       });
     }

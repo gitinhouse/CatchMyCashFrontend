@@ -18,12 +18,13 @@ import { useRouter } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchStore } from './store/searchStore';
+import { clearClientSession } from './lib/session';
 
 export const SiteHeader = () => {
   const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-  const { goToSearch } = useSearchStore();
+  const { goToSearch, resetAll } = useSearchStore();
 
   // 🔹 ADD: Check if user is logged in
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
@@ -75,8 +76,8 @@ export const SiteHeader = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('userLogin');
-    window.dispatchEvent(new Event('authChange'));
+    clearClientSession();
+    resetAll();
     setIsLoggedIn(false);
     setUserName('');
     router.push('/');

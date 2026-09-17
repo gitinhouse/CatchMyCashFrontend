@@ -61,7 +61,8 @@ export default function AttentionClient() {
         needs_attention: 'true',
         attention: reason || undefined,
         search: debounced,
-        sort_by: 'days_since_movement',
+        // Newest flagged claims first, as requested by ops.
+        sort_by: 'created_at',
         sort_dir: 'desc',
         page,
         limit,

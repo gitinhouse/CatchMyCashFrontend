@@ -10,6 +10,7 @@ import { withAdmin } from '../../../../lib/adminAuth';
 import { caseJoinStages, toCaseRow, toObjectId } from '../../../../lib/adminQueries';
 import { ALL_DOC_FIELDS, DOC_LABELS } from '../../../../lib/claimLifecycle';
 import { getSignedDocumentUrl } from '../../../../lib/documentUrls';
+import { resolvePollUrl } from '../../../../lib/adminQueries';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,7 +85,7 @@ export const GET = withAdmin(async (req, ctx) => {
       label: DOC_LABELS[field] || field,
       stored_value: value,
       filename: value.split('/').pop(),
-      url: await getSignedDocumentUrl(value),
+      url: await getSignedDocumentUrl(value, { field }),
       uploaded_at: doc.docs?.createdAt || null,
     });
   }
@@ -92,7 +93,7 @@ export const GET = withAdmin(async (req, ctx) => {
   return NextResponse.json({
     case: row,
     raw_case: {
-      poll_url: doc.poll_url || null,
+      poll_url: resolvePollUrl(doc.poll_url),
       property_ids: doc.property_ids || [],
       claim_message: doc.claim_message || '',
       document_upload_message: doc.document_upload_message || '',

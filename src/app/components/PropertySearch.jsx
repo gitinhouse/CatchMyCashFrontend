@@ -316,10 +316,45 @@ const PropertySearch = ({ onNext, onBack, onFieldFilled }) => {
       localStorage.setItem('propertyData', JSON.stringify(matchedProperties));
 
       if (matchedProperties.length > 0) {
-        const { data } = await axios.post('/api/users', payload);
+        // A signed-in claimant keeps the user_id their account is bound to.
+        // Creating a fresh UserInformation on every search would file each new
+        // claim under a different id, and the dashboard — which queries by the
+        // account's user_id — would never show it.
+        let sessionUserId = null;
+        let sessionToken = null;
+        try {
+          const rawLogin = localStorage.getItem('userLogin');
+          if (rawLogin && rawLogin !== 'undefined') {
+            const session = JSON.parse(rawLogin);
+            if (session?.token && session?.user?.user_id) {
+              sessionUserId = session.user.user_id;
+              sessionToken = session.token;
+            }
+          }
+        } catch (e) {
+          console.error('Failed to read userLogin from localStorage', e);
+        }
 
-        // ✅ Make sure we extract the actual user data
-        const userDataToStore = data.data || data;  // Handle both response shapes
+        let userDataToStore;
+
+        if (sessionUserId) {
+          try {
+            const { data } = await axios.get(
+              `/api/users?user_id=${sessionUserId}`,
+              { headers: { Authorization: `Bearer ${sessionToken}` } },
+            );
+            userDataToStore = data?.data?.[0] || { _id: sessionUserId };
+          } catch (e) {
+            // The id is what matters downstream; a failed profile fetch (for
+            // example an expired token) must not block the search.
+            console.error('Failed to load signed-in profile', e);
+            userDataToStore = { _id: sessionUserId };
+          }
+        } else {
+          const { data } = await axios.post('/api/users', payload);
+          // ✅ Make sure we extract the actual user data
+          userDataToStore = data.data || data; // Handle both response shapes
+        }
 
         setUserData(userDataToStore);
         localStorage.setItem('userData', JSON.stringify(userDataToStore));
@@ -334,7 +369,10 @@ const PropertySearch = ({ onNext, onBack, onFieldFilled }) => {
           holder: prop.owner_name,
           amount: prop.current_cash_balance || prop.cash_reported,
           reportDate: new Date().toISOString().split('T')[0],
-          status: 'Available',
+          status: prop.claim_in_progress ? 'Claim in progress' : 'Available',
+          // Set by the search API when a claim for this property has already
+          // been filed but not yet settled.
+          claimInProgress: !!prop.claim_in_progress,
           lastKnownAddress: `${prop.owner_street_1}, ${prop.owner_city}, ${prop.owner_state} ${prop.owner_zip}`,
         }));
 

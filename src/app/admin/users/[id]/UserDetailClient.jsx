@@ -455,7 +455,7 @@ function PropertiesTab({ data }) {
                   </Td>
                   <Td align="right">
                     <span className="font-semibold text-[#0A0A0A] tabular-nums">
-                      {money(p.amount, true)}
+                      {money(p.amount)}
                     </span>
                   </Td>
                 </Tr>
