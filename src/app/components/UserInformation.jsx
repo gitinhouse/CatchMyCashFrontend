@@ -917,16 +917,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                         ? 'bg-[#F0EEEB] text-[#4A4A4A] cursor-not-allowed focus:border-[#E8E6E3]'
                         : ''
                     }`}
-                  />
-                  {lockedEmail && (
-                    <p className="text-[#888888] text-xs mt-1">
-                      Filing as{' '}
-                      <span className="font-medium text-[#4A4A4A]">
-                        {lockedEmail}
-                      </span>
-                      . Sign out to file under a different email.
-                    </p>
-                  )}
+                  />                 
                   {errors.email && (
                     <p className="text-[#E1261C] text-xs mt-1 font-medium">
                       {errors.email}
