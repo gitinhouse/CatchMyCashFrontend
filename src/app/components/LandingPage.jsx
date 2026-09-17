@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { ImageWithFallback } from './uicomponents/ImageWithFallback';
 import { Button } from './uicomponents/Button';
+import { deriveSubmissionStep } from '../lib/claimLifecycle';
 
 // ============================================================
 // DESIGN TOKENS — matching the HTML mockup exactly
@@ -675,25 +676,16 @@ const ClaimProgressModal = ({ claim, onClose }) => {
       icon: FileText,
     });
 
-    // Step 6: Claim Submitted
-    const uploadFailed = claim?.document_upload_task_status === 'failed'; // ← ADD
-    const isSubmitted = Boolean(
-      claim?.submitted_at ||
-      claim?.document_upload_task_status === 'completed' ||
-      claim?.claim_process_task_status === 'completed' ||
-      claim?.claim_status === 'Success'
-    );
+    // Step 6: Claim Submitted — reads "Claim Submission Failed" when either the
+    // filing or the document-verification run failed.
+    const submission = deriveSubmissionStep(claim, { includeMessage: true });
     steps.push({
       id: 6,
-      title: 'Claim Submitted',
-      description: uploadFailed // ← CHANGE
-        ? (claim?.document_upload_message
-          ? `Document verification failed: ${claim.document_upload_message}`
-          : 'Document verification failed. Please retry and upload your documents again.')
-        : 'Claim submitted for review',
-      completed: isSubmitted && !uploadFailed, // ← CHANGE: never show "complete" while failed
-      failed: uploadFailed, // ← ADD
-      icon: uploadFailed ? AlertTriangle : Clock, // ← CHANGE (AlertTriangle already imported in this file)
+      title: submission.title,
+      description: submission.description,
+      completed: submission.completed,
+      failed: submission.failed,
+      icon: submission.failed ? AlertTriangle : Clock,
     });
 
     // Step 7: Approved/Completed

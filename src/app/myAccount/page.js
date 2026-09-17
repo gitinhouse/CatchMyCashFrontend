@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { clearClientSession } from '../lib/session';
+import { deriveSubmissionStep } from '../lib/claimLifecycle';
 
 // ── Helpers: derive a human step from case + docs data ─────────────────────
 function parseAmount(v) {
@@ -274,23 +275,17 @@ const ClaimProgressModal = ({ claim, onClose }) => {
             icon: FileText,
         });
 
-        // Step 6: Claim Submitted
-        const uploadFailed = claim?.document_upload_task_status === 'failed';
-        const isSubmitted = Boolean(
-            claim?.submitted_at ||
-            claim?.document_upload_task_status === 'completed' ||
-            claim?.claim_process_task_status === 'completed' ||
-            claim?.claim_status === 'Success'
-        );
+        // Step 6: Claim Submitted — reads "Claim Submission Failed" when either
+        // the filing or the document-verification run failed. Descriptions stay
+        // generic here; the raw processor message is not shown on the dashboard.
+        const submission = deriveSubmissionStep(claim);
         steps.push({
             id: 6,
-            title: 'Claim Submitted',
-            description: uploadFailed
-                ? 'Document verification failed. Please retry and upload your documents again.' // ← CHANGE: always generic, no raw message
-                : 'Claim submitted for review',
-            completed: isSubmitted && !uploadFailed,
-            failed: uploadFailed,
-            icon: uploadFailed ? AlertTriangle : Clock,
+            title: submission.title,
+            description: submission.description,
+            completed: submission.completed,
+            failed: submission.failed,
+            icon: submission.failed ? AlertTriangle : Clock,
         });
 
         // Step 7: Approved/Completed

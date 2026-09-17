@@ -2,14 +2,17 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "../../lib/mongodb";
 import UserProperty from "../../models/userProperty";
 import User from "../../models/UserInformation";
+import UserCases from "../../models/userCases";
+import { deriveClaimFailure } from "../../lib/claimLifecycle";
 
 export async function POST(req) {
   try {
     const { user_id, properties } = await req.json();
 
-    console.log("user_id,properties,properties.length", user_id, properties, properties.length);
-
-    if (!user_id || !properties || !properties.length) {
+    // NB: this guard must come first — a debug log here previously read
+    // properties.length before the check and turned a malformed request into
+    // a 500 instead of a 400.
+    if (!user_id || !Array.isArray(properties) || properties.length === 0) {
       return NextResponse.json(
         { error: "Invalid request data" },
         { status: 400 }
@@ -29,7 +32,39 @@ export async function POST(req) {
     const existingProperties = await UserProperty.find({
       user_id,
       property_id: { $in: propertyIds },
-    }).select("property_id");
+    }).select("property_id case_id");
+
+    // A property the claimant already holds is normally left alone. But when
+    // its previous claim failed, the row is still stamped with that failed
+    // case, and linkPropertiesToCase only fills in empty case_ids — so a retry
+    // would silently stay attached to the old case and never appear under the
+    // new one. Release those rows so the retry can claim them.
+    const stampedCaseIds = existingProperties
+      .map((p) => p.case_id)
+      .filter(Boolean);
+
+    if (stampedCaseIds.length > 0) {
+      const relatedCases = await UserCases.find({ _id: { $in: stampedCaseIds } })
+        .select(
+          "_id claim_status status claim_process_task_status document_upload_task_status",
+        )
+        .lean();
+
+      const failedCaseIds = relatedCases
+        .filter((kase) => deriveClaimFailure(kase).failed)
+        .map((kase) => String(kase._id));
+
+      if (failedCaseIds.length > 0) {
+        await UserProperty.updateMany(
+          {
+            user_id,
+            property_id: { $in: propertyIds },
+            case_id: { $in: failedCaseIds },
+          },
+          { $set: { case_id: null, is_claimed: false, status: false } },
+        );
+      }
+    }
 
     const existingPropertyIds = existingProperties.map((p) => p.property_id);
 

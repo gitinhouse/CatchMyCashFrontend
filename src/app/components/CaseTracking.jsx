@@ -20,6 +20,7 @@ import { useSearchStore } from '../store/searchStore';
 import axios from 'axios';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { deriveClaimFailure } from '../lib/claimLifecycle';
 
 const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   const router = useRouter();
@@ -528,9 +529,16 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   // ============================================================
   const recentUpdates = getRecentUpdates();
   const caseNumber = caseData?.case_id || 'CM-2024-001234';
-  const claimStatus = caseData?.claim_status || 'Pending';
-  const isSuccess = claimStatus === 'Success';
-  const isFailed = claimStatus === 'Failed';
+  // A claim can fail either at filing or during document verification, so the
+  // headline status is derived from both rather than claim_status alone — a
+  // document failure used to still read "progressing well" here.
+  const failure = deriveClaimFailure(caseData);
+  const isFailed = failure.failed;
+  const isSuccess = !isFailed && caseData?.claim_status === 'Success';
+  const claimStatus = isFailed ? 'Failed' : caseData?.claim_status || 'Pending';
+  const failureText = failure.claimFailed
+    ? "Your claim submission to the State Controller's Office failed. Please contact support."
+    : 'Document verification failed. Please re-upload your documents or contact support.';
 
   // ✅ Check if any properties are already claimed
   const properties = caseData?.user_properties || [];
@@ -692,7 +700,7 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
               </p>
               <p className="text-sm text-[#4A4A4A]">
                 {isSuccess ? 'Your claim has been successfully initiated.!' :
-                  isFailed ? 'Your claim failed. Please contact support.' :
+                  isFailed ? failureText :
                     'Your claim is being initiated.'}
               </p>
             </div>
@@ -764,7 +772,7 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
             </div>
             <p className="text-sm text-[#4A4A4A]">
               {isSuccess ? '✅ Your claim has been successfully initiated.!' :
-                isFailed ? '❌ Your claim failed. Please contact support.' :
+                isFailed ? `❌ ${failureText}` :
                   'Your case is progressing well. Estimated completion in 3-4 weeks.'}
             </p>
           </div>
