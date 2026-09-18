@@ -286,6 +286,7 @@ import { getPropertyModel } from '../../models/AllPropertyProperty';
 import connectToDatabase from '../../lib/mongodb';
 import UserProperty from '../../models/userProperty';
 import UserCases from '../../models/userCases';
+import { deriveClaimFailure } from '../../lib/claimLifecycle';
 
 export const runtime = 'nodejs';
 
@@ -293,10 +294,12 @@ export const runtime = 'nodejs';
  * Cross-reference search hits against claims in the main database.
  *
  * The searchable property catalogue lives in its own database and knows
- * nothing about claims, so a property already recovered by someone else kept
- * showing up as available. Properties with a settled claim are dropped; ones
- * with a claim still in flight stay visible but are flagged so the UI can say
- * so instead of letting the claimant file a duplicate.
+ * nothing about claims, so a property someone has already claimed kept showing
+ * up as available.
+ *
+ * A property is withheld while a claim on it is settled or still running. A
+ * claim that failed releases the property, so the claimant can find it and try
+ * again.
  *
  * @param {Array} properties Rows from the property catalogue.
  * @returns {Promise<{ visible: Array, hiddenCount: number }>}
@@ -310,8 +313,10 @@ async function applyClaimState(properties) {
     return { visible: properties, hiddenCount: 0 };
   }
 
-  const settled = new Set();
-  const inProgress = new Set();
+  // A property is blocked when any claim on it is settled or still in flight.
+  // Failures are tracked separately so a property whose only claims failed is
+  // offered again.
+  const blocked = new Set();
 
   try {
     await connectToDatabase();
@@ -321,28 +326,29 @@ async function applyClaimState(properties) {
         .select('property_id')
         .lean(),
       UserCases.find({ property_ids: { $in: ids } })
-        .select('property_ids claim_status status')
+        .select(
+          'property_ids claim_status status claim_process_task_status document_upload_task_status',
+        )
         .lean(),
     ]);
 
+    // Claimed at the state by anyone: never offer it again.
     for (const row of claimedRows) {
-      settled.add(String(row.property_id));
+      blocked.add(String(row.property_id));
     }
 
     const wanted = new Set(ids);
     for (const kase of relatedCases) {
-      // `status === false` is how an approved case is marked.
-      const isSettled = kase.claim_status === 'Success' || kase.status === false;
+      const { failed } = deriveClaimFailure(kase);
+
+      // A failed case does not block; any other case does, whether it is
+      // settled (`status === false` marks an approved case) or still running.
+      if (failed) continue;
 
       for (const rawId of kase.property_ids || []) {
         const propertyId = String(rawId);
-        if (!wanted.has(propertyId)) continue;
-
-        if (isSettled) {
-          settled.add(propertyId);
-          inProgress.delete(propertyId);
-        } else if (!settled.has(propertyId)) {
-          inProgress.add(propertyId);
+        if (wanted.has(propertyId)) {
+          blocked.add(propertyId);
         }
       }
     }
@@ -357,18 +363,11 @@ async function applyClaimState(properties) {
   let hiddenCount = 0;
 
   for (const property of properties) {
-    const propertyId = String(property.property_id ?? '').trim();
-
-    if (settled.has(propertyId)) {
+    if (blocked.has(String(property.property_id ?? '').trim())) {
       hiddenCount += 1;
       continue;
     }
-
-    visible.push(
-      inProgress.has(propertyId)
-        ? { ...property, claim_in_progress: true }
-        : property,
-    );
+    visible.push(property);
   }
 
   return { visible, hiddenCount };

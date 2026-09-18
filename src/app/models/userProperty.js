@@ -12,6 +12,10 @@ const UserPropertySchema = new mongoose.Schema({
     required: false,
   },
   property_id: { type: String, required: true },
+  // The state's claim number for THIS property. The processor files one claim
+  // per property, so this is not the same across a case — the case-level
+  // claim_id is only a fallback for rows filed before this field existed.
+  claim_id: { type: String, default: null },
   property_type: { type: String, required: true },
   property_title: { type: String, required: true },
   amount: { type: Number, required: true },

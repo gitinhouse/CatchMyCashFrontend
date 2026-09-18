@@ -298,3 +298,80 @@ export function taskStatusLabel(value) {
   };
   return map[normalized] || value;
 }
+
+/**
+ * Whether a case has failed, and at which stage.
+ *
+ * A claim can fail in two distinct places: filing the claim with the State
+ * Controller's Office, and the document-verification run that follows. The
+ * claimant-facing screens previously only looked at the document failure, so a
+ * claim that failed at filing still read as "submitted".
+ *
+ * @param {object} caseDoc A UserCases document (or the shape the claim APIs return).
+ */
+export function deriveClaimFailure(caseDoc) {
+  const claimProcess = String(caseDoc?.claim_process_task_status || '').toLowerCase();
+  const upload = String(caseDoc?.document_upload_task_status || '').toLowerCase();
+
+  const claimFailed = caseDoc?.claim_status === 'Failed' || claimProcess === 'failed';
+  const uploadFailed = upload === 'failed';
+
+  return {
+    claimFailed,
+    uploadFailed,
+    failed: claimFailed || uploadFailed,
+    // The message the processor sent back for whichever stage failed.
+    message: claimFailed
+      ? caseDoc?.claim_message || ''
+      : uploadFailed
+        ? caseDoc?.document_upload_message || ''
+        : '',
+  };
+}
+
+export const CLAIM_SUBMITTED_TITLE = 'Claim Submitted';
+export const CLAIM_FAILED_TITLE = 'Claim Submission Failed';
+
+/**
+ * The "Claim Submitted" milestone, shared by the progress modal on the landing
+ * page and the dashboard so both render an identical state.
+ *
+ * @param {object} caseDoc
+ * @param {{ includeMessage?: boolean }} [options] Whether to surface the raw
+ *   processor message in the description, or keep it generic.
+ */
+export function deriveSubmissionStep(caseDoc, options = {}) {
+  const { includeMessage = false } = options;
+  const { claimFailed, uploadFailed, failed, message } = deriveClaimFailure(caseDoc);
+
+  const submitted = Boolean(
+    caseDoc?.submitted_at ||
+      String(caseDoc?.document_upload_task_status || '').toLowerCase() === 'completed' ||
+      String(caseDoc?.claim_process_task_status || '').toLowerCase() === 'completed' ||
+      caseDoc?.claim_status === 'Success',
+  );
+
+  let description;
+  if (claimFailed) {
+    description =
+      includeMessage && message
+        ? `Claim submission failed: ${message}`
+        : "Claim submission to the State Controller's Office failed. Please contact support.";
+  } else if (uploadFailed) {
+    description =
+      includeMessage && message
+        ? `Document verification failed: ${message}`
+        : 'Document verification failed. Please retry and upload your documents again.';
+  } else {
+    description = 'Claim submitted for review';
+  }
+
+  return {
+    title: failed ? CLAIM_FAILED_TITLE : CLAIM_SUBMITTED_TITLE,
+    description,
+    completed: submitted && !failed,
+    failed,
+    claimFailed,
+    uploadFailed,
+  };
+}

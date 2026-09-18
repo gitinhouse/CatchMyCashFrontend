@@ -369,10 +369,7 @@ const PropertySearch = ({ onNext, onBack, onFieldFilled }) => {
           holder: prop.owner_name,
           amount: prop.current_cash_balance || prop.cash_reported,
           reportDate: new Date().toISOString().split('T')[0],
-          status: prop.claim_in_progress ? 'Claim in progress' : 'Available',
-          // Set by the search API when a claim for this property has already
-          // been filed but not yet settled.
-          claimInProgress: !!prop.claim_in_progress,
+          status: 'Available',
           lastKnownAddress: `${prop.owner_street_1}, ${prop.owner_city}, ${prop.owner_state} ${prop.owner_zip}`,
         }));
 
