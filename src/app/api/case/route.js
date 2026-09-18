@@ -228,11 +228,39 @@ export async function GET(req) {
           },
         },
         {
+          $lookup: {
+            from: 'casestatushistories',
+            let: { caseId: '$_id' },
+            pipeline: [
+              { $match: { $expr: { $eq: ['$case_id', '$$caseId'] } } },
+              { $sort: { createdAt: -1 } },
+              {
+                $project: {
+                  _id: 1,
+                  status: 1,
+                  previous_status: 1,
+                  note: 1,
+                  createdAt: 1,
+                },
+              },
+            ],
+            as: 'status_history',
+          },
+        },
+        {
           $project: {
             _id: 1,
             case_id: 1,
             status: 1,
             claim_status: 1,
+          case_status: 1,
+          case_status_note: 1,
+          case_status_updated_at: 1,
+          status_history: 1,
+            case_status: 1,
+            case_status_note: 1,
+            case_status_updated_at: 1,
+            status_history: 1,
             claim_id: 1,
             claim_process_task_status: 1,
             document_upload_task_status: 1,
@@ -493,6 +521,26 @@ export async function GET(req) {
             }
           ],
           as: 'user_properties',
+        },
+      },
+      {
+        $lookup: {
+          from: 'casestatushistories',
+          let: { caseId: '$_id' },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$case_id', '$$caseId'] } } },
+            { $sort: { createdAt: -1 } },
+            {
+              $project: {
+                _id: 1,
+                status: 1,
+                previous_status: 1,
+                note: 1,
+                createdAt: 1,
+              },
+            },
+          ],
+          as: 'status_history',
         },
       },
       {

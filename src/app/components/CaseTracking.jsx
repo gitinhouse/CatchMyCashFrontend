@@ -21,6 +21,20 @@ import axios from 'axios';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { deriveClaimFailure } from '../lib/claimLifecycle';
+import { caseStatusLabel, caseStatusTone } from '../lib/caseStatuses';
+
+// Tailwind needs complete class strings, so map tone -> classes here
+// rather than interpolating the tone into a class name.
+const CASE_STATUS_CHIP = {
+  success: 'bg-[#E6F7F1] text-[#00785A] border-[#B7E7D8]',
+  danger: 'bg-[#FCE9E7] text-[#B11912] border-[#F5C6C1]',
+  warning: 'bg-[#FFF4E0] text-[#9A6400] border-[#F3DFB4]',
+  info: 'bg-[#EAF1FC] text-[#1B4F9C] border-[#C6D8F2]',
+  neutral: 'bg-[#F0EEEB] text-[#4A4A4A] border-[#E0DDD8]',
+};
+
+const caseStatusChipClass = (key) =>
+  CASE_STATUS_CHIP[caseStatusTone(key)] || CASE_STATUS_CHIP.neutral;
 
 const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   const router = useRouter();
@@ -536,6 +550,15 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   const isFailed = failure.failed;
   const isSuccess = !isFailed && caseData?.claim_status === 'Success';
   const claimStatus = isFailed ? 'Failed' : caseData?.claim_status || 'Pending';
+  // Admin-managed workflow status and its trail (see lib/caseStatuses.js).
+  const workflowStatus = caseData?.case_status || null;
+  const workflowLabel = workflowStatus
+    ? caseStatusLabel(workflowStatus) || workflowStatus
+    : null;
+  const statusHistory = Array.isArray(caseData?.status_history)
+    ? caseData.status_history
+    : [];
+
   const failureText = failure.claimFailed
     ? "Your claim submission to the State Controller's Office failed. Please contact support."
     : 'Document verification failed. Please re-upload your documents or contact support.';
@@ -990,6 +1013,92 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
             Recent{' '}
             <span className="text-[#E1261C] italic font-normal">Updates</span>
           </h3>
+
+          {workflowLabel && (
+            <div className="mb-5 rounded-xl border border-[#E8E6E3] bg-[#F7F5F2] p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#888888] mb-1.5">
+                Current case status
+              </p>
+              <div className="flex items-center flex-wrap gap-2">
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-semibold border ${caseStatusChipClass(
+                    workflowStatus,
+                  )}`}
+                >
+                  {workflowLabel}
+                </span>
+                {caseData?.case_status_updated_at && (
+                  <span className="text-xs text-[#888888]">
+                    Updated{' '}
+                    {new Date(
+                      caseData.case_status_updated_at,
+                    ).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </span>
+                )}
+              </div>
+              {caseData?.case_status_note && (
+                <p className="text-sm text-[#4A4A4A] mt-2 whitespace-pre-wrap break-words">
+                  {caseData.case_status_note}
+                </p>
+              )}
+            </div>
+          )}
+
+          {statusHistory.length > 0 && (
+            <div className="mb-5">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#888888] mb-2">
+                Status history
+              </p>
+              <ul className="space-y-3">
+                {statusHistory.map((h) => {
+                  const label = caseStatusLabel(h.status) || h.status;
+                  const prev = h.previous_status
+                    ? caseStatusLabel(h.previous_status) || h.previous_status
+                    : null;
+                  return (
+                    <li key={h._id} className="flex items-start">
+                      <div className="w-2 h-2 rounded-full mt-2 mr-3 bg-[#E1261C] shrink-0" />
+                      <div className="w-[90%]">
+                        <div className="flex items-center flex-wrap gap-1.5">
+                          {prev && (
+                            <>
+                              <span className="text-xs text-[#888888]">
+                                {prev}
+                              </span>
+                              <span className="text-xs text-[#D4D4D4]">→</span>
+                            </>
+                          )}
+                          <span className="font-medium text-[#0A0A0A]">
+                            {label}
+                          </span>
+                        </div>
+                        {h.note && (
+                          <p className="text-sm text-[#4A4A4A] mt-0.5 whitespace-pre-wrap break-words">
+                            {h.note}
+                          </p>
+                        )}
+                        <p className="text-xs text-[#888888] mt-0.5">
+                          {h.createdAt
+                            ? new Date(h.createdAt).toLocaleString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit',
+                              })
+                            : ''}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
           <div className="space-y-3">
             {recentUpdates.length > 0 ? (
               recentUpdates.map((update) => (
