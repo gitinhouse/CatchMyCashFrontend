@@ -126,6 +126,8 @@ export const SiteHeader = () => {
           ))}
 
           <div className="flex items-center gap-1.5 lg:gap-3">
+            {isLoggedIn && (<NotificationBell />)}
+
             <button
               onClick={handleSearchNow}
               className="inline-flex items-center gap-1.5 px-2 py-1.5 lg:px-5 lg:py-3 bg-[#E1261C] text-white text-xs lg:text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md whitespace-nowrap"
@@ -136,7 +138,6 @@ export const SiteHeader = () => {
             {/* 🔹 MODIFIED: Conditional rendering for Login/Dashboard */}
             {isLoggedIn ? (
               <>
-                <NotificationBell />
                 <button
                   onClick={handleDashboard}
                   className="inline-flex items-center gap-1.5 px-2 py-1.5 lg:px-5 lg:py-3 bg-[#E1261C] text-white text-xs lg:text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md whitespace-nowrap"
@@ -257,11 +258,11 @@ export default function Home() {
   }, [currentStep]);
 
   useEffect(() => {
-  if (!activeReferralCode) {
-    const saved = localStorage.getItem('activeReferralCode');
-    if (saved) setActiveReferralCode(saved);
-  }
-}, [activeReferralCode]);
+    if (!activeReferralCode) {
+      const saved = localStorage.getItem('activeReferralCode');
+      if (saved) setActiveReferralCode(saved);
+    }
+  }, [activeReferralCode]);
 
   // Restore login session after browser reload and send returning users to documents
 
@@ -361,7 +362,7 @@ export default function Home() {
           onViewLeaderboard={() => handleStepChange('leaderboard')}
           onCreateReferral={(code) => {           // ← CHANGE: capture the code
             setActiveReferralCode(code);
-             localStorage.setItem('activeReferralCode', code);
+            localStorage.setItem('activeReferralCode', code);
             handleStepChange('referral');
           }}
         />
