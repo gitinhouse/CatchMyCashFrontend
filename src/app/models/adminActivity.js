@@ -18,6 +18,7 @@ const AdminActivitySchema = new mongoose.Schema({
     required: true,
     enum: [
       'case_status_updated',
+      'case_workflow_status_updated',
       'claim_status_updated',
       'claim_id_updated',
       'claim_stage_updated',

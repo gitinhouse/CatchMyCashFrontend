@@ -5,6 +5,8 @@ import UserNotifications from '../../../../models/notifications';
 import UserReferral from '../../../../models/userReferral';
 import ReferralLink from '../../../../models/ReferralLink';
 import CaseNote from '../../../../models/caseNote';
+import CaseStatusHistory from '../../../../models/caseStatusHistory';
+import { caseStatusLabel } from '../../../../lib/caseStatuses';
 import AdminActivity from '../../../../models/adminActivity';
 import { withAdmin } from '../../../../lib/adminAuth';
 import { caseJoinStages, toCaseRow, toObjectId } from '../../../../lib/adminQueries';
@@ -50,8 +52,15 @@ export const GET = withAdmin(async (req, ctx) => {
   const row = toCaseRow(doc);
   const userId = doc.user_id;
 
-  const [notes, activity, notifications, referrals, referralLink, siblingCases] =
-    await Promise.all([
+  const [
+    notes,
+    activity,
+    notifications,
+    referrals,
+    referralLink,
+    siblingCases,
+    statusHistory,
+  ] = await Promise.all([
       CaseNote.find({ case_id: caseObjectId }).sort({ createdAt: -1 }).lean(),
       AdminActivity.find({
         $or: [{ case_id: caseObjectId }, ...(userId ? [{ user_id: userId }] : [])],
@@ -73,6 +82,9 @@ export const GET = withAdmin(async (req, ctx) => {
             .sort({ createdAt: -1 })
             .lean()
         : [],
+      CaseStatusHistory.find({ case_id: caseObjectId })
+        .sort({ createdAt: -1 })
+        .lean(),
     ]);
 
   // Presign every stored document so admins can open them directly.
@@ -151,6 +163,18 @@ export const GET = withAdmin(async (req, ctx) => {
     missing_documents: row.state.missing_required_docs.map((f) => ({
       field: f,
       label: DOC_LABELS[f] || f,
+    })),
+    status_history: statusHistory.map((h) => ({
+      _id: String(h._id),
+      status: h.status,
+      label: caseStatusLabel(h.status) || h.status,
+      previous_status: h.previous_status,
+      previous_label: h.previous_status
+        ? caseStatusLabel(h.previous_status) || h.previous_status
+        : null,
+      note: h.note || '',
+      updated_by_email: h.updated_by_email,
+      created_at: h.createdAt,
     })),
     notes: notes.map((n) => ({
       _id: String(n._id),

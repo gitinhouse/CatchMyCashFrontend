@@ -21,6 +21,15 @@ const UserCasesSchema = new mongoose.Schema(
 
     claim_message: { type: String, default: "" },
 
+    // Admin-managed workflow status. Separate from `claim_status` (reported by
+    // the automation) and `status` (the legacy approval flag). The full trail
+    // of changes lives in CaseStatusHistory; these fields are the current
+    // value, denormalised so lists and the tracking page can read it directly.
+    case_status: { type: String, default: null, index: true },
+    case_status_note: { type: String, default: "" },
+    case_status_updated_at: { type: Date, default: null },
+    case_status_updated_by: { type: String, default: "" },
+
     claim_process_task_id: { type: String, index: true },
     claim_process_task_status: { type: String },
     claim_process_message: { type: String, default: "" },

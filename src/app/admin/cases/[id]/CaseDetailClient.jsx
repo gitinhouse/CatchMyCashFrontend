@@ -34,6 +34,11 @@ import {
 } from '../../_lib/format';
 import { PageHeader } from '../../_components/AdminShell';
 import {
+  CASE_STATUS_GROUPS,
+  caseStatusLabel,
+  caseStatusTone,
+} from '../../../lib/caseStatuses';
+import {
   Badge,
   Button,
   EmptyState,
@@ -143,6 +148,11 @@ export default function CaseDetailClient({ caseId }) {
         }
         actions={
           <>
+            {c.case_status && (
+              <Badge tone={caseStatusTone(c.case_status)}>
+                {caseStatusLabel(c.case_status) || c.case_status}
+              </Badge>
+            )}
             <StatusBadge status={state.status} label={state.status_label} />
             <Button icon={RefreshCcw} onClick={load}>
               Refresh
@@ -402,6 +412,7 @@ function OverviewTab({ data, onUpdated, notify }) {
       </div>
 
       <div className="space-y-4">
+        <CaseStatusPanel data={data} onUpdated={onUpdated} notify={notify} />
         <AdminActionsPanel data={data} onUpdated={onUpdated} notify={notify} />
         <NotifyPanel data={data} notify={notify} onUpdated={onUpdated} />
       </div>
@@ -427,6 +438,148 @@ function MessageBlock({ label, text, tone = 'neutral' }) {
 /* ------------------------------------------------------------------ */
 /* Admin actions                                                       */
 /* ------------------------------------------------------------------ */
+
+/**
+ * Move a case through the admin workflow.
+ *
+ * The note is not internal: it is written to the status history and sent to
+ * the claimant, and it is what they read on their tracking page — so it is
+ * labelled as claimant-visible here.
+ */
+function CaseStatusPanel({ data, onUpdated, notify }) {
+  const c = data.case;
+  const history = data.status_history || [];
+  const current = c.case_status || '';
+
+  const [status, setStatus] = useState(current);
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    if (!status) {
+      notify('Choose a status first', 'error');
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await adminFetch(`/api/admin/cases/${c._id}/status`, {
+        method: 'POST',
+        body: JSON.stringify({ status, note }),
+      });
+      setNote('');
+      notify(`Status set to ${res?.data?.label || status}`);
+      await onUpdated();
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Panel
+      title="Case status"
+      subtitle="Visible to the applicant on their tracking page"
+    >
+      <div className="mb-4">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#888888] mb-1.5">
+          Current status
+        </p>
+        {current ? (
+          <Badge tone={caseStatusTone(current)}>
+            {caseStatusLabel(current) || current}
+          </Badge>
+        ) : (
+          <Badge tone="muted">Not set</Badge>
+        )}
+        {c.case_status_updated_at && (
+          <p className="text-[11px] text-[#B4B0AA] mt-1.5">
+            {c.case_status_updated_by || 'admin'} ·{' '}
+            {relativeTime(c.case_status_updated_at)}
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-3 pt-4 border-t border-[#F0EEEB]">
+        <label className="block">
+          <span className="block text-xs font-semibold text-[#4A4A4A] mb-1.5">
+            New status
+          </span>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="w-full px-3 py-2 text-sm rounded-lg border border-[#E8E6E3] bg-white text-[#0A0A0A] focus:outline-none focus:border-[#E1261C] focus:ring-2 focus:ring-[#FCE9E7] transition"
+          >
+            <option value="">Select a status…</option>
+            {CASE_STATUS_GROUPS.map((group) => (
+              <optgroup key={group.key} label={group.label}>
+                {group.statuses.map((s) => (
+                  <option key={s.key} value={s.key}>
+                    {s.label}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </label>
+
+        <TextArea
+          label="Note for the applicant (optional)"
+          rows={3}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Explain what changed and what happens next…"
+          maxLength={2000}
+        />
+
+        <Button
+          variant="primary"
+          icon={Save}
+          loading={saving}
+          onClick={submit}
+          className="w-full"
+        >
+          Update status
+        </Button>
+      </div>
+
+      {history.length > 0 && (
+        <div className="mt-5 pt-4 border-t border-[#F0EEEB]">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#888888] mb-2">
+            Recent changes
+          </p>
+          <ul className="space-y-2 max-h-60 overflow-y-auto">
+            {history.slice(0, 5).map((h) => (
+              <li key={h._id} className="text-xs">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {h.previous_label && (
+                    <>
+                      <span className="text-[#B4B0AA]">{h.previous_label}</span>
+                      <span className="text-[#D4D4D4]">→</span>
+                    </>
+                  )}
+                  <Badge tone={caseStatusTone(h.status)}>{h.label}</Badge>
+                </div>
+                {h.note && (
+                  <p className="text-[#4A4A4A] mt-1 break-words">{h.note}</p>
+                )}
+                <p className="text-[11px] text-[#B4B0AA] mt-0.5">
+                  {h.updated_by_email} · {relativeTime(h.created_at)}
+                </p>
+              </li>
+            ))}
+          </ul>
+          {history.length > 5 && (
+            <p className="text-[11px] text-[#B4B0AA] mt-2">
+              {history.length - 5} earlier change
+              {history.length - 5 === 1 ? '' : 's'} in the Notes &amp; Audit tab.
+            </p>
+          )}
+        </div>
+      )}
+    </Panel>
+  );
+}
 
 function AdminActionsPanel({ data, onUpdated, notify }) {
   const c = data.case;
@@ -1318,6 +1471,49 @@ function NotesTab({ data, onUpdated, notify }) {
             </ul>
           )}
         </div>
+      </Panel>
+
+      <Panel
+        title="Status history"
+        subtitle="Every workflow status change, newest first"
+        bodyClassName="p-0"
+      >
+        {(data.status_history || []).length === 0 ? (
+          <EmptyState
+            icon={Activity}
+            title="No status changes yet"
+            message="Set a status from the Overview tab to start the trail."
+          />
+        ) : (
+          <ul className="divide-y divide-[#F0EEEB] max-h-[640px] overflow-y-auto">
+            {data.status_history.map((h) => (
+              <li key={h._id} className="px-5 py-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {h.previous_label && (
+                    <>
+                      <span className="text-[11px] text-[#B4B0AA]">
+                        {h.previous_label}
+                      </span>
+                      <span className="text-[#D4D4D4] text-xs">→</span>
+                    </>
+                  )}
+                  <Badge tone={caseStatusTone(h.status)}>{h.label}</Badge>
+                  <span className="text-[11px] text-[#B4B0AA]">
+                    {relativeTime(h.created_at)}
+                  </span>
+                </div>
+                {h.note && (
+                  <p className="text-xs text-[#4A4A4A] mt-1.5 break-words whitespace-pre-wrap">
+                    {h.note}
+                  </p>
+                )}
+                <p className="text-[11px] text-[#B4B0AA] mt-1">
+                  {h.updated_by_email} · {formatDateTime(h.created_at)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
       </Panel>
 
       <Panel

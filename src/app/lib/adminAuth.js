@@ -51,6 +51,14 @@ export function withAdmin(handler) {
     try {
       return await handler(req, ctx, admin);
     } catch (err) {
+      // A body the client sent wrong is a bad request, not a server fault.
+      if (err instanceof SyntaxError) {
+        return NextResponse.json(
+          { error: 'Request body is not valid JSON' },
+          { status: 400 },
+        );
+      }
+
       console.error('[admin-api]', err);
       return NextResponse.json(
         { error: err.message || 'Server error' },

@@ -138,6 +138,12 @@ export function toCaseRow(doc, now = new Date()) {
       (doc.user_properties || []).length || (doc.property_ids || []).length,
     total_value: state.total_value,
 
+    // Admin-managed workflow status (see lib/caseStatuses.js).
+    case_status: doc.case_status || null,
+    case_status_note: doc.case_status_note || '',
+    case_status_updated_at: doc.case_status_updated_at || null,
+    case_status_updated_by: doc.case_status_updated_by || '',
+
     claim_status: doc.claim_status || null,
     claim_message: doc.claim_message || '',
     claim_process_task_status: doc.claim_process_task_status || null,
