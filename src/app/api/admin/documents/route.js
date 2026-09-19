@@ -4,7 +4,6 @@ import UserCases from '../../../models/userCases';
 import { withAdmin } from '../../../lib/adminAuth';
 import { caseJoinStages, toCaseRow, safeRegex } from '../../../lib/adminQueries';
 import { ALL_DOC_FIELDS, DOC_LABELS } from '../../../lib/claimLifecycle';
-import { getSignedDocumentUrl } from '../../../lib/documentUrls';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +18,6 @@ export const GET = withAdmin(async (req) => {
   const search = (searchParams.get('search') || '').trim();
   const verification = searchParams.get('verification'); // completed|failed|processing|pending
   const completeness = searchParams.get('completeness'); // complete|incomplete
-  const sign = searchParams.get('sign') === 'true';
 
   const page = Math.max(parseInt(searchParams.get('page'), 10) || 1, 1);
   const limit = Math.min(
@@ -102,16 +100,9 @@ export const GET = withAdmin(async (req) => {
   const safePage = Math.min(page, totalPages);
   const paged = rows.slice((safePage - 1) * limit, safePage * limit);
 
-  // Presigning is opt-in: it costs one S3 call per file.
-  if (sign) {
-    for (const row of paged) {
-      for (const file of row.files) {
-        file.url = await getSignedDocumentUrl(file.stored_value, {
-          field: file.field,
-        });
-      }
-    }
-  }
+  // URLs are resolved on click via /api/admin/documents/resolve, so nothing is
+  // presigned here — a URL minted at list time would often expire before the
+  // admin got to it.
 
   return NextResponse.json({
     data: paged,

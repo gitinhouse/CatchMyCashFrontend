@@ -211,10 +211,21 @@ export async function GET(req) {
               },
               {
                 $addFields: {
-                  // Prefer the property's own claim number; fall back to the
-                  // case-level one for rows filed before per-property ids existed.
+                  // The property's own claim number. The case-level number is only used
+                  // as a fallback when the case covers a single property — otherwise it
+                  // would paint one claim's number across every property on the case,
+                  // which is what made separate claims look like they shared an id.
                   claim_id: {
-                    $ifNull: ['$claim_id', { $arrayElemAt: ['$case_info.claim_id', 0] }],
+                    $ifNull: [
+                      '$claim_id',
+                      {
+                        $cond: [
+                          { $lte: [{ $size: { $ifNull: ['$$propertyIds', []] } }, 1] },
+                          { $arrayElemAt: ['$case_info.claim_id', 0] },
+                          null,
+                        ],
+                      },
+                    ],
                   }
                 }
               },
@@ -507,10 +518,21 @@ export async function GET(req) {
             },
             {
               $addFields: {
-                // Prefer the property's own claim number; fall back to the
-                // case-level one for rows filed before per-property ids existed.
+                // The property's own claim number. The case-level number is only used
+                // as a fallback when the case covers a single property — otherwise it
+                // would paint one claim's number across every property on the case,
+                // which is what made separate claims look like they shared an id.
                 claim_id: {
-                  $ifNull: ['$claim_id', { $arrayElemAt: ['$case_info.claim_id', 0] }],
+                  $ifNull: [
+                    '$claim_id',
+                    {
+                      $cond: [
+                        { $lte: [{ $size: { $ifNull: ['$$propertyIds', []] } }, 1] },
+                        { $arrayElemAt: ['$case_info.claim_id', 0] },
+                        null,
+                      ],
+                    },
+                  ],
                 }
               }
             },

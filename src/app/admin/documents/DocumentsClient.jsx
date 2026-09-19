@@ -5,8 +5,6 @@ import Link from 'next/link';
 import {
   AlertTriangle,
   CheckCircle2,
-  ExternalLink,
-  FileText,
   Files,
   RefreshCcw,
 } from 'lucide-react';
@@ -26,6 +24,7 @@ import {
   Select,
 } from '../_components/ui';
 import { SearchBox } from '../_components/filters';
+import DocumentLink from '../_components/DocumentLink';
 
 const VERIFICATION_TABS = [
   { value: '', label: 'All' },
@@ -63,7 +62,6 @@ export default function DocumentsClient() {
         completeness,
         page,
         limit,
-        sign: 'true',
       }),
     [debounced, verification, completeness, page, limit],
   );
@@ -207,29 +205,16 @@ export default function DocumentsClient() {
                         </p>
                       ) : (
                         <div className="flex flex-wrap gap-1.5">
-                          {row.files.map((file) =>
-                            file.url ? (
-                              <a
-                                key={file.field}
-                                href={file.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#E8E6E3] bg-white text-[11px] font-medium text-[#4A4A4A] hover:border-[#E1261C] hover:text-[#E1261C] transition-colors"
-                              >
-                                <FileText className="w-3 h-3" />
-                                {file.label}
-                                <ExternalLink className="w-2.5 h-2.5" />
-                              </a>
-                            ) : (
-                              <span
-                                key={file.field}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#E8E6E3] bg-[#F7F5F2] text-[11px] text-[#B4B0AA]"
-                              >
-                                <FileText className="w-3 h-3" />
-                                {file.label}
-                              </span>
-                            ),
-                          )}
+                          {row.files.map((file) => (
+                            <DocumentLink
+                              key={file.field}
+                              caseId={row._id}
+                              field={file.field}
+                              label={file.label}
+                              compact
+                              onError={(m) => setError(m)}
+                            />
+                          ))}
                         </div>
                       )}
 
