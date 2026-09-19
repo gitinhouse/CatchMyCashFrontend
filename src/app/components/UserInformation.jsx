@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { Button } from './uicomponents/Button';
 import { Card } from './uicomponents/Card';
 import { Textarea } from './uicomponents/Textarea';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import {
   ArrowLeft,
   Shield,
@@ -27,6 +29,53 @@ const getInputErrorClass = (hasError) =>
   hasError
     ? 'border-[#E1261C] bg-[#FCE9E7] ring-2 ring-[#E1261C]/20'
     : 'border-[#E8E6E3]';
+
+const AGE_ERROR =
+  'You must be at least 18 years old.';
+
+// "YYYY-MM-DD" -> local Date (avoids the timezone shift from new Date(str))
+const parseDOB = (str) => {
+  if (!str) return null;
+  const [y, m, d] = str.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d);
+};
+
+// Date -> "YYYY-MM-DD"
+const formatDOB = (date) => {
+  if (!date) return '';
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+const getAge = (dob) => {
+  const now = new Date();
+  let age = now.getFullYear() - dob.getFullYear();
+  const monthDiff = now.getMonth() - dob.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
+    age--;
+  }
+  return age;
+};
+
+// The date picker opens on this date when nothing is selected yet
+const getEighteenYearsAgo = () => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setFullYear(d.getFullYear() - 18);
+  return d;
+};
+
+// "YYYY-MM-DD" -> "MM/DD/YYYY"
+const toDisplayDOB = (str) => {
+  if (!str) return '';
+  const [y, m, d] = str.split('-');
+  return `${m}/${d}/${y}`;
+};
+
+const DOB_FORMAT_ERROR = 'Please enter a complete, valid date (MM/DD/YYYY).';
 
 const CLAIMANT_RELATIONSHIPS = [
   { value: 'MYSELF', label: 'Myself - Individual' },
@@ -95,6 +144,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
   const addressInputRef = useRef(null);
   const autocompleteRef = useRef(null);
   const [today, setToday] = useState('');
+  const [dobRaw, setDobRaw] = useState('');
 
   useEffect(() => {
     setToday(new Date().toISOString().split('T')[0]);
@@ -143,13 +193,29 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
         }
       }
 
+      // if (field === 'dateOfBirth' && value) {
+      //   const dob = new Date(value);
+      //   const now = new Date();
+      //   now.setHours(0, 0, 0, 0);
+
+      //   if (dob > now) {
+      //     updated.dateOfBirth = 'Date of birth cannot be in the future.';
+      //   }
+      // }
+
       if (field === 'dateOfBirth' && value) {
-        const dob = new Date(value);
+        const dob = parseDOB(value);
         const now = new Date();
         now.setHours(0, 0, 0, 0);
 
-        if (dob > now) {
+        if (!dob || isNaN(dob.getTime())) {
+          updated.dateOfBirth = 'Please enter a valid date.';
+        } else if (dob > now) {
           updated.dateOfBirth = 'Date of birth cannot be in the future.';
+        } else {
+          const age = getAge(dob);
+          if (age < 18) updated.dateOfBirth = AGE_ERROR;
+          else if (age > 120) updated.dateOfBirth = 'Please enter a valid date of birth.';
         }
       }
 
@@ -449,24 +515,44 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
       newErrors.lastName = 'Last name can only contain alphabets.';
     }
 
+    // if (formData.dateOfBirth) {
+    //   const dob = new Date(formData.dateOfBirth);
+    //   const now = new Date();
+    //   now.setHours(0, 0, 0, 0);
+
+    //   if (isNaN(dob.getTime())) {
+    //     newErrors.dateOfBirth = 'Please enter a valid date.';
+    //   } else if (dob > now) {
+    //     newErrors.dateOfBirth = 'Date of birth cannot be in the future.';
+    //   } else {
+    //     const age = now.getFullYear() - dob.getFullYear() -
+    //       (now < new Date(now.getFullYear(), dob.getMonth(), dob.getDate()) ? 1 : 0);
+    //     if (age < 18) {
+    //       newErrors.dateOfBirth = 'You must be at least 18 years old.';
+    //     } else if (age > 120) {
+    //       newErrors.dateOfBirth = 'Please enter a valid date of birth.';
+    //     }
+    //   }
+    // }
+
     if (formData.dateOfBirth) {
-      const dob = new Date(formData.dateOfBirth);
+      const dob = parseDOB(formData.dateOfBirth);
       const now = new Date();
       now.setHours(0, 0, 0, 0);
 
-      if (isNaN(dob.getTime())) {
+      if (!dob || isNaN(dob.getTime())) {
         newErrors.dateOfBirth = 'Please enter a valid date.';
       } else if (dob > now) {
         newErrors.dateOfBirth = 'Date of birth cannot be in the future.';
       } else {
-        const age = now.getFullYear() - dob.getFullYear() -
-          (now < new Date(now.getFullYear(), dob.getMonth(), dob.getDate()) ? 1 : 0);
-        if (age < 18) {
-          newErrors.dateOfBirth = 'You must be at least 18 years old.';
-        } else if (age > 120) {
-          newErrors.dateOfBirth = 'Please enter a valid date of birth.';
-        }
+        const age = getAge(dob);
+        if (age < 18) newErrors.dateOfBirth = AGE_ERROR;
+        else if (age > 120) newErrors.dateOfBirth = 'Please enter a valid date of birth.';
       }
+    }
+
+    if (dobRaw && dobRaw !== toDisplayDOB(formData.dateOfBirth)) {
+      newErrors.dateOfBirth = DOB_FORMAT_ERROR;
     }
 
     const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
@@ -717,6 +803,31 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
         .pac-matched { color: #E1261C !important; font-weight: 600 !important; }
         .pac-icon, .pac-icon-marker { display: none !important; }
         .pac-logo::after { display: none !important; }
+
+        .react-datepicker-popper { z-index: 50 !important; }
+        .react-datepicker {
+          font-family: 'Inter', system-ui, sans-serif;
+          border: 1px solid #E8E6E3;
+          border-radius: 0.75rem;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        .react-datepicker__header {
+          background-color: #FCE9E7;
+          border-bottom: 1px solid #E8E6E3;
+        }
+        .react-datepicker__month-select,
+        .react-datepicker__year-select {
+          padding: 2px 6px;
+          border: 1px solid #E8E6E3;
+          border-radius: 6px;
+          background: #fff;
+        }
+        .react-datepicker__day:hover { background-color: #FCE9E7; }
+        .react-datepicker__day--selected,
+        .react-datepicker__day--keyboard-selected {
+          background-color: #E1261C !important;
+          color: #fff !important;
+        }
       `}</style>
 
       {/* Header */}
@@ -876,15 +987,49 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                   <label className="block text-sm font-medium text-[#0A0A0A] mb-1 font-['JetBrains_Mono']">
                     Date of Birth *
                   </label>
-                  <InputField
-                    type="date"
-                    value={formData.dateOfBirth}
-                    onChange={(e) =>
-                      handleInputChange('dateOfBirth', e.target.value)
-                    }
-                    max={today}
+                  <DatePicker
+                    selected={parseDOB(formData.dateOfBirth)}
+                    onChange={(date) => {
+                      setDobRaw(date ? toDisplayDOB(formatDOB(date)) : '');
+                      handleInputChange('dateOfBirth', formatDOB(date));
+                    }}
+                    onChangeRaw={(e) => {
+                      // Only handle real typing in the text input.
+                      // Calendar clicks and month/year dropdowns also fire this event.
+                      if (!e || !e.target || e.target.tagName !== 'INPUT') return;
+
+                      const digits = e.target.value.replace(/\D/g, '').slice(0, 8);
+                      let formatted = digits;
+                      if (digits.length > 4) {
+                        formatted = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+                      } else if (digits.length > 2) {
+                        formatted = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+                      }
+                      e.target.value = formatted;
+                      setDobRaw(formatted);
+                      setErrors((prev) => ({ ...prev, dateOfBirth: '' }));
+                    }}
+                    onBlur={() => {
+                      // typed text that never became a valid date
+                      if (dobRaw && dobRaw !== toDisplayDOB(formData.dateOfBirth)) {
+                        setErrors((prev) => ({ ...prev, dateOfBirth: DOB_FORMAT_ERROR }));
+                      }
+                    }}
+                    strictParsing
+                    openToDate={parseDOB(formData.dateOfBirth) || getEighteenYearsAgo()}
+                    maxDate={new Date()}
+                    minDate={new Date(1900, 0, 1)}
+                    showMonthDropdown
+                    showYearDropdown
+                    dropdownMode="select"
+                    yearDropdownItemNumber={100}
+                    scrollableYearDropdown
+                    dateFormat="MM/dd/yyyy"
+                    placeholderText="MM/DD/YYYY"
+                    autoComplete="off"
+                    wrapperClassName="w-full"
                     aria-invalid={!!errors.dateOfBirth}
-                    className={`w-full text-[#0A0A0A] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${getInputErrorClass(!!errors.dateOfBirth)}`}
+                    className={`w-full px-4 py-2.5 text-sm text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${getInputErrorClass(!!errors.dateOfBirth)}`}
                   />
                   {errors.dateOfBirth && (
                     <p className="text-[#E1261C] text-xs mt-1 font-medium">
@@ -912,12 +1057,11 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                     }
                     className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${getInputErrorClass(
                       !!errors.email,
-                    )} ${
-                      lockedEmail
-                        ? 'bg-[#F0EEEB] text-[#4A4A4A] cursor-not-allowed focus:border-[#E8E6E3]'
-                        : ''
-                    }`}
-                  />                 
+                    )} ${lockedEmail
+                      ? 'bg-[#F0EEEB] text-[#4A4A4A] cursor-not-allowed focus:border-[#E8E6E3]'
+                      : ''
+                      }`}
+                  />
                   {errors.email && (
                     <p className="text-[#E1261C] text-xs mt-1 font-medium">
                       {errors.email}

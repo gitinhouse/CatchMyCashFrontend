@@ -3,6 +3,7 @@ import { Button } from './uicomponents/Button';
 import { Card } from './uicomponents/Card';
 import { Progress } from './uicomponents/Progress';
 import { Badge } from './uicomponents/Badge';
+import { motion } from 'framer-motion';
 import {
   Globe,
   CheckCircle,
@@ -11,6 +12,7 @@ import {
   Shield,
   Key,
   Sparkles,
+  ArrowLeft
 } from 'lucide-react';
 import { useSearchStore } from '../store/searchStore';
 import { useRouter } from 'next/navigation';
@@ -118,19 +120,39 @@ const FormAutomation = ({ userData, onNext }) => {
 
   return (
     <div className="min-h-screen bg-[#F7F5F2] pt-4">
+
+
       {/* Header */}
       <div className="bg-white border-b border-[#E8E6E3] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <Link href='/'>
-          <h1 className="text-3xl font-bold text-[#0A0A0A] font-['Fraunces']">
-            CatchMyCash
-          </h1>
+            <h1 className="text-3xl font-bold text-[#0A0A0A] font-['Fraunces']">
+              CatchMyCash
+            </h1>
           </Link>
           <p className="text-[#4A4A4A] mt-1">Automated Form Processing</p>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <motion.div
+          className="mb-8"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <button
+            onClick={() => router.push('/')}
+            className="flex items-center gap-2 text-sm text-[#4A4A4A] hover:text-[#E1261C] transition-colors font-semibold"
+          >
+            <div className="relative flex items-center justify-center">
+              <div className="absolute w-8 h-8 rounded-full bg-[#E1261C]/10"></div>
+              <ArrowLeft className="h-4 w-4 relative z-10 text-[#E1261C]" />
+            </div>
+          </button>
+        </motion.div>
+
+
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-[#FCE9E7] rounded-full flex items-center justify-center mx-auto mb-4">
@@ -226,16 +248,14 @@ const FormAutomation = ({ userData, onNext }) => {
             {automationSteps.map((step, index) => (
               <div
                 key={index}
-                className={`flex items-center p-3 rounded-lg transition-all duration-300 ${
-                  index <= currentStep
-                    ? 'bg-[#FCE9E7] border border-[#E1261C]/30'
-                    : 'bg-[#F0EEEB]'
-                }`}
+                className={`flex items-center p-3 rounded-lg transition-all duration-300 ${index <= currentStep
+                  ? 'bg-[#FCE9E7] border border-[#E1261C]/30'
+                  : 'bg-[#F0EEEB]'
+                  }`}
               >
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
-                    index <= currentStep ? 'bg-[#E1261C]' : 'bg-[#D4D4D4]'
-                  }`}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${index <= currentStep ? 'bg-[#E1261C]' : 'bg-[#D4D4D4]'
+                    }`}
                 >
                   {index <= currentStep ? (
                     <CheckCircle className="h-5 w-5 text-white" />
@@ -247,16 +267,14 @@ const FormAutomation = ({ userData, onNext }) => {
                 </div>
                 <div className="flex-1">
                   <h4
-                    className={`font-medium ${
-                      index <= currentStep ? 'text-[#0A0A0A]' : 'text-[#888888]'
-                    }`}
+                    className={`font-medium ${index <= currentStep ? 'text-[#0A0A0A]' : 'text-[#888888]'
+                      }`}
                   >
                     {step.title}
                   </h4>
                   <p
-                    className={`text-sm ${
-                      index <= currentStep ? 'text-[#4A4A4A]' : 'text-[#888888]'
-                    }`}
+                    className={`text-sm ${index <= currentStep ? 'text-[#4A4A4A]' : 'text-[#888888]'
+                      }`}
                   >
                     {step.description}
                   </p>
@@ -406,11 +424,10 @@ const FormAutomation = ({ userData, onNext }) => {
               <button
                 onClick={() => setShowPopup(true)}
                 disabled={isSubmitting}
-                className={`px-2 py-2.5 bg-[#E1261C] text-white text-sm lg:text-lg font-semibold rounded-xl transition-all duration-300 shadow-md hover:shadow-lg w-full sm:w-2/3 md:w-1/2 ${
-                  isSubmitting
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'hover:bg-[#B11912]'
-                }`}
+                className={`px-2 py-2.5 bg-[#E1261C] text-white text-sm lg:text-lg font-semibold rounded-xl transition-all duration-300 shadow-md hover:shadow-lg w-full sm:w-2/3 md:w-1/2 ${isSubmitting
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:bg-[#B11912]'
+                  }`}
               >
                 {isSubmitting
                   ? 'Creating Case...'
@@ -517,11 +534,10 @@ const FormAutomation = ({ userData, onNext }) => {
             <button
               onClick={() => setShowPopup(true)}
               disabled={isSubmitting}
-              className={`px-3 py-2.5 bg-[#E1261C] text-white text-sm lg:text-lg font-semibold rounded-xl transition-all duration-300 shadow-md hover:shadow-lg ${
-                isSubmitting
-                  ? 'opacity-50 cursor-not-allowed'
-                  : 'hover:bg-[#B11912]'
-              }`}
+              className={`px-3 py-2.5 bg-[#E1261C] text-white text-sm lg:text-lg font-semibold rounded-xl transition-all duration-300 shadow-md hover:shadow-lg ${isSubmitting
+                ? 'opacity-50 cursor-not-allowed'
+                : 'hover:bg-[#B11912]'
+                }`}
             >
               {isSubmitting ? 'Creating Case...' : 'Continue to DocuSign'}
             </button>
@@ -534,6 +550,8 @@ const FormAutomation = ({ userData, onNext }) => {
           </div>
         )}
       </div>
+
+
 
       {/* Popup Modal - Red Themed */}
       {showPopup && (
@@ -576,11 +594,10 @@ const FormAutomation = ({ userData, onNext }) => {
               <button
                 onClick={handleContinue}
                 disabled={isSubmitting}
-                className={`w-1/2 px-4 py-2 bg-[#E1261C] text-white font-semibold rounded-lg transition-all shadow-md ${
-                  isSubmitting
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'hover:bg-[#B11912] hover:shadow-lg'
-                }`}
+                className={`w-1/2 px-4 py-2 bg-[#E1261C] text-white font-semibold rounded-lg transition-all shadow-md ${isSubmitting
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:bg-[#B11912] hover:shadow-lg'
+                  }`}
               >
                 {isSubmitting ? 'Processing...' : 'Continue'}
               </button>
