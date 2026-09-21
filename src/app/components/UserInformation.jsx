@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { InputField } from './uicomponents/InputField';
 import { useSearchStore } from '../store/searchStore';
+import { readVerifiedEmail, sessionEmail } from '../lib/verifiedEmail';
 import axios from 'axios';
 
 const getInputErrorClass = (hasError) =>
@@ -111,8 +112,13 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
     previousAddresses: '',
     claimantRelationship: 'MYSELF',
   });
-  // Set when a signed-in session supplies the email; null for signed-out users.
+  // Set when the address is already settled — from the signed-in session, or
+  // from the code a signed-out visitor verified before searching. Either way
+  // the field is filled in and cannot be edited.
   const [lockedEmail, setLockedEmail] = useState(null);
+  // Proof of an OTP-verified address, sent with the registration so the server
+  // can check the claim is being filed under an address somebody owns.
+  const [verificationToken, setVerificationToken] = useState(null);
   const [errorModal, setErrorModal] = useState({
     show: false,
     title: '',
@@ -337,6 +343,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
       if (!session?.token || !sessionEmail) return;
 
       setLockedEmail(sessionEmail);
+      setVerificationToken(null);
       setFormData((prev) => ({ ...prev, email: sessionEmail }));
       setErrors((prev) => {
         if (!prev.email) return prev;
@@ -347,6 +354,28 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
     } catch (e) {
       console.error('Failed to read userLogin from localStorage', e);
     }
+  }, []);
+
+  // Signed-out visitors reach this form only after verifying an address, so it
+  // is prefilled and locked here too: the claim has to be filed under the
+  // address that was verified, not one typed in afterwards.
+  useEffect(() => {
+    // Read the session directly rather than waiting for the effect above to
+    // land: both run in the same commit, so lockedEmail is still null here.
+    if (sessionEmail()) return;
+
+    const verified = readVerifiedEmail();
+    if (!verified?.email) return;
+
+    setLockedEmail(verified.email);
+    setVerificationToken(verified.token);
+    setFormData((prev) => ({ ...prev, email: verified.email }));
+    setErrors((prev) => {
+      if (!prev.email) return prev;
+      const next = { ...prev };
+      delete next.email;
+      return next;
+    });
   }, []);
 
   const handlePhoneChange = (value) => {
@@ -609,6 +638,9 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
         userEmail: formData.email,
         user_id: userData._id,
         userType: 'User',
+        // Present for signed-out claimants; the server rejects a registration
+        // whose address was never verified.
+        verification_token: verificationToken || undefined,
       };
 
       const [dobYear, dobMonth, dobDay] = formData.dateOfBirth.split('-');
@@ -646,13 +678,20 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
 
       let userLoginRes;
       try {
-        if (lockedEmail) {
+        // The email is locked for two different people: a signed-in claimant,
+        // who already has an account, and a signed-out visitor who verified an
+        // address by code and still needs one. Only the first can skip
+        // registration — keying this on the lock alone would leave a guest
+        // with no account at all.
+        const existingSession = sessionEmail()
+          ? localStorage.getItem('userLogin')
+          : null;
+
+        if (existingSession) {
           // Already signed in: the account exists and the session is valid, so
           // registering again would only re-send the "you already have an
           // account" mail on every additional claim.
-          userLoginRes = {
-            data: JSON.parse(localStorage.getItem('userLogin')),
-          };
+          userLoginRes = { data: JSON.parse(existingSession) };
         } else {
           userLoginRes = await axios.post('/api/register', payloadData);
           setUserLogin(userLoginRes.data);
@@ -711,6 +750,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
       try {
         const { data } = await axios.post('/api/legalDetails', {
           ...payload,
+          verification_token: verificationToken || undefined,
           claimSubmission: {
             ...claimSubmission,
             property_ids: ownPropertyIds,
@@ -1049,16 +1089,17 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                     placeholder="your@email.com"
                     aria-invalid={!!errors.email}
                     readOnly={!!lockedEmail}
+                    disabled={!!lockedEmail}
                     aria-readonly={!!lockedEmail}
                     title={
                       lockedEmail
-                        ? 'This claim is filed under the account you are signed in to.'
+                        ? 'This claim is filed under your verified email address.'
                         : undefined
                     }
                     className={`w-full text-[#0A0A0A] placeholder-[#888888] border-2 rounded-lg focus:border-[#E1261C] focus:outline-none transition-all ${getInputErrorClass(
                       !!errors.email,
                     )} ${lockedEmail
-                      ? 'bg-[#F0EEEB] text-[#4A4A4A] cursor-not-allowed focus:border-[#E8E6E3]'
+                      ? 'bg-[#F0EEEB] text-[#4A4A4A] cursor-not-allowed focus:border-[#E8E6E3] disabled:opacity-100 disabled:cursor-not-allowed'
                       : ''
                       }`}
                   />

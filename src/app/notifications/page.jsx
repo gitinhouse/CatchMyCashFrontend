@@ -19,6 +19,7 @@ export default function NotificationsPage() {
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     try {
@@ -40,6 +41,7 @@ export default function NotificationsPage() {
   const load = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
+    setError(null);
     try {
       const { data } = await axios.get(
         `/api/notification?userId=${userId}&scope=all&limit=200`,
@@ -47,9 +49,18 @@ export default function NotificationsPage() {
       if (data?.success) {
         setItems(Array.isArray(data.data) ? data.data : []);
         setUnread(data.unreadCount || 0);
+      } else {
+        // Reporting the failure matters: an empty list and a failed request
+        // look identical otherwise, so a broken query reads as "no
+        // notifications" and nobody goes looking.
+        setError(data?.error || 'Could not load your notifications.');
       }
     } catch (err) {
       console.error('Failed to load notifications', err);
+      setError(
+        err.response?.data?.error ||
+          'Could not load your notifications. Please try again.',
+      );
     } finally {
       setLoading(false);
     }
@@ -159,6 +170,16 @@ export default function NotificationsPage() {
           {loading ? (
             <div className="py-16 text-center text-sm text-[#888888]">
               Loading notifications…
+            </div>
+          ) : error ? (
+            <div className="py-16 text-center px-6">
+              <p className="text-sm font-semibold text-[#B11912]">{error}</p>
+              <button
+                onClick={load}
+                className="mt-3 px-4 py-2 rounded-lg border border-[#E8E6E3] text-xs font-semibold text-[#4A4A4A] hover:border-[#E1261C] hover:text-[#E1261C] transition-colors"
+              >
+                Try again
+              </button>
             </div>
           ) : items.length === 0 ? (
             <div className="py-16 text-center">

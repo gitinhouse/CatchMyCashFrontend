@@ -7,6 +7,11 @@ import UserProperty from "../../models/userProperty";
 import { generateCaseNumber } from "../../lib/generateCaseNumber";
 import { sendEmailTwilio } from "../../lib/sendgrid";
 import { createNotification } from "../../lib/createNotification.js";
+import UserLogin from "../../models/userLogin";
+import {
+  normalizeEmail,
+  readVerifiedEmailToken,
+} from "../../lib/emailVerification";
 
 /**
  * Confirm a submission to the claimant.
@@ -251,6 +256,49 @@ export async function POST(req) {
         { error: "User not found with provided user_id" },
         { status: 404 }
       );
+    }
+
+    // The claim confirmation, the agreement and every later update go to this
+    // address, so it has to be the one the claimant proved they own — the
+    // account's own address, or one just verified by emailed code. Checking it
+    // here as well as at registration means the address cannot be swapped on
+    // the way to filing.
+    const claimEmail = normalizeEmail(email_id);
+    const account = await UserLogin.findOne({ user_id })
+      .select("userEmail")
+      .lean();
+
+    if (account) {
+      if (normalizeEmail(account.userEmail) !== claimEmail) {
+        console.warn("[legalDetails] rejected claim email", {
+          user_id: String(user_id),
+          account_email: account.userEmail,
+        });
+        return NextResponse.json(
+          {
+            error:
+              "This claim must be filed under your verified email address.",
+            email_verification_required: true,
+          },
+          { status: 403 }
+        );
+      }
+    } else {
+      // No account bound to this search yet, so the only thing that can vouch
+      // for the address is a verification issued in this session.
+      const proof = readVerifiedEmailToken(
+        body?.verification_token || body?.verificationToken
+      );
+      if (!proof.valid || proof.email !== claimEmail) {
+        return NextResponse.json(
+          {
+            error:
+              "Please verify your email address before submitting your claim.",
+            email_verification_required: true,
+          },
+          { status: 403 }
+        );
+      }
     }
 
     // NEW: resolve/create the case FIRST, so we can tag UserDetails with case_id

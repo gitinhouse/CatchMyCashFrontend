@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { Button } from './uicomponents/Button';
 import { InputField } from './uicomponents/InputField';
+import EmailVerificationModal from './EmailVerificationModal';
+import { hasActiveSession, readVerifiedEmail } from '../lib/verifiedEmail';
 
 // ============================================================
 // DESIGN TOKENS — matching the HTML mockup exactly
@@ -57,6 +59,7 @@ const PropertySearch = ({ onNext, onBack, onFieldFilled }) => {
   const [lastNameError, setLastNameError] = useState('');
   const { setUserData, setSearchResults } = useSearchStore();
   const [addressError, setAddressError] = useState('');
+  const [showEmailVerify, setShowEmailVerify] = useState(false);
   const progressIntervalRef = useRef(null);
   //
   // const setAddressRef = useRef(setAddress);
@@ -210,7 +213,42 @@ const PropertySearch = ({ onNext, onBack, onFieldFilled }) => {
   };
 
   // ─── Form submit ──────────────────────────────────────────────────────────
+  /**
+   * A claim can only be filed under an address its owner can read. Signed-in
+   * claimants already have one; everyone else proves an address by emailed
+   * code before we search, so the address is settled before any claim exists
+   * and cannot be swapped for a stranger's later in the flow.
+   */
   const handleSearch = async () => {
+    if (!hasActiveSession() && !readVerifiedEmail()) {
+      // The same validation the search itself does, so the dialog never opens
+      // on a form that is not ready to be submitted.
+      if (firstNameError || lastNameError) {
+        setValidationError('Please fix the errors before searching.');
+        return;
+      }
+      if (!firstName.trim() || !lastName.trim()) {
+        setValidationError(
+          !firstName.trim() && !lastName.trim()
+            ? 'Please enter your first name and last name'
+            : `Please enter your ${!firstName.trim() ? 'first name' : 'last name'}`,
+        );
+        return;
+      }
+      if (!captchaToken) {
+        setValidationError('Please confirm you are not a robot.');
+        return;
+      }
+
+      setValidationError('');
+      setShowEmailVerify(true);
+      return;
+    }
+
+    return runSearch();
+  };
+
+  const runSearch = async () => {
     if (firstNameError || lastNameError) {
       setValidationError('Please fix the errors before searching.');
       return;
@@ -1148,6 +1186,16 @@ const PropertySearch = ({ onNext, onBack, onFieldFilled }) => {
           )}
         </AnimatePresence>
       </div>
+
+      <EmailVerificationModal
+        open={showEmailVerify}
+        onClose={() => setShowEmailVerify(false)}
+        onVerified={() => {
+          setShowEmailVerify(false);
+          // The address is settled; run the search the click asked for.
+          runSearch();
+        }}
+      />
     </div>
   );
 };

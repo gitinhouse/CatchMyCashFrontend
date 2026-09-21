@@ -22,6 +22,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { deriveClaimFailure } from '../lib/claimLifecycle';
 import { caseStatusLabel, caseStatusTone } from '../lib/caseStatuses';
+import { caseClaimIds, propertyClaimId } from '../lib/claimIds';
 
 // Tailwind needs complete class strings, so map tone -> classes here
 // rather than interpolating the tone into a class name.
@@ -565,6 +566,7 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
 
   // ✅ Check if any properties are already claimed
   const properties = caseData?.user_properties || [];
+  const claimIds = caseClaimIds(caseData);
   const hasClaimedProperties = properties.some(p => p.is_claimed === true);
   const claimedCount = properties.filter(p => p.is_claimed === true).length;
   const availableCount = properties.filter(p => p.is_claimed !== true).length;
@@ -621,6 +623,13 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
               </Link>
               <p className="text-[#4A4A4A] mt-1 font-['JetBrains_Mono'] text-sm">
                 Case #{caseNumber}
+              </p>
+              {/* Each property on a case is filed as its own claim, so the
+                  tracking page names every claim number the state issued. */}
+              <p className="text-[#E1261C] mt-0.5 font-['JetBrains_Mono'] text-xs break-all">
+                {claimIds.length > 0
+                  ? `Claim ID${claimIds.length > 1 ? 's' : ''}: ${claimIds.join(', ')}`
+                  : 'Claim ID: pending'}
               </p>
             </div>
             <div className="flex items-center space-x-3 flex-wrap gap-2">
@@ -695,6 +704,14 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                         No new notifications
                       </div>
                     )}
+                    <div className="p-3 border-t border-[#E8E6E3] text-center">
+                      <a
+                        href="/notifications"
+                        className="text-xs font-semibold text-[#E1261C] hover:text-[#B11912]"
+                      >
+                        See all notifications
+                      </a>
+                    </div>
                   </div>
                 )}
               </div>
@@ -839,6 +856,50 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
             </div>
           </div>
         </div>
+
+        {/* Claims on this case — one per property, each with its own number */}
+        {properties.length > 0 && (
+          <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 mb-8 shadow-md">
+            <h3 className="text-lg font-bold text-[#0A0A0A] mb-4 font-['Fraunces']">
+              Your{' '}
+              <span className="text-[#E1261C] italic font-normal">Claims</span>
+            </h3>
+            <ul className="divide-y divide-[#F0EEEB]">
+              {properties.map((p, i) => (
+                <li
+                  key={p._id || p.property_id || i}
+                  className="py-3 flex flex-wrap items-start justify-between gap-3 first:pt-0 last:pb-0"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[#0A0A0A]">
+                      {p.property_title || p.property_type || 'Unclaimed property'}
+                    </p>
+                    <p className="text-xs text-[#888888] font-['JetBrains_Mono'] mt-0.5 break-all">
+                      Property ID: {p.property_id}
+                    </p>
+                    <p className="text-xs text-[#E1261C] font-['JetBrains_Mono'] mt-0.5 break-all">
+                      Claim ID: {propertyClaimId(p, caseData) || 'pending'}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold text-[#0A0A0A]">
+                      $
+                      {parsePropertyAmount(p).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </p>
+                    {p.is_claimed === true && (
+                      <p className="text-[11px] text-[#888888] mt-0.5">
+                        Already claimed
+                      </p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Milestone Timeline */}
         <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 mb-8 shadow-md relative overflow-hidden">

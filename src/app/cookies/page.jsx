@@ -33,6 +33,14 @@ const STORAGE_IN_USE = [
     category: 'Essential',
   },
   {
+    name: 'cmc_verified_email',
+    kind: 'Local storage',
+    purpose:
+      'Remembers the email address you verified by code, so your claim is filed under it.',
+    retention: 'Until you sign out, or 2 hours',
+    category: 'Essential',
+  },
+  {
     name: 'activeReferralCode, referralCode',
     kind: 'Local storage',
     purpose: 'Credits the person who referred you when your claim is created.',

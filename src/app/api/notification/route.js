@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "../../lib/mongodb";
 import UserNotifications from "../../models/notifications";
 import { createNotification } from "../../lib/createNotification";
+import {
+  resolveAccountUserIds,
+  userIdFilter,
+} from "../../lib/accountIdentity";
 
 // The bell shows this window, plus anything still unread beyond it.
 const RECENT_WINDOW_DAYS = 60;
@@ -44,6 +48,18 @@ export async function GET(request, { params }) {
 
     await connectToDatabase();
 
+    // A claimant can own several UserInformation ids, so match all of them or
+    // notifications written against an earlier one stay invisible.
+    const { ids } = await resolveAccountUserIds(userId);
+    const owner = userIdFilter(ids);
+
+    if (!owner) {
+      return Response.json(
+        { success: false, error: "Invalid userId" },
+        { status: 400 }
+      );
+    }
+
     // `status: false` means unread.
     //
     // Three shapes:
@@ -64,22 +80,22 @@ export async function GET(request, { params }) {
 
     let query;
     if (scope === "all") {
-      query = { user_id: userId };
+      query = { ...owner };
     } else if (scope === "recent") {
       query = {
-        user_id: userId,
+        ...owner,
         $or: [{ createdAt: { $gte: cutoff } }, { status: false }],
       };
     } else {
       query = legacyAll
-        ? { user_id: userId }
-        : { user_id: userId, status: false };
+        ? { ...owner }
+        : { ...owner, status: false };
     }
 
     const [notifications, unreadCount, totalCount] = await Promise.all([
       UserNotifications.find(query).sort({ createdAt: -1 }).limit(limit).lean(),
-      UserNotifications.countDocuments({ user_id: userId, status: false }),
-      UserNotifications.countDocuments({ user_id: userId }),
+      UserNotifications.countDocuments({ ...owner, status: false }),
+      UserNotifications.countDocuments({ ...owner }),
     ]);
 
     return Response.json({
@@ -125,10 +141,18 @@ export async function PUT(request, { params }) {
     // Mark every notification for a user as read in one call, for the bell's
     // "mark all as read" action.
     if (markAll) {
-      const userId = allUserId;
+      const { ids } = await resolveAccountUserIds(allUserId);
+      const owner = userIdFilter(ids);
+
+      if (!owner) {
+        return Response.json(
+          { success: false, error: "Invalid userId" },
+          { status: 400 }
+        );
+      }
 
       const result = await UserNotifications.updateMany(
-        { user_id: userId, status: false },
+        { ...owner, status: false },
         { $set: { status: true } }
       );
 
@@ -191,7 +215,17 @@ export async function DELETE(request) {
     await connectToDatabase();
 
     if (deleteAll) {
-      const result = await UserNotifications.deleteMany({ user_id: userId });
+      const { ids } = await resolveAccountUserIds(userId);
+      const owner = userIdFilter(ids);
+
+      if (!owner) {
+        return Response.json(
+          { success: false, error: "Invalid userId" },
+          { status: 400 }
+        );
+      }
+
+      const result = await UserNotifications.deleteMany(owner);
       return Response.json({
         success: true,
         deleted: result?.deletedCount ?? 0,
