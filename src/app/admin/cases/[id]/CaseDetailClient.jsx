@@ -33,6 +33,7 @@ import {
   relativeTime,
 } from '../../_lib/format';
 import { PageHeader } from '../../_components/AdminShell';
+import DocumentLink from '../../_components/DocumentLink';
 import {
   CASE_STATUS_GROUPS,
   caseStatusLabel,
@@ -218,7 +219,7 @@ export default function CaseDetailClient({ caseId }) {
       )}
       {tab === 'applicant' && <ApplicantTab data={data} notify={notify} onUpdated={load} />}
       {tab === 'properties' && <PropertiesTab data={data} />}
-      {tab === 'documents' && <DocumentsTab data={data} />}
+      {tab === 'documents' && <DocumentsTab data={data} notify={notify} />}
       {tab === 'automation' && <AutomationTab data={data} onUpdated={load} notify={notify} />}
       {tab === 'notes' && <NotesTab data={data} onUpdated={load} notify={notify} />}
 
@@ -1042,7 +1043,7 @@ function PropertiesTab({ data }) {
 /* Documents                                                           */
 /* ------------------------------------------------------------------ */
 
-function DocumentsTab({ data }) {
+function DocumentsTab({ data, notify }) {
   const c = data.case;
 
   return (
@@ -1075,18 +1076,12 @@ function DocumentsTab({ data }) {
                     {doc.filename}
                   </p>
                 </div>
-                {doc.url ? (
-                  <a
-                    href={doc.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#E8E6E3] text-xs font-semibold text-[#4A4A4A] hover:border-[#E1261C] hover:text-[#E1261C] transition-colors"
-                  >
-                    Open <ExternalLink className="w-3 h-3" />
-                  </a>
-                ) : (
-                  <Badge tone="muted">Unavailable</Badge>
-                )}
+                <DocumentLink
+                  caseId={c._id}
+                  field={doc.field}
+                  label={doc.label}
+                  onError={(m) => notify?.(m, 'error')}
+                />
               </li>
             ))}
           </ul>
@@ -1202,7 +1197,6 @@ function AutomationTab({ data, onUpdated, notify }) {
           ['Claim status', c.claim_status],
           ['Claim ID', c.claim_id],
           ['Reported stage', c.claim_process_stage],
-          ['Poll URL', data.raw_case.poll_url],
         ]}
         retry={{
           count: c.retry.claim_count,
@@ -1275,21 +1269,8 @@ function PipelinePanel({
           {taskId || null}
         </Field>
         {extra.map(([label, value]) => (
-          <Field key={label} label={label} mono={label.includes('ID') || label.includes('URL')}>
-            {value ? (
-              label === 'Poll URL' ? (
-                <a
-                  href={value}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[#E1261C] hover:underline break-all"
-                >
-                  {value}
-                </a>
-              ) : (
-                String(value)
-              )
-            ) : null}
+          <Field key={label} label={label} mono={label.includes('ID')}>
+            {value ? String(value) : null}
           </Field>
         ))}
       </dl>

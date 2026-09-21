@@ -2,7 +2,8 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { Bell, Check, CheckCheck } from 'lucide-react';
+import Link from 'next/link';
+import { Bell, Check, CheckCheck, Trash2 } from 'lucide-react';
 
 /**
  * Notification bell for signed-in claimants.
@@ -19,6 +20,7 @@ export default function NotificationBell() {
   const [userId, setUserId] = useState(null);
   const [items, setItems] = useState([]);
   const [unread, setUnread] = useState(0);
+  const [total, setTotal] = useState(0);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const panelRef = useRef(null);
@@ -50,12 +52,15 @@ export default function NotificationBell() {
   const load = useCallback(async () => {
     if (!userId) return;
     try {
+      // The bell shows the last 60 days plus anything still unread, so an
+      // old unread item is never hidden by age.
       const { data } = await axios.get(
-        `/api/notification?userId=${userId}&all=true&limit=30`,
+        `/api/notification?userId=${userId}&scope=recent&limit=30`,
       );
       if (data?.success) {
         setItems(Array.isArray(data.data) ? data.data : []);
         setUnread(data.unreadCount || 0);
+        setTotal(data.totalCount || 0);
       }
     } catch (err) {
       // The bell is advisory; a failed poll should never surface an error.
@@ -107,6 +112,28 @@ export default function NotificationBell() {
       setUnread(0);
     } catch (err) {
       console.error('Failed to mark all read', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteAll = async () => {
+    if (!userId || total === 0) return;
+    if (
+      !window.confirm(
+        'Delete all notifications? This cannot be undone.',
+      )
+    ) {
+      return;
+    }
+    setLoading(true);
+    try {
+      await axios.delete(`/api/notification?all=true&userId=${userId}`);
+      setItems([]);
+      setUnread(0);
+      setTotal(0);
+    } catch (err) {
+      console.error('Failed to delete notifications', err);
     } finally {
       setLoading(false);
     }
@@ -202,6 +229,27 @@ export default function NotificationBell() {
               })}
             </ul>
           )}
+
+          <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-t border-[#E8E6E3] bg-[#FCFBFA]">
+            <Link
+              href="/notifications"
+              onClick={() => setOpen(false)}
+              className="text-xs font-semibold text-[#E1261C] hover:text-[#B11912]"
+            >
+              See all notifications
+              {total > items.length ? ` (${total})` : ''}
+            </Link>
+            {total > 0 && (
+              <button
+                onClick={deleteAll}
+                disabled={loading}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#888888] hover:text-[#E1261C] disabled:opacity-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete all
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

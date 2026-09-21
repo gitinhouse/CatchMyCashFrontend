@@ -107,7 +107,12 @@ export function toCaseRow(doc, now = new Date()) {
   return {
     _id: String(doc._id),
     case_id: doc.case_id,
-    claim_id: doc.claim_id || propertyClaimIds[0] || null,
+    // Only borrow the case-level number when the case covers a single
+    // property; otherwise separate claims would appear to share an id.
+    claim_id:
+      doc.claim_id ||
+      ((doc.user_properties || []).length <= 1 ? propertyClaimIds[0] : null) ||
+      null,
     // Every distinct state claim number on this case, for cases that cover
     // several properties.
     claim_ids: doc.claim_id
@@ -196,24 +201,4 @@ export function toObjectId(value) {
 export function safeRegex(value) {
   const escaped = String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return { $regex: escaped, $options: 'i' };
-}
-
-/**
- * The automation server may report its poll endpoint as an absolute URL or as
- * a bare path. A bare path rendered as an href resolves against this site and
- * goes nowhere, so anchor it to EXTENSION_URL instead.
- *
- * @param {string} value Raw `poll_url` from the case record.
- * @returns {string|null} An absolute URL, or null when there is nothing usable.
- */
-export function resolvePollUrl(value) {
-  const raw = String(value || '').trim();
-  if (!raw) return null;
-
-  if (/^https?:\/\//i.test(raw)) return raw;
-
-  const base = process.env.EXTENSION_URL?.replace(/\/$/, '');
-  if (!base) return null;
-
-  return `${base}/${raw.replace(/^\/+/, '')}`;
 }

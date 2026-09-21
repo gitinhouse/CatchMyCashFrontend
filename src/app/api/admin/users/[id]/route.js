@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
 import connectToDatabase from '../../../../lib/mongodb';
 import User from '../../../../models/UserInformation';
 import UserDetails from '../../../../models/userDetails';
@@ -14,7 +13,7 @@ import AdminActivity from '../../../../models/adminActivity';
 import { withAdmin } from '../../../../lib/adminAuth';
 import { toObjectId } from '../../../../lib/adminQueries';
 import { deriveCaseState, DOC_LABELS, ALL_DOC_FIELDS } from '../../../../lib/claimLifecycle';
-import { generateRandomPassword } from '../../../../lib/utils';
+import { sendPasswordSetupLink } from '../../../../lib/passwordSetup';
 
 export const dynamic = 'force-dynamic';
 
@@ -270,19 +269,21 @@ export const PATCH = withAdmin(async (req, ctx, admin) => {
         { status: 404 },
       );
     }
-    const newPassword = generateRandomPassword(10);
-    account.userPassword = await bcrypt.hash(newPassword, 10);
-    await account.save();
+    // No password is generated. The claimant gets a single-use link and
+    // chooses their own, so no admin ever handles their credentials.
+    const { sent, reason } = await sendPasswordSetupLink(account);
+
     await AdminActivity.create({
       admin_id: admin.id,
       admin_email: admin.email,
       action: 'user_updated',
-      summary: `Reset password for ${account.userEmail}`,
+      summary: `Sent a password reset link to ${account.userEmail}`,
       user_id: userId,
       changes: {},
     });
-    // Returned once so the admin can pass it on; never stored in plain text.
-    result.temporary_password = newPassword;
+
+    result.password_reset_link_sent = sent;
+    if (!sent) result.password_reset_link_error = reason || 'send_failed';
   }
 
   return NextResponse.json(result);

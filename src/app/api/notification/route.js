@@ -3,6 +3,9 @@ import connectToDatabase from "../../lib/mongodb";
 import UserNotifications from "../../models/notifications";
 import { createNotification } from "../../lib/createNotification";
 
+// The bell shows this window, plus anything still unread beyond it.
+const RECENT_WINDOW_DAYS = 60;
+
 export async function POST(req) {
   try {
     const { userId, title, message } = await req.json();
@@ -40,25 +43,52 @@ export async function GET(request, { params }) {
     }
 
     await connectToDatabase();
-    // `status: false` means unread. The bell needs the full list plus a count,
-    // so `all=true` returns read ones too; existing callers that omit it keep
-    // getting only the unread set.
-    const includeRead = searchParams.get("all") === "true";
+
+    // `status: false` means unread.
+    //
+    // Three shapes:
+    //   scope=recent (default) — the bell: anything from the last 60 days,
+    //     plus older items that are still unread, so nothing unread is ever
+    //     hidden by age.
+    //   scope=all — the full history page.
+    //   neither, legacy `all=true` — kept for older callers.
+    const scope = searchParams.get("scope");
+    const legacyAll = searchParams.get("all") === "true";
+
     const limit = Math.min(
       Math.max(parseInt(searchParams.get("limit"), 10) || 50, 1),
       200
     );
 
-    const query = includeRead
-      ? { user_id: userId }
-      : { user_id: userId, status: false };
+    const cutoff = new Date(Date.now() - RECENT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
-    const [notifications, unreadCount] = await Promise.all([
+    let query;
+    if (scope === "all") {
+      query = { user_id: userId };
+    } else if (scope === "recent") {
+      query = {
+        user_id: userId,
+        $or: [{ createdAt: { $gte: cutoff } }, { status: false }],
+      };
+    } else {
+      query = legacyAll
+        ? { user_id: userId }
+        : { user_id: userId, status: false };
+    }
+
+    const [notifications, unreadCount, totalCount] = await Promise.all([
       UserNotifications.find(query).sort({ createdAt: -1 }).limit(limit).lean(),
       UserNotifications.countDocuments({ user_id: userId, status: false }),
+      UserNotifications.countDocuments({ user_id: userId }),
     ]);
 
-    return Response.json({ success: true, data: notifications, unreadCount });
+    return Response.json({
+      success: true,
+      data: notifications,
+      unreadCount,
+      totalCount,
+      recentWindowDays: RECENT_WINDOW_DAYS,
+    });
   } catch (error) {
     return Response.json(
       { success: false, error: error.message },
@@ -122,6 +152,61 @@ export async function PUT(request, { params }) {
     }
 
     return Response.json({ success: true, data: updatedNotification });
+  } catch (error) {
+    return Response.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Delete notifications.
+ *
+ *   ?all=true&userId=   removes every notification for that user
+ *   ?id=                removes one
+ */
+export async function DELETE(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const deleteAll = searchParams.get("all") === "true";
+    const userId = searchParams.get("userId");
+    const _id = searchParams.get("id");
+
+    // Validate before connecting, so a malformed request answers 400 instead
+    // of surfacing a database error.
+    if (deleteAll && !userId) {
+      return Response.json(
+        { success: false, error: "Missing userId" },
+        { status: 400 }
+      );
+    }
+    if (!deleteAll && !_id) {
+      return Response.json(
+        { success: false, error: "Missing notification id" },
+        { status: 400 }
+      );
+    }
+
+    await connectToDatabase();
+
+    if (deleteAll) {
+      const result = await UserNotifications.deleteMany({ user_id: userId });
+      return Response.json({
+        success: true,
+        deleted: result?.deletedCount ?? 0,
+      });
+    }
+
+    const removed = await UserNotifications.findByIdAndDelete(_id);
+    if (!removed) {
+      return Response.json(
+        { success: false, message: "Notification not found" },
+        { status: 404 }
+      );
+    }
+
+    return Response.json({ success: true, deleted: 1 });
   } catch (error) {
     return Response.json(
       { success: false, error: error.message },

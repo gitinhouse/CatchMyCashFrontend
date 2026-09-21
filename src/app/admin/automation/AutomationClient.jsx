@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Cpu, ExternalLink, RefreshCcw, RotateCcw } from 'lucide-react';
+import { Cpu, RefreshCcw, RotateCcw } from 'lucide-react';
 import { adminFetch, buildQuery } from '../_lib/api';
 import { formatDateTime, humanize, number, relativeTime } from '../_lib/format';
 import { PageHeader } from '../_components/AdminShell';
@@ -16,11 +16,7 @@ import {
   Pagination,
   Panel,
   Select,
-  Table,
-  Td,
-  Th,
   Toast,
-  Tr,
 } from '../_components/ui';
 import { SearchBox } from '../_components/filters';
 
@@ -192,82 +188,53 @@ export default function AutomationClient() {
           />
         ) : (
           <>
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Case</Th>
-                  <Th>Claim submission</Th>
-                  <Th>Document upload</Th>
-                  <Th>Identifiers</Th>
-                  <Th>Last update</Th>
-                  <Th align="right">Actions</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.data.map((row) => (
-                  <Tr key={row._id}>
-                    <Td>
+            {/* Cards rather than a wide table: the run detail does not fit a
+                phone as columns, and an admin triaging on mobile needs the
+                same information. */}
+            <ul className="divide-y divide-[#F0EEEB]">
+              {result.data.map((row) => (
+                <li key={row._id} className="p-4 sm:p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
                       <CaseLink id={row._id}>{row.case_id}</CaseLink>
-                      <p className="text-[11px] text-[#888888] truncate max-w-[150px]">
-                        {row.applicant.name || 'Unknown'}
+                      <p className="text-xs text-[#888888] mt-0.5 truncate max-w-[240px]">
+                        {row.applicant.name || 'Unknown applicant'}
                       </p>
-                    </Td>
-                    <Td>
-                      <PipelineCell p={row.claim_pipeline} />
-                    </Td>
-                    <Td>
-                      <PipelineCell p={row.document_pipeline} />
-                    </Td>
-                    <Td>
-                      <div className="space-y-0.5 text-[11px]">
-                        <IdRow label="Claim" value={row.claim_id} />
-                        <IdRow label="Automation" value={row.automation_id} />
-                        <IdRow label="Claim task" value={row.claim_pipeline.task_id} />
-                        <IdRow label="Doc task" value={row.document_pipeline.task_id} />
-                        {row.poll_url && (
-                          <a
-                            href={row.poll_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[#E1261C] hover:underline"
-                          >
-                            Poll URL <ExternalLink className="w-2.5 h-2.5" />
-                          </a>
-                        )}
-                      </div>
-                    </Td>
-                    <Td>
-                      <span className="text-xs text-[#4A4A4A]">
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-xs text-[#4A4A4A]">
                         {relativeTime(row.updated_at || row.created_at)}
-                      </span>
+                      </p>
                       <p className="text-[11px] text-[#B4B0AA]">
                         {formatDateTime(row.updated_at || row.created_at)}
                       </p>
-                    </Td>
-                    <Td align="right">
-                      <div className="flex flex-col gap-1 items-end">
-                        <Button
-                          size="sm"
-                          icon={RotateCcw}
-                          loading={busyId === row._id}
-                          onClick={() => resetRetry(row._id, 'claim')}
-                        >
-                          Reset claim
-                        </Button>
-                        <Button
-                          size="sm"
-                          icon={RotateCcw}
-                          loading={busyId === row._id}
-                          onClick={() => resetRetry(row._id, 'document')}
-                        >
-                          Reset docs
-                        </Button>
-                      </div>
-                    </Td>
-                  </Tr>
-                ))}
-              </tbody>
-            </Table>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                    <PipelinePanel
+                      title="Claim submission"
+                      p={row.claim_pipeline}
+                      busy={busyId === row._id}
+                      onReset={() => resetRetry(row._id, 'claim')}
+                    />
+                    <PipelinePanel
+                      title="Document upload"
+                      p={row.document_pipeline}
+                      busy={busyId === row._id}
+                      onReset={() => resetRetry(row._id, 'document')}
+                    />
+                  </div>
+
+                  <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
+                    <IdRow label="Claim" value={row.claim_id} />
+                    <IdRow label="Automation" value={row.automation_id} />
+                    <IdRow label="Claim task" value={row.claim_pipeline.task_id} />
+                    <IdRow label="Doc task" value={row.document_pipeline.task_id} />
+                  </dl>
+                </li>
+              ))}
+            </ul>
             <Pagination
               page={result.page}
               totalPages={result.totalPages}
@@ -285,7 +252,7 @@ export default function AutomationClient() {
   );
 }
 
-function PipelineCell({ p }) {
+function PipelinePanel({ title, p, busy, onReset }) {
   const tone =
     p.task_status === 'completed'
       ? 'success'
@@ -296,13 +263,20 @@ function PipelineCell({ p }) {
           : 'muted';
 
   return (
-    <div className="min-w-[150px]">
-      <Badge tone={tone}>
-        {p.task_status ? humanize(p.task_status) : 'Not started'}
-      </Badge>
-      <div className="mt-1.5 space-y-0.5 text-[11px] text-[#888888]">
+    <div className="rounded-lg border border-[#E8E6E3] bg-[#FCFBFA] p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-semibold text-[#0A0A0A]">{title}</p>
+        <Badge tone={tone}>
+          {p.task_status ? humanize(p.task_status) : 'Not started'}
+        </Badge>
+      </div>
+
+      <div className="mt-2 space-y-1 text-[11px] text-[#888888]">
         <p>
-          Retries {p.retry_count}/{p.retry_max}
+          Retries{' '}
+          <span className="tabular-nums text-[#4A4A4A]">
+            {p.retry_count}/{p.retry_max}
+          </span>
           {p.exhausted && (
             <span className="text-[#B11912] font-semibold"> · exhausted</span>
           )}
@@ -315,9 +289,19 @@ function PipelineCell({ p }) {
         )}
         {p.next_retry_at && <p>Next {relativeTime(p.next_retry_at)}</p>}
         {p.message && (
-          <p className="text-[#B11912] line-clamp-2 max-w-[220px]">{p.message}</p>
+          <p className="text-[#B11912] break-words line-clamp-3">{p.message}</p>
         )}
       </div>
+
+      <Button
+        size="sm"
+        icon={RotateCcw}
+        loading={busy}
+        onClick={onReset}
+        className="mt-3 w-full"
+      >
+        Reset retries
+      </Button>
     </div>
   );
 }
@@ -325,9 +309,14 @@ function PipelineCell({ p }) {
 function IdRow({ label, value }) {
   if (!value) return null;
   return (
-    <p className="text-[#888888]">
-      {label}: <Mono className="text-[11px] text-[#4A4A4A]">{value}</Mono>
-    </p>
+    <div className="min-w-0">
+      <dt className="text-[10px] font-semibold uppercase tracking-wide text-[#B4B0AA]">
+        {label}
+      </dt>
+      <dd>
+        <Mono className="text-[11px] text-[#4A4A4A] break-all">{value}</Mono>
+      </dd>
+    </div>
   );
 }
 

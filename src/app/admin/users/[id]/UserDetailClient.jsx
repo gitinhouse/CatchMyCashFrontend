@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   Bell,
   Building2,
-  Copy,
   FileText,
   KeyRound,
   RefreshCcw,
@@ -505,7 +504,6 @@ function PropertiesTab({ data }) {
 function AccountTab({ data, onUpdated, notify }) {
   const [role, setRole] = useState(data.account?.type || 'User');
   const [saving, setSaving] = useState(false);
-  const [tempPassword, setTempPassword] = useState(null);
   const [notifyTitle, setNotifyTitle] = useState('');
   const [notifyMessage, setNotifyMessage] = useState('');
   const [sending, setSending] = useState(false);
@@ -533,8 +531,16 @@ function AccountTab({ data, onUpdated, notify }) {
         method: 'PATCH',
         body: JSON.stringify({ reset_password: true }),
       });
-      setTempPassword(res.temporary_password);
-      notify('Password reset — share the temporary password securely');
+      if (res?.password_reset_link_sent) {
+        notify(`Reset link sent to ${data.account?.email}`);
+      } else {
+        notify(
+          `Could not send the reset link${
+            res?.password_reset_link_error ? `: ${res.password_reset_link_error}` : ''
+          }`,
+          'error',
+        );
+      }
     } catch (err) {
       notify(err.message, 'error');
     } finally {
@@ -614,29 +620,12 @@ function AccountTab({ data, onUpdated, notify }) {
                     loading={saving}
                     className="w-full"
                   >
-                    Generate temporary password
+                    Send password reset link
                   </Button>
-                  {tempPassword && (
-                    <div className="mt-2 rounded-lg border border-[#F5C6C1] bg-[#FCE9E7] px-3 py-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-[#B11912]">
-                        Shown once — copy it now
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <code className="text-sm font-['JetBrains_Mono',monospace] text-[#0A0A0A] flex-1 break-all">
-                          {tempPassword}
-                        </code>
-                        <button
-                          onClick={() =>
-                            navigator.clipboard?.writeText(tempPassword)
-                          }
-                          className="text-[#B11912] hover:text-[#E1261C] shrink-0"
-                          title="Copy"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                  <p className="text-[11px] text-[#888888] mt-1.5">
+                    Emails a single-use link so the user sets their own
+                    password. No password is generated or shared.
+                  </p>
                 </div>
               </div>
             </>

@@ -84,21 +84,24 @@ async function presignIfExists(bucket, region, key, expiresIn) {
 }
 
 /**
- * Turn a stored document value into something an admin can open in a browser.
+ * Resolve a stored document value to an openable URL, reporting how it got
+ * there and why it failed.
  *
  * @param {string} value            Raw value from the UserDocs record.
  * @param {object} [options]
  * @param {string} [options.field]  The UserDocs field name, which decides the bucket.
  * @param {number} [options.expiresIn] Signed-URL lifetime in seconds.
- * @returns {Promise<string|null>} An openable URL, or null if it cannot be resolved.
+ * @returns {Promise<{url: string|null, strategy: string, reason?: string, tried?: string[]}>}
  */
-export async function getSignedDocumentUrl(value, options = {}) {
+export async function resolveDocumentUrl(value, options = {}) {
   const { field = null, expiresIn = 3600 } = options;
 
   const raw = stripQuotes(value);
-  if (!raw) return null;
+  if (!raw) return { url: null, strategy: 'none', reason: 'empty_value' };
 
-  if (/^https?:\/\//i.test(raw)) return raw;
+  if (/^https?:\/\//i.test(raw)) {
+    return { url: raw, strategy: 'stored_url' };
+  }
 
   const key = raw.startsWith('/') ? raw.slice(1) : raw;
   const useAgreementBucket =
@@ -107,35 +110,91 @@ export async function getSignedDocumentUrl(value, options = {}) {
   if (useAgreementBucket) {
     const bucket = process.env.AGREEMENT_BUCKET_NAME;
     const region = process.env.AGREEMENT_AWS_REGION || 'eu-central-1';
+    const tried = [];
 
     if (bucket) {
       for (const candidate of agreementKeyCandidates(key)) {
+        tried.push(candidate);
         try {
-          return await presignIfExists(bucket, region, candidate, expiresIn);
+          const url = await presignIfExists(bucket, region, candidate, expiresIn);
+          return { url, strategy: 'agreement_bucket', tried };
         } catch {
           // Try the next key shape.
         }
       }
     }
 
-    // The automation server serves agreements directly when S3 is not configured.
+    // The automation server serves agreements directly when S3 is not
+    // configured. Check it actually has the file: handing back a URL that
+    // 404s is what makes an agreement "open" to a blank page.
     const extensionUrl = process.env.EXTENSION_URL?.replace(/\/$/, '');
-    if (extensionUrl) return `${extensionUrl}/${key}`;
-    return null;
+    if (extensionUrl) {
+      const candidate = `${extensionUrl}/${key}`;
+      try {
+        const head = await fetch(candidate, { method: 'HEAD' });
+        if (head.ok) {
+          return { url: candidate, strategy: 'extension_server', tried };
+        }
+        return {
+          url: null,
+          strategy: 'extension_server',
+          reason: `extension_server_responded_${head.status}`,
+          tried,
+        };
+      } catch (error) {
+        return {
+          url: null,
+          strategy: 'extension_server',
+          reason: `extension_server_unreachable: ${error.message}`,
+          tried,
+        };
+      }
+    }
+
+    return {
+      url: null,
+      strategy: 'agreement_bucket',
+      reason: bucket
+        ? 'not_found_in_agreement_bucket'
+        : 'AGREEMENT_BUCKET_NAME_not_configured',
+      tried,
+    };
   }
 
   const bucket = process.env.BUCKET_NAME;
   const region = process.env.AWS_REGION;
-  if (!bucket || !region) return null;
+  if (!bucket || !region) {
+    return {
+      url: null,
+      strategy: 'main_bucket',
+      reason: 'BUCKET_NAME_or_AWS_REGION_not_configured',
+    };
+  }
 
   try {
-    return await getSignedUrl(
+    const url = await getSignedUrl(
       s3(region),
       new GetObjectCommand({ Bucket: bucket, Key: key }),
       { expiresIn },
     );
+    return { url, strategy: 'main_bucket', tried: [key] };
   } catch (error) {
     console.error('[documentUrls] failed to presign', key, error.message);
-    return null;
+    return {
+      url: null,
+      strategy: 'main_bucket',
+      reason: `presign_failed: ${error.message}`,
+      tried: [key],
+    };
   }
+}
+
+/**
+ * Convenience wrapper for callers that only need the URL.
+ *
+ * @returns {Promise<string|null>}
+ */
+export async function getSignedDocumentUrl(value, options = {}) {
+  const { url } = await resolveDocumentUrl(value, options);
+  return url;
 }

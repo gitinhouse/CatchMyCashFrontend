@@ -11,8 +11,6 @@ import AdminActivity from '../../../../models/adminActivity';
 import { withAdmin } from '../../../../lib/adminAuth';
 import { caseJoinStages, toCaseRow, toObjectId } from '../../../../lib/adminQueries';
 import { ALL_DOC_FIELDS, DOC_LABELS } from '../../../../lib/claimLifecycle';
-import { getSignedDocumentUrl } from '../../../../lib/documentUrls';
-import { resolvePollUrl } from '../../../../lib/adminQueries';
 
 export const dynamic = 'force-dynamic';
 
@@ -87,8 +85,11 @@ export const GET = withAdmin(async (req, ctx) => {
         .lean(),
     ]);
 
-  // Presign every stored document so admins can open them directly.
   const documents = [];
+  // No URL is minted here: a signed URL expires an hour after it is made,
+  // so one embedded at page load is often dead by the time it is clicked.
+  // The client resolves each document on demand via
+  // /api/admin/documents/resolve.
   for (const field of ALL_DOC_FIELDS) {
     const value = doc.docs?.[field];
     if (typeof value !== 'string' || !value.trim()) continue;
@@ -97,7 +98,6 @@ export const GET = withAdmin(async (req, ctx) => {
       label: DOC_LABELS[field] || field,
       stored_value: value,
       filename: value.split('/').pop(),
-      url: await getSignedDocumentUrl(value, { field }),
       uploaded_at: doc.docs?.createdAt || null,
     });
   }
@@ -105,7 +105,6 @@ export const GET = withAdmin(async (req, ctx) => {
   return NextResponse.json({
     case: row,
     raw_case: {
-      poll_url: resolvePollUrl(doc.poll_url),
       property_ids: doc.property_ids || [],
       claim_message: doc.claim_message || '',
       document_upload_message: doc.document_upload_message || '',

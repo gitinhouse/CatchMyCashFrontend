@@ -1,9 +1,65 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import {
+  CONSENT_EVENT,
+  clearConsent,
+  readConsent,
+} from '../lib/cookieConsent';
+
+// What the site actually stores. Kept next to the prose so the policy and the
+// implementation cannot drift apart.
+const STORAGE_IN_USE = [
+  {
+    name: 'cmc_cookie_consent',
+    kind: 'Cookie',
+    purpose: 'Remembers your cookie choice so we stop asking.',
+    retention: '180 days',
+    category: 'Essential',
+  },
+  {
+    name: 'userLogin',
+    kind: 'Local storage',
+    purpose: 'Keeps you signed in and identifies your account.',
+    retention: 'Until you sign out',
+    category: 'Essential',
+  },
+  {
+    name: 'userData, userCase, userAgreement, ownPropertyIds, propertyData',
+    kind: 'Local storage',
+    purpose:
+      'Holds the claim you are part-way through so a refresh does not lose it.',
+    retention: 'Until you sign out',
+    category: 'Essential',
+  },
+  {
+    name: 'activeReferralCode, referralCode',
+    kind: 'Local storage',
+    purpose: 'Credits the person who referred you when your claim is created.',
+    retention: 'Until you sign out',
+    category: 'Essential',
+  },
+  {
+    name: 'cmc_analytics_id, cmc_last_seen',
+    kind: 'Local storage',
+    purpose:
+      'Anonymous usage statistics. Only set if you accept analytics, and removed if you decline.',
+    retention: 'Removed when you decline',
+    category: 'Analytics',
+  },
+];
 
 export default function CookiesPage() {
   const [activeSection, setActiveSection] = useState('c-what');
+  const [consent, setConsent] = useState(null);
+
+  // Reflect the visitor's actual stored choice on the page.
+  useEffect(() => {
+    const sync = () => setConsent(readConsent());
+    sync();
+    window.addEventListener(CONSENT_EVENT, sync);
+    return () => window.removeEventListener(CONSENT_EVENT, sync);
+  }, []);
   const sectionRefs = useRef({});
   const isScrollingRef = useRef(false);
 
@@ -134,7 +190,9 @@ export default function CookiesPage() {
             </ul>
           </aside>
 
-          <div className="space-y-16">
+          {/* min-w-0: a grid item defaults to its content's minimum width, which
+              would let the storage table push the page wider than the screen. */}
+          <div className="space-y-16 min-w-0">
             <section id="c-what" className="scroll-mt-24">
               <h2 className="font-['Fraunces'] text-2xl md:text-3xl font-semibold tracking-[-0.01em] mb-5 pb-3 border-b-2 border-[#E1261C] inline-block">
                 What are cookies?
@@ -216,11 +274,111 @@ export default function CookiesPage() {
                 Managing cookies
               </h2>
               <p className="text-base leading-relaxed text-[#4A4A4A]">
-                Most browsers let you view, delete, or block cookies through
-                their settings. If you block essential cookies, some parts of
-                the website, including sign-in and account features, may not
-                work correctly. Browser settings also vary, so refer to your
-                browser&apos;s help documentation for instructions.
+                You can change your choice at any time using the button below.
+                Most browsers also let you view, delete, or block cookies
+                through their settings. If you block essential cookies, some
+                parts of the website, including sign-in and account features,
+                may not work correctly.
+              </p>
+
+              <div className="mt-5 rounded-xl border border-[#E8E6E3] bg-[#F7F5F2] p-4">
+                <p className="text-sm font-semibold text-[#0A0A0A]">
+                  Your current choice
+                </p>
+                <p className="text-sm text-[#4A4A4A] mt-1">
+                  {consent
+                    ? consent.analytics
+                      ? 'Essential and analytics cookies are allowed.'
+                      : 'Only essential cookies are allowed. Analytics are off.'
+                    : 'You have not made a choice yet.'}
+                </p>
+                <button
+                  onClick={clearConsent}
+                  className="mt-3 inline-flex items-center px-4 py-2 rounded-lg bg-[#E1261C] text-white text-sm font-semibold hover:bg-[#B11912] transition-colors"
+                >
+                  Manage cookie preferences
+                </button>
+              </div>
+
+              <h3 className="font-['Fraunces'] text-xl font-semibold mt-8 mb-3">
+                What we store
+              </h3>
+              {/* Stacked cards on phones, a table from md up: four columns of
+                  prose cannot be read at 375px. */}
+              <ul className="md:hidden space-y-3">
+                {STORAGE_IN_USE.map((row) => (
+                  <li
+                    key={row.name}
+                    className="rounded-xl border border-[#E8E6E3] p-4"
+                  >
+                    <p className="font-['JetBrains_Mono'] text-[12px] text-[#0A0A0A] break-words">
+                      {row.name}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5">
+                      <span className="text-xs text-[#4A4A4A]">{row.kind}</span>
+                      <span className="text-[#E8E6E3]">&middot;</span>
+                      <span
+                        className={`text-[11px] font-semibold ${
+                          row.category === 'Analytics'
+                            ? 'text-[#9A6400]'
+                            : 'text-[#00785A]'
+                        }`}
+                      >
+                        {row.category}
+                      </span>
+                    </div>
+                    <p className="text-sm text-[#4A4A4A] mt-2 leading-relaxed">
+                      {row.purpose}
+                    </p>
+                    <p className="text-xs text-[#888888] mt-2">
+                      Kept: {row.retention}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="hidden md:block overflow-x-auto rounded-xl border border-[#E8E6E3]">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-[#F7F5F2] text-left">
+                      <th className="px-4 py-2.5 font-semibold text-[#0A0A0A]">Name</th>
+                      <th className="px-4 py-2.5 font-semibold text-[#0A0A0A]">Type</th>
+                      <th className="px-4 py-2.5 font-semibold text-[#0A0A0A]">Purpose</th>
+                      <th className="px-4 py-2.5 font-semibold text-[#0A0A0A]">Retention</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {STORAGE_IN_USE.map((row) => (
+                      <tr key={row.name} className="border-t border-[#E8E6E3] align-top">
+                        <td className="px-4 py-3 font-['JetBrains_Mono'] text-[12px] text-[#0A0A0A] break-all">
+                          {row.name}
+                        </td>
+                        <td className="px-4 py-3 text-[#4A4A4A] whitespace-nowrap">
+                          {row.kind}
+                          <span
+                            className={`block text-[11px] font-semibold ${
+                              row.category === 'Analytics'
+                                ? 'text-[#9A6400]'
+                                : 'text-[#00785A]'
+                            }`}
+                          >
+                            {row.category}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-[#4A4A4A]">{row.purpose}</td>
+                        <td className="px-4 py-3 text-[#4A4A4A] whitespace-nowrap">
+                          {row.retention}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-sm text-[#888888] mt-3">
+                Some of these are stored in your browser&apos;s local storage
+                rather than as cookies. They serve the same purposes and are
+                listed here so this page reflects everything the site keeps on
+                your device.
               </p>
             </section>
 
