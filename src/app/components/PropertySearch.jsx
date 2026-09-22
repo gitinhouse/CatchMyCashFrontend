@@ -20,7 +20,11 @@ import {
 import { Button } from './uicomponents/Button';
 import { InputField } from './uicomponents/InputField';
 import EmailVerificationModal from './EmailVerificationModal';
-import { hasActiveSession, readVerifiedEmail } from '../lib/verifiedEmail';
+import {
+  clearVerifiedEmail,
+  hasActiveSession,
+  readVerifiedEmail,
+} from '../lib/verifiedEmail';
 
 // ============================================================
 // DESIGN TOKENS — matching the HTML mockup exactly
@@ -60,6 +64,9 @@ const PropertySearch = ({ onNext, onBack, onFieldFilled }) => {
   const { setUserData, setSearchResults } = useSearchStore();
   const [addressError, setAddressError] = useState('');
   const [showEmailVerify, setShowEmailVerify] = useState(false);
+  // What the visitor submitted when they pressed Search, held across the
+  // verification dialog so the search that follows uses the same criteria.
+  const pendingSearchRef = useRef(null);
   const progressIntervalRef = useRef(null);
   //
   // const setAddressRef = useRef(setAddress);
@@ -71,6 +78,14 @@ const PropertySearch = ({ onNext, onBack, onFieldFilled }) => {
     //   setCityRef.current = setCity;
     //   setZipRef.current = setZipCode;
     //
+  }, []);
+
+  // Landing on the search step ends any earlier verification. Coming back here
+  // — the back button, or returning from the property list — means starting a
+  // new search, and a new search proves the address again rather than riding
+  // on a code that was entered for a previous one.
+  useEffect(() => {
+    clearVerifiedEmail();
   }, []);
 
   const searchSteps = [
@@ -220,7 +235,9 @@ const PropertySearch = ({ onNext, onBack, onFieldFilled }) => {
    * and cannot be swapped for a stranger's later in the flow.
    */
   const handleSearch = async () => {
-    if (!hasActiveSession() && !readVerifiedEmail()) {
+    const verified = readVerifiedEmail();
+
+    if (!hasActiveSession() && !verified) {
       // The same validation the search itself does, so the dialog never opens
       // on a form that is not ready to be submitted.
       if (firstNameError || lastNameError) {
@@ -240,22 +257,40 @@ const PropertySearch = ({ onNext, onBack, onFieldFilled }) => {
         return;
       }
 
+      pendingSearchRef.current = {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+      };
       setValidationError('');
       setShowEmailVerify(true);
       return;
     }
 
-    return runSearch();
+    // A verification from this visit keeps working if the search is retried,
+    // when the captcha beside it has long since expired.
+    return runSearch({ verificationToken: verified?.token || null });
   };
 
-  const runSearch = async () => {
+  /**
+   * @param {object} [options]
+   * @param {string} [options.verificationToken] Proof from the emailed code.
+   *   Stands in for the captcha, which by then has almost certainly expired:
+   *   a reCAPTCHA response is good for about two minutes, and receiving an
+   *   email and typing the code takes longer than that.
+   * @param {{firstName: string, lastName: string}} [options.criteria]
+   */
+  const runSearch = async (options = {}) => {
+    const { verificationToken = null, criteria = null } = options;
+    const searchFirstName = criteria?.firstName ?? firstName.trim();
+    const searchLastName = criteria?.lastName ?? lastName.trim();
+
     if (firstNameError || lastNameError) {
       setValidationError('Please fix the errors before searching.');
       return;
     }
     const missingFields = [];
-    if (!firstName.trim()) missingFields.push('first name');
-    if (!lastName.trim()) missingFields.push('last name');
+    if (!searchFirstName) missingFields.push('first name');
+    if (!searchLastName) missingFields.push('last name');
     // if (!address.trim()) missingFields.push('address');
     // if (!city.trim()) missingFields.push('city');
     //
@@ -285,14 +320,14 @@ const PropertySearch = ({ onNext, onBack, onFieldFilled }) => {
     //   return;
     // }
 
-    if (!captchaToken) {
+    if (!captchaToken && !verificationToken) {
       setValidationError('Please confirm you are not a robot.');
       return;
     }
 
     const payload = {
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
+      first_name: searchFirstName,
+      last_name: searchLastName,
       address: 'test', //address.trim(),
       city: 'test', //city.trim(),
       state: 'CA',
@@ -323,17 +358,21 @@ const PropertySearch = ({ onNext, onBack, onFieldFilled }) => {
 
     try {
       const propertyPayload = {
-        first_name: firstName.trim().toUpperCase(),
-        last_name: lastName.trim().toUpperCase(),
+        first_name: searchFirstName.toUpperCase(),
+        last_name: searchLastName.toUpperCase(),
       };
 
       // ✅ ADDED: minimum duration so a fast API response can't skip stops
       const MIN_SEARCH_DURATION = 3600; // ms — matches time to reach 80% above
 
+      // Send whichever proof this search has. The verified-email token is
+      // preferred once it exists, because the captcha beside it is stale.
+      const proofHeaders = verificationToken
+        ? { 'x-email-verification-token': verificationToken }
+        : { 'x-captcha-token': captchaToken };
+
       const apiCallPromise = axios
-        .post('/api/filterProperty', propertyPayload, {
-          headers: { 'x-captcha-token': captchaToken },
-        })
+        .post('/api/filterProperty', propertyPayload, { headers: proofHeaders })
         .then((res) => res.data);
 
       const minDurationPromise = new Promise((resolve) =>
@@ -412,7 +451,7 @@ const PropertySearch = ({ onNext, onBack, onFieldFilled }) => {
         }));
 
         onNext({
-          name: `${firstName.trim()} ${lastName.trim()}`,
+          name: `${searchFirstName} ${searchLastName}`,
           address: {},
           properties: transformedProperties,
           totalAmount: transformedProperties
@@ -1190,10 +1229,15 @@ const PropertySearch = ({ onNext, onBack, onFieldFilled }) => {
       <EmailVerificationModal
         open={showEmailVerify}
         onClose={() => setShowEmailVerify(false)}
-        onVerified={() => {
+        onVerified={({ token }) => {
           setShowEmailVerify(false);
-          // The address is settled; run the search the click asked for.
-          runSearch();
+          // The address is settled, so run the search the click asked for —
+          // same criteria, no second press of the button.
+          runSearch({
+            verificationToken: token,
+            criteria: pendingSearchRef.current,
+          });
+          pendingSearchRef.current = null;
         }}
       />
     </div>

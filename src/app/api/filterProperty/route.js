@@ -287,6 +287,7 @@ import connectToDatabase from '../../lib/mongodb';
 import UserProperty from '../../models/userProperty';
 import UserCases from '../../models/userCases';
 import { deriveClaimFailure } from '../../lib/claimLifecycle';
+import { readVerifiedEmailToken } from '../../lib/emailVerification';
 
 export const runtime = 'nodejs';
 
@@ -424,23 +425,41 @@ export async function POST(req) {
   const startTime = Date.now();
 
   try {
+    // Two ways to prove this is a person: a fresh captcha, or the token issued
+    // when an emailed code was verified. The second exists because a reCAPTCHA
+    // token dies after about two minutes — far less than it takes to receive
+    // an email and type the code — so a signed-out claimant who verifies their
+    // address would otherwise come back to a captcha that no longer works and
+    // never reach their results.
     const captchaToken = req.headers.get('x-captcha-token');
-    if (!captchaToken) {
+    const emailVerificationToken = req.headers.get('x-email-verification-token');
+
+    if (!captchaToken && !emailVerificationToken) {
       return NextResponse.json({ error: 'Captcha token missing' }, { status: 403 });
     }
 
-    const captchaRes = await fetch('https://www.google.com/recaptcha/api/siteverify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        secret: process.env.RECAPTCHA_SECRET_KEY,
-        response: captchaToken,
-      }),
-    });
+    if (captchaToken) {
+      const captchaRes = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          secret: process.env.RECAPTCHA_SECRET_KEY,
+          response: captchaToken,
+        }),
+      });
 
-    const captchaData = await captchaRes.json();
-    if (!captchaData.success) {
-      return NextResponse.json({ error: 'Captcha verification failed' }, { status: 403 });
+      const captchaData = await captchaRes.json();
+      if (!captchaData.success) {
+        return NextResponse.json({ error: 'Captcha verification failed' }, { status: 403 });
+      }
+    } else {
+      const proof = readVerifiedEmailToken(emailVerificationToken);
+      if (!proof.valid) {
+        return NextResponse.json(
+          { error: 'Email verification expired. Please verify your email again.' },
+          { status: 403 },
+        );
+      }
     }
 
     const body = await req.json();

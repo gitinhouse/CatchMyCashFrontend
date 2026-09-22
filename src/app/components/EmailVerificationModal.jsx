@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, ArrowRight, Loader2, Mail, ShieldCheck, X } from 'lucide-react';
+import { AlertCircle, Loader2, Mail, ShieldCheck, X } from 'lucide-react';
 import { writeVerifiedEmail } from '../lib/verifiedEmail';
 
 /**
@@ -186,38 +186,26 @@ export default function EmailVerificationModal({ open, onClose, onVerified }) {
                 <AlertCircle className="w-4 h-4 text-[#B11912] mt-0.5 shrink-0" />
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-[#B11912]">
-                    You already have an account
+                    This email is already registered. Please log in to continue.
                   </p>
-                  <p className="text-xs text-[#4A4A4A] mt-1 leading-relaxed">
-                    An account already exists with <strong>{email}</strong>.
-                    Please log in to continue your claim — your claims stay
-                    together that way. Forgotten your password? You can reset it
-                    from the login page.
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-3">
+                  <div className="flex flex-wrap items-center gap-4 mt-3">
                     <button
                       onClick={() => router.push('/userLogin')}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#E1261C] text-white text-xs font-semibold hover:bg-[#B11912] transition-colors"
+                      className="text-xs font-semibold text-[#E1261C] hover:text-[#B11912] underline underline-offset-2"
                     >
-                      Log in to continue
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => router.push('/forgotPassword')}
-                      className="px-3 py-2 rounded-lg border border-[#E8E6E3] text-xs font-semibold text-[#4A4A4A] hover:border-[#E1261C] hover:text-[#E1261C] transition-colors"
-                    >
-                      Reset password
+                      Login
                     </button>
                     <button
                       onClick={() => {
                         setRegistered(false);
                         setError('');
                         setEmail('');
+                        setStep('email');
                         emailRef.current?.focus();
                       }}
-                      className="px-3 py-2 rounded-lg border border-[#E8E6E3] text-xs font-semibold text-[#4A4A4A] hover:border-[#E1261C] hover:text-[#E1261C] transition-colors"
+                      className="text-xs font-semibold text-[#4A4A4A] hover:text-[#E1261C] underline underline-offset-2"
                     >
-                      Use another email
+                      Use a different email
                     </button>
                   </div>
                 </div>

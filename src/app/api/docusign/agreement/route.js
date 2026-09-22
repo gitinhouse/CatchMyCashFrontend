@@ -19,6 +19,8 @@ import {
 import connectToDatabase from '../../../lib/mongodb';
 import UserDocs from '../../../models/userDocs';
 import UserDetails from '../../../models/userDetails';
+import UserCases from '../../../models/userCases';
+import { NOTARY_CLAIM_THRESHOLD, requiresNotary } from '../../../lib/notary';
 import {
   createAuthenticatedDocuSignClient,
   docuSignErrorResponse,
@@ -362,6 +364,102 @@ async function resolveAgreementLayout(pdfBuffer, pageCount) {
   };
 }
 
+/**
+ * How this account reaches a remote notary.
+ *
+ * The partner and signature provider are account settings on DocuSign's side,
+ * not something that can be inferred, so they come from configuration. Without
+ * them an envelope that needs notarising cannot be built correctly.
+ */
+function getNotaryConfig() {
+  const enabled = String(process.env.DOCUSIGN_NOTARY_ENABLED || '')
+    .trim()
+    .toLowerCase();
+
+  return {
+    enabled: enabled === 'true' || enabled === '1' || enabled === 'yes',
+    notaryType: process.env.DOCUSIGN_NOTARY_TYPE || 'remote',
+    sourceType: process.env.DOCUSIGN_NOTARY_SOURCE_TYPE || 'thirdparty',
+    thirdPartyPartner: process.env.DOCUSIGN_NOTARY_THIRD_PARTY_PARTNER || '',
+    signatureProvider: process.env.DOCUSIGN_NOTARY_SIGNATURE_PROVIDER || '',
+    name: process.env.DOCUSIGN_NOTARY_NAME || '',
+    email: process.env.DOCUSIGN_NOTARY_EMAIL || '',
+  };
+}
+
+/**
+ * What is missing before a notarised envelope can be sent.
+ *
+ * Reported rather than guessed around: sending a large claim through the plain
+ * e-signature flow because the notary was not configured would produce an
+ * agreement that is not notarised at all, which is worse than a clear failure.
+ *
+ * @returns {string[]} Names of the unset settings.
+ */
+function missingNotarySettings(config) {
+  const missing = [];
+  if (!config.enabled) missing.push('DOCUSIGN_NOTARY_ENABLED');
+
+  if (config.sourceType === 'thirdparty') {
+    if (!config.thirdPartyPartner) {
+      missing.push('DOCUSIGN_NOTARY_THIRD_PARTY_PARTNER');
+    }
+  } else if (!config.name || !config.email) {
+    // An in-house notary is an ordinary recipient and needs an address.
+    missing.push('DOCUSIGN_NOTARY_NAME/DOCUSIGN_NOTARY_EMAIL');
+  }
+
+  return missing;
+}
+
+/**
+ * The notary who will witness this signing.
+ *
+ * DocuSign keeps the signer where it always was and adds the notary beside it:
+ * the signer points at the notary through `notaryId`, and the notary lists the
+ * recipient ids it witnesses in `notarySigners`.
+ */
+function buildNotaryRecipient(config, signerRecipientId) {
+  const notary = new docusign.NotaryRecipient();
+
+  notary.recipientId = '2';
+  notary.routingOrder = '1';
+  notary.notaryType = config.notaryType;
+  notary.notarySourceType = config.sourceType;
+  notary.notarySigners = [String(signerRecipientId)];
+
+  if (config.sourceType === 'thirdparty') {
+    notary.notaryThirdPartyPartner = config.thirdPartyPartner;
+  } else {
+    notary.name = config.name;
+    notary.email = config.email;
+  }
+
+  if (config.signatureProvider) {
+    notary.recipientSignatureProviders = [
+      { signatureProviderName: config.signatureProvider },
+    ];
+  }
+
+  return notary;
+}
+
+/**
+ * How many properties this claim covers, which is what decides notarisation.
+ *
+ * Counted from the case rather than trusted from the browser: the envelope is
+ * a legal document and the number of properties on it is the server's fact.
+ */
+async function countCaseProperties(caseObjectId) {
+  if (!caseObjectId) return 0;
+
+  const kase = await UserCases.findById(caseObjectId)
+    .select('property_ids')
+    .lean();
+
+  return Array.isArray(kase?.property_ids) ? kase.property_ids.length : 0;
+}
+
 function splitLegalName(legalName) {
   const name = String(legalName || '').trim();
   if (!name) return { firstName: '', lastName: '' };
@@ -614,15 +712,53 @@ export async function POST(req) {
       has_signed_url: !!signedUrl,
     });
 
+    // Notarisation is decided from the case, and the page count is read from
+    // the document that actually arrived. They are separate on purpose: the
+    // agreement carries an extra page when it has a notarial certificate, so
+    // the field positions follow the real page count rather than the flag.
+    const propertyCount = await countCaseProperties(userDocs.case_id);
+    const notaryRequired = requiresNotary(propertyCount);
+
+    trace.step('notary_decision', {
+      property_count: propertyCount,
+      threshold: NOTARY_CLAIM_THRESHOLD,
+      notary_required: notaryRequired,
+    });
+
     const pdfDoc = await PDFDocument.load(pdfBuffer);
     const numberOfPages = pdfDoc.getPageCount();
     trace.step('pdf_loaded', { pages: numberOfPages });
     const lastPage = String(numberOfPages);
     const layout = await resolveAgreementLayout(pdfBuffer, numberOfPages);
 
+    const notaryConfig = getNotaryConfig();
+    if (notaryRequired) {
+      const missing = missingNotarySettings(notaryConfig);
+      if (missing.length > 0) {
+        trace.fail('notary_not_configured', {
+          property_count: propertyCount,
+          threshold: NOTARY_CLAIM_THRESHOLD,
+          missing,
+        });
+        return NextResponse.json(
+          {
+            error:
+              'This claim covers enough properties to need a notarised signature, but remote notarisation is not configured.',
+            notary_required: true,
+            property_count: propertyCount,
+            threshold: NOTARY_CLAIM_THRESHOLD,
+            missing_configuration: missing,
+          },
+          { status: 503 },
+        );
+      }
+    }
+
     console.log('[docusign/agreement] layout resolved', {
       numberOfPages,
       lastPage,
+      notary_required: notaryRequired,
+      property_count: propertyCount,
       profile: layout.profile,
       rows: {
         nameRow: layout.nameRow,
@@ -677,13 +813,27 @@ export async function POST(req) {
     tabs.textTabs = buildAgreementTextTabs(userDetails, lastPage, layout);
     signer.tabs = tabs;
 
-    envelopeDefinition.recipients = { signers: [signer] };
+    if (notaryRequired) {
+      // The two recipients reference each other by id: the signer names the
+      // notary witnessing it, and the notary lists the signers it witnesses.
+      const notary = buildNotaryRecipient(notaryConfig, signer.recipientId);
+      signer.notaryId = notary.recipientId;
+      envelopeDefinition.recipients = {
+        signers: [signer],
+        notaries: [notary],
+      };
+    } else {
+      envelopeDefinition.recipients = { signers: [signer] };
+    }
+
     envelopeDefinition.status = 'sent';
 
     trace.step('envelope_prepared', {
       signer: userDetails.email_id,
       sign_page: lastPage,
       text_tabs: tabs.textTabs?.length ?? 0,
+      notary_required: notaryRequired,
+      notary_source_type: notaryRequired ? notaryConfig.sourceType : null,
     });
 
     const envelopeResponse = await envelopesApi.createEnvelope(accountId, {
