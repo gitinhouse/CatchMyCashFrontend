@@ -16,7 +16,11 @@ import {
   Pagination,
   Panel,
   Select,
+  Table,
+  Td,
+  Th,
   Toast,
+  Tr,
 } from '../_components/ui';
 import { SearchBox } from '../_components/filters';
 
@@ -188,12 +192,80 @@ export default function AutomationClient() {
           />
         ) : (
           <>
-            {/* Cards rather than a wide table: the run detail does not fit a
-                phone as columns, and an admin triaging on mobile needs the
-                same information. */}
-            <ul className="divide-y divide-[#F0EEEB]">
+            {/* A table from lg up, where the columns fit; the same rows stack
+                into cards below that so the tab stays usable on a phone. */}
+            <div className="hidden lg:block">
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>Case</Th>
+                    <Th>Claim submission</Th>
+                    <Th>Document upload</Th>
+                    <Th>Identifiers</Th>
+                    <Th>Last update</Th>
+                    <Th align="right">Actions</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.data.map((row) => (
+                    <Tr key={row._id}>
+                      <Td className="align-top">
+                        <CaseLink id={row._id}>{row.case_id}</CaseLink>
+                        <p className="text-[11px] text-[#888888] mt-0.5 max-w-[180px] truncate">
+                          {row.applicant.name || 'Unknown applicant'}
+                        </p>
+                      </Td>
+                      <Td className="align-top">
+                        <PipelineCell p={row.claim_pipeline} />
+                      </Td>
+                      <Td className="align-top">
+                        <PipelineCell p={row.document_pipeline} />
+                      </Td>
+                      <Td className="align-top">
+                        <dl className="space-y-1">
+                          <IdRow label="Claim" value={row.claim_id} />
+                          <IdRow label="Automation" value={row.automation_id} />
+                          <IdRow label="Claim task" value={row.claim_pipeline.task_id} />
+                          <IdRow label="Doc task" value={row.document_pipeline.task_id} />
+                        </dl>
+                      </Td>
+                      <Td className="align-top whitespace-nowrap">
+                        <p className="text-xs text-[#4A4A4A]">
+                          {relativeTime(row.updated_at || row.created_at)}
+                        </p>
+                        <p className="text-[11px] text-[#B4B0AA]">
+                          {formatDateTime(row.updated_at || row.created_at)}
+                        </p>
+                      </Td>
+                      <Td align="right" className="align-top">
+                        <div className="flex flex-col items-end gap-1">
+                          <Button
+                            size="sm"
+                            icon={RotateCcw}
+                            loading={busyId === row._id}
+                            onClick={() => resetRetry(row._id, 'claim')}
+                          >
+                            Reset claim
+                          </Button>
+                          <Button
+                            size="sm"
+                            icon={RotateCcw}
+                            loading={busyId === row._id}
+                            onClick={() => resetRetry(row._id, 'document')}
+                          >
+                            Reset docs
+                          </Button>
+                        </div>
+                      </Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
+
+            <ul className="lg:hidden divide-y divide-[#F0EEEB]">
               {result.data.map((row) => (
-                <li key={row._id} className="p-4 sm:p-5">
+                <li key={row._id} className="p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
                       <CaseLink id={row._id}>{row.case_id}</CaseLink>
@@ -211,7 +283,7 @@ export default function AutomationClient() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                     <PipelinePanel
                       title="Claim submission"
                       p={row.claim_pipeline}
@@ -250,6 +322,48 @@ export default function AutomationClient() {
       <Toast toast={toast} onDismiss={() => setToast(null)} />
     </>
   );
+}
+
+/** The status of one pipeline, sized for a table cell. */
+function PipelineCell({ p }) {
+  return (
+    <div className="min-w-[170px]">
+      <Badge tone={pipelineTone(p)}>
+        {p.task_status ? humanize(p.task_status) : 'Not started'}
+      </Badge>
+      <div className="mt-1.5 space-y-0.5 text-[11px] text-[#888888]">
+        <p>
+          Retries{' '}
+          <span className="tabular-nums text-[#4A4A4A]">
+            {p.retry_count}/{p.retry_max}
+          </span>
+          {p.exhausted && (
+            <span className="text-[#B11912] font-semibold"> · exhausted</span>
+          )}
+          {p.retry_overdue && (
+            <span className="text-[#9A6400] font-semibold"> · overdue</span>
+          )}
+        </p>
+        {p.error_type && (
+          <p className="text-[#9A6400]">{humanize(p.error_type)}</p>
+        )}
+        {p.next_retry_at && <p>Next {relativeTime(p.next_retry_at)}</p>}
+        {p.message && (
+          <p className="text-[#B11912] line-clamp-2 max-w-[240px]">{p.message}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function pipelineTone(p) {
+  return p.task_status === 'completed'
+    ? 'success'
+    : p.task_status === 'failed'
+      ? 'danger'
+      : p.task_status === 'processing' || p.task_status === 'queued'
+        ? 'info'
+        : 'muted';
 }
 
 function PipelinePanel({ title, p, busy, onReset }) {

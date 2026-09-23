@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import { InputField } from '../components/uicomponents/InputField';
 import { useSearchStore } from '../store/searchStore';
+import EmailVerificationModal from '../components/EmailVerificationModal';
+import { readVerifiedEmail } from '../lib/verifiedEmail';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 
@@ -55,6 +57,7 @@ export default function PrivacyPage() {
     zipCode: '',
   });
   const [apiError, setApiError] = useState('');
+  const [showEmailVerify, setShowEmailVerify] = useState(false);
   const [agreeSMS, setAgreeSMS] = useState(false);
   const [agreePrivacy, setAgreePrivacy] = useState(false);
 
@@ -251,6 +254,18 @@ export default function PrivacyPage() {
     e.preventDefault();
     if (loading) return;
 
+    // Registering an address means owning it. A visitor who has not verified
+    // one yet is sent through the same code check as the claim flow.
+    const verifiedNow = readVerifiedEmail();
+    if (
+      formData.email &&
+      verifiedNow?.email !== String(formData.email).trim().toLowerCase()
+    ) {
+      setApiError('');
+      setShowEmailVerify(true);
+      return;
+    }
+
     const requiredFields = [
       'fullName',
       'email',
@@ -317,10 +332,14 @@ export default function PrivacyPage() {
         formal_employer: formData.formerEmployers,
         previous_address: formData.previousAddresses,
       };
+      const verified = readVerifiedEmail();
       const payloadData = {
         userEmail: formData.email,
         user_id: '690d932ff286de3acbb2f69b',
         userType: 'User',
+        // An address is only registered once its owner has proved they read
+        // it; the server enforces the same rule.
+        verification_token: verified?.token || undefined,
       };
 
       const { firstName, lastName } = getFirstAndLastName(formData.fullName);
@@ -730,6 +749,15 @@ export default function PrivacyPage() {
           </div>
         </form>
       </div>
+
+      <EmailVerificationModal
+        open={showEmailVerify}
+        onClose={() => setShowEmailVerify(false)}
+        onVerified={({ email }) => {
+          setShowEmailVerify(false);
+          setFormData((prev) => ({ ...prev, email }));
+        }}
+      />
     </div>
   );
 }

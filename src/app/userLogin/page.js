@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/uicomponents/Button';
 import { InputField } from '../components/uicomponents/InputField';
+import { clearVerifiedEmail } from '../lib/verifiedEmail';
 
 const ErrorPopup = ({ message, onClose }) => {
   return (
@@ -149,6 +150,9 @@ useEffect(() => {
       const { data } = await axios.post('/api/login', payload);
       setUserLogin(data);
       localStorage.setItem('userLogin', JSON.stringify(data));
+      // Any guest verification from before signing in is now irrelevant: the
+      // account's own address is what claims are filed under.
+      clearVerifiedEmail();
       window.dispatchEvent(new Event('authChange'));
       console.log(data?.user?.type);
       if (data?.user?.type === 'User') {

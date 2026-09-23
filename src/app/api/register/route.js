@@ -10,6 +10,11 @@ import {
   unusablePasswordHash,
 } from '../../lib/passwordSetup';
 import { createNotification } from '../../lib/createNotification.js';
+import EmailVerification from '../../models/emailVerification';
+import {
+  normalizeEmail,
+  readVerifiedEmailToken,
+} from '../../lib/emailVerification';
 import UserCases from '../../models/userCases';
 import { verifyToken } from '../../lib/verifyToken';
 import { Types } from 'mongoose';
@@ -17,9 +22,18 @@ import { Types } from 'mongoose';
 
 export async function POST(req) {
   try {
-    await connectToDatabase();
-
-    const body = await req.json();
+    // Everything that can be decided from the request alone is decided before
+    // opening a database connection, so a malformed or unauthorised request
+    // answers with its own status rather than a connection error.
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { message: "Invalid request body" },
+        { status: 400 }
+      );
+    }
 
     const userEmail = body.userEmail?.trim().toLowerCase();
     const { user_id, userType } = body;
@@ -29,6 +43,30 @@ export async function POST(req) {
         { message: "Email is required" },
         { status: 400 }
       );
+    }
+
+    // The address a claim is filed under has to be one its owner can read:
+    // either the address of the account the request is signed in as, or one
+    // that has just been proved by an emailed code. Trusting the field alone
+    // would let anyone file under a stranger's address.
+    const ownership = confirmEmailOwnership(req, body, userEmail);
+
+    if (!ownership.ok) {
+      return NextResponse.json(
+        {
+          message:
+            'Please verify your email address before continuing with your claim.',
+          reason: ownership.reason,
+          email_verification_required: true,
+        },
+        { status: 403 },
+      );
+    }
+
+    await connectToDatabase();
+
+    if (ownership.via === 'otp') {
+      await markVerificationConsumed(userEmail);
     }
 
     // A missing or malformed user_id must never reach findOne(): Mongoose drops
@@ -201,5 +239,60 @@ export async function GET(req) {
   } catch (error) {
     console.error('GET /api/case error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+/**
+ * Decide whether this request is entitled to register the address it names.
+ *
+ * Two ways to qualify, matching the two ways a claimant reaches the form:
+ * signed in as the account that owns the address, or carrying the token this
+ * session got back from /api/email-verification/verify. Both are decided from
+ * signatures alone, so no database is needed to refuse a request.
+ *
+ * @returns {{ok: boolean, via?: string, reason?: string}}
+ */
+function confirmEmailOwnership(req, body, userEmail) {
+  // 1. Signed in as the address being registered.
+  try {
+    const session = verifyToken(req);
+    const sessionEmail = normalizeEmail(session?.email);
+    if (sessionEmail && sessionEmail === userEmail) {
+      return { ok: true, via: 'session' };
+    }
+  } catch {
+    // Not signed in, or the token is stale — fall through to the code path.
+  }
+
+  // 2. Verified by emailed code during this visit.
+  const token = body?.verification_token || body?.verificationToken;
+  const claim = readVerifiedEmailToken(token);
+
+  if (!claim.valid) {
+    return { ok: false, reason: claim.reason || 'not_verified' };
+  }
+
+  if (claim.email !== userEmail) {
+    // The token proves an address; it does not authorise a different one.
+    return { ok: false, reason: 'email_mismatch' };
+  }
+
+  return { ok: true, via: 'otp' };
+}
+
+/**
+ * Spend the verification so the same proof is not silently reused later.
+ *
+ * Bookkeeping only — the signed token is what actually authorised the
+ * registration — so a failure here must never fail the request.
+ */
+async function markVerificationConsumed(userEmail) {
+  try {
+    await EmailVerification.updateMany(
+      { email: userEmail, verified_at: { $ne: null }, consumed_at: null },
+      { $set: { consumed_at: new Date() } },
+    );
+  } catch (error) {
+    console.error('[register] could not mark verification consumed', error.message);
   }
 }

@@ -17,6 +17,13 @@ import { Card } from './uicomponents/Card';
 import { Button } from './uicomponents/Button';
 import { Badge } from './uicomponents/Badge';
 import { useSearchStore } from '../store/searchStore';
+import { NOTARY_CLAIM_THRESHOLD, requiresNotary } from '../lib/notary';
+
+// Selecting more than this many properties in one submission sends the
+// agreement through the remote online notary (RON) flow instead of a plain
+// e-signature. Change it in ../lib/notary so the server agrees; it is low
+// while the notary path is being tested and goes up in production.
+const NOTARY_THRESHOLD = NOTARY_CLAIM_THRESHOLD;
 
 const infoArray = [
   'Provide your information for our investigator agreement',
@@ -93,11 +100,14 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
       if (prev.includes(propertyId)) {
         return prev.filter((id) => id !== propertyId);
       }
-      if (prev.length < 3) {
-        return [...prev, propertyId];
+
+      const next = [...prev, propertyId];
+      // Crossing the threshold is allowed; it changes how the agreement is
+      // signed, so say so once rather than blocking the selection.
+      if (requiresNotary(next.length) && !requiresNotary(prev.length)) {
+        setShowSelectionLimitPopup(true);
       }
-      setShowSelectionLimitPopup(true);
-      return prev;
+      return next;
     });
   };
 
@@ -195,6 +205,7 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
 
 
   const isButtonDisabled = selectedTotalAmount <= 0 || isClaiming;
+  const notaryRequired = requiresNotary(selectedProperties.length);
 
   const propertyCount = uniqueProperties?.length || 0;
   const isJackpot = propertyCount > 0;
@@ -582,6 +593,28 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
           </div>
         </motion.div>
 
+        {/* A claim above the threshold is signed with a notary, so say so
+            where the claimant is about to commit rather than only in the
+            one-time popup. */}
+        {notaryRequired && (
+          <div
+            data-testid="notary-notice"
+            className="max-w-2xl mx-auto mb-6 rounded-xl border border-[#F5C6C1] bg-[#FCE9E7] px-4 py-3"
+          >
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="h-4 w-4 text-[#B11912] mt-0.5 shrink-0" />
+              <p className="text-sm text-[#4A4A4A] text-left">
+                <span className="font-semibold text-[#B11912]">
+                  Notarised signing required.
+                </span>{' '}
+                You have selected {selectedProperties.length} properties, which
+                is more than {NOTARY_THRESHOLD}. Your agreement will be signed
+                with a notary online instead of a plain electronic signature.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* CTA - Red Themed */}
         <motion.div
           className="text-center"
@@ -653,16 +686,20 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
                 <AlertTriangle className="h-7 w-7 text-[#E1261C]" />
               </div>
               <h2 className="text-2xl font-bold text-[#0A0A0A] mb-2 font-['Fraunces']">
-                Selection Limit Reached
+                This Claim Needs a Notary
               </h2>
               <p className="text-[#4A4A4A] mb-6">
-                You can select a maximum of 3 properties to claim at once.
+                Claiming more than {NOTARY_THRESHOLD} propert
+                {NOTARY_THRESHOLD === 1 ? 'y' : 'ies'} at once means your
+                agreement is signed with a notary online, rather than with a
+                plain electronic signature. You can carry on — we will set up
+                the notary session when you sign.
               </p>
               <button
                 onClick={() => setShowSelectionLimitPopup(false)}
                 className="bg-[#E1261C] hover:bg-[#B11912] text-white px-8 py-2.5 rounded-lg transition-all shadow-md hover:shadow-lg"
               >
-                Close
+                Got it
               </button>
             </div>
           </motion.div>

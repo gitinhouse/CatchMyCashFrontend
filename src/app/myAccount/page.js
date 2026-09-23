@@ -18,6 +18,7 @@ import {
 import { motion } from 'framer-motion';
 import { clearClientSession } from '../lib/session';
 import { deriveSubmissionStep } from '../lib/claimLifecycle';
+import { claimIdSummary, propertyClaimId } from '../lib/claimIds';
 
 // ── Helpers: derive a human step from case + docs data ─────────────────────
 function parseAmount(v) {
@@ -331,7 +332,9 @@ const ClaimProgressModal = ({ claim, onClose }) => {
                                     Claim Progress
                                 </h2>
                                 <span className="px-3 py-1 bg-[#FCE9E7] text-[#E1261C] text-xs font-semibold rounded-full font-['JetBrains_Mono']">
-                                    {claim.claim_id || 'N/A'}
+                                    {claimIdSummary(claim)
+                                        ? `Claim ID: ${claimIdSummary(claim)}`
+                                        : 'Claim ID pending'}
                                 </span>
                             </div>
                             <p className="text-sm text-[#4A4A4A]">
@@ -472,15 +475,10 @@ const ClaimProgressModal = ({ claim, onClose }) => {
                                                     <p className="text-xs text-[#888888] font-['JetBrains_Mono']">
                                                         ID: {p.property_id}
                                                     </p>
-                                                    {/* This property's own claim number. The case-level number
-                                                        is only borrowed for a single-property case, so separate
-                                                        claims never appear to share an id. */}
-                                                    {(p.claim_id ||
-                                                        (properties.length === 1 && claim.claim_id)) && (
-                                                        <p className="text-xs text-[#E1261C] font-['JetBrains_Mono'] mt-1">
-                                                          Claim ID: {p.claim_id || claim.claim_id}
-                                                        </p>
-                                                    )}
+                                                    <p className="text-xs text-[#E1261C] font-['JetBrains_Mono'] mt-1">
+                                                        Claim ID:{' '}
+                                                        {propertyClaimId(p, claim) || 'pending'}
+                                                    </p>
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="font-bold text-[#0A0A0A]">
@@ -820,11 +818,10 @@ export default function MyAccountPage() {
                                                 <span className="text-xs text-[#888888] font-['JetBrains_Mono']">
                                                     #{caseItem.case_id || String(caseItem._id).slice(-8).toUpperCase()}
                                                 </span>
-                                                {caseItem.claim_id && (
-                                                    <span className="text-xs text-[#888888] font-['JetBrains_Mono']">
-                                                        • Claim ID: {caseItem.claim_id}
-                                                    </span>
-                                                )}
+                                                <span className="text-xs text-[#888888] font-['JetBrains_Mono']">
+                                                    • Claim ID:{' '}
+                                                    {claimIdSummary(caseItem) || 'pending'}
+                                                </span>
                                                 {/* ✅ Show claimed count */}
                                                 {properties.some(p => p.is_claimed === true) && (
                                                     <span className="text-xs text-[#E1261C] font-['JetBrains_Mono']">
@@ -1008,11 +1005,10 @@ export default function MyAccountPage() {
                                                                                     <p className="text-xs text-[#888888] font-['JetBrains_Mono']">
                                                                                         ID: {p.property_id}
                                                                                     </p>
-                                                                                    {p.claim_id && (
-                                                                                        <p className="text-xs text-[#E1261C] font-['JetBrains_Mono'] mt-1">
-                                                                                            Claim ID: {p.claim_id}
-                                                                                        </p>
-                                                                                    )}
+                                                                                    <p className="text-xs text-[#E1261C] font-['JetBrains_Mono'] mt-1">
+                                                                                        Claim ID:{' '}
+                                                                                        {propertyClaimId(p, caseItem) || 'pending'}
+                                                                                    </p>
                                                                                     {isClaimed && (
                                                                                         <p className="text-xs text-[#E1261C] mt-1">
                                                                                             ⚠️ This property already  claimed.
