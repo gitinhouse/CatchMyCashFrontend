@@ -1,7 +1,7 @@
 import UserDocs from '../models/userDocs.js';
-import UserDetails from '../models/userDetails';
-import UserCases from '../models/userCases';
-import { sendEmailTwilio } from './sendgrid';
+import UserDetails from '../models/userDetails.js';
+import UserCases from '../models/userCases.js';
+import { sendEmailTwilio } from './sendgrid.js';
 import { createNotification } from './createNotification.js';
 
 const LOG_PREFIX = '[agreement-ready]';
