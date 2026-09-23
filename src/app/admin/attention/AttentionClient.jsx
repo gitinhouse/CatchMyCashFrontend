@@ -12,7 +12,7 @@ import {
   CaseLink,
   EmptyState,
   ErrorState,
-  LoadingBlock,
+  ListSkeleton,
   Mono,
   Pagination,
   Panel,
@@ -169,7 +169,7 @@ export default function AttentionClient() {
 
       <Panel bodyClassName="p-0">
         {loading ? (
-          <LoadingBlock label="Building the queue…" />
+          <ListSkeleton rows={5} label="Building the queue…" />
         ) : error ? (
           <ErrorState message={error} onRetry={load} />
         ) : result.data.length === 0 ? (

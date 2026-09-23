@@ -564,60 +564,94 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     }
   }, [docusignComplete]);
 
+  // How long to keep looking before telling the claimant there is nothing to
+  // sign. The agreement is produced by the automation server moments after the
+  // claim is filed, so arriving at this step a little early is normal — and
+  // announcing "no agreement" to somebody whose agreement is seconds away is
+  // the failure this retry exists to prevent.
+  const AGREEMENT_POLL_INTERVAL_MS = 5000;
+  const AGREEMENT_POLL_ATTEMPTS = 12; // ~1 minute
+
   useEffect(() => {
+    if (!userData?._id) {
+      setIsAgreementAvailable(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    let timer = null;
+    let attempts = 0;
+
+    const hasUserDetails = () =>
+      !!(userAgreement?.legal_name && userAgreement?.email_id) ||
+      !!(userData?.first_name && userData?.last_name);
+
     const checkAgreementDocumentExists = async () => {
-      if (!userData?._id) {
-        setIsAgreementAvailable(false);
-        return;
-      }
+      if (cancelled) return;
+      attempts += 1;
 
       try {
-        // Use the GET endpoint to check if agreement exists
-        const response = await fetch(`/api/docusign/agreement?user_id=${userData._id}`);
-        // const response = await fetch(`/api/docusign/agreement?user_id=6a7d64c5942c7410458aea7b`);
+        // Naming the case matters when a claimant has more than one: without
+        // it the check can land on a different case's documents.
+        const params = new URLSearchParams({ user_id: userData._id });
+        if (userCase?._id) params.set('case_id', userCase._id);
+
+        const response = await fetch(`/api/docusign/agreement?${params}`);
         const data = await response.json();
+        if (cancelled) return;
 
-        if (response.ok) {
-          // Check if user has filled in their details
-          const hasUserDetails = !!(userAgreement?.legal_name && userAgreement?.email_id) ||
-            !!(userData?.first_name && userData?.last_name);
-
-          // Agreement is available ONLY if BOTH conditions are met:
-          // 1. User details exist (name, email)
-          // 2. Agreement document exists in database
-          const agreementAvailable = data.hasAgreement && hasUserDetails;
-
-          setIsAgreementAvailable(agreementAvailable);
-
-          console.log('Agreement check result:', {
-            hasAgreementDoc: data.hasAgreement,
-            agreementDocPath: data.agreement_doc,
-            hasUserDetails,
-            agreementAvailable
-          });
-
-          // Show error modal if agreement document is missing but user has details
-          if (!data.hasAgreement && hasUserDetails) {
-            setErrorModal({
-              show: true,
-              title: 'Agreement Document Not Found',
-              message: 'No agreement document has been uploaded for your account. Please contact support to get your agreement document uploaded so you can proceed with the signing process.',
-            });
-          }
-        } else {
+        if (!response.ok) {
           setIsAgreementAvailable(false);
           console.error('Failed to check agreement:', data.error);
+          return;
         }
+
+        const detailsPresent = hasUserDetails();
+        const agreementAvailable = !!data.hasAgreement && detailsPresent;
+        setIsAgreementAvailable(agreementAvailable);
+
+        console.log('Agreement check result:', {
+          attempt: attempts,
+          hasAgreementDoc: data.hasAgreement,
+          agreementDocPath: data.agreement_doc,
+          hasUserDetails: detailsPresent,
+          agreementAvailable,
+        });
+
+        if (data.hasAgreement || !detailsPresent) {
+          // Either there is something to sign, or the claimant has not got far
+          // enough for the question to mean anything yet.
+          return;
+        }
+
+        if (attempts < AGREEMENT_POLL_ATTEMPTS) {
+          timer = setTimeout(checkAgreementDocumentExists, AGREEMENT_POLL_INTERVAL_MS);
+          return;
+        }
+
+        setErrorModal({
+          show: true,
+          title: 'Agreement Document Not Found',
+          message:
+            'No agreement document has been uploaded for your account. Please contact support to get your agreement document uploaded so you can proceed with the signing process.',
+        });
       } catch (error) {
+        if (cancelled) return;
         console.error('Error checking agreement document:', error);
         setIsAgreementAvailable(false);
+        if (attempts < AGREEMENT_POLL_ATTEMPTS) {
+          timer = setTimeout(checkAgreementDocumentExists, AGREEMENT_POLL_INTERVAL_MS);
+        }
       }
     };
 
-    if (userData?._id) {
-      checkAgreementDocumentExists();
-    }
-  }, [userData?._id, userAgreement, userData]);
+    checkAgreementDocumentExists();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [userData?._id, userAgreement, userData, userCase?._id]);
 
   useEffect(() => {
     const requiredDocIds = ['id', 'ssn', 'address'];

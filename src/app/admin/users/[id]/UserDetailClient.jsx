@@ -30,7 +30,7 @@ import {
   EmptyState,
   ErrorState,
   Field,
-  LoadingBlock,
+  DetailSkeleton,
   Mono,
   Panel,
   ProgressBar,
@@ -81,7 +81,7 @@ export default function UserDetailClient({ userId }) {
     setTimeout(() => setToast(null), 5000);
   }, []);
 
-  if (loading) return <LoadingBlock label="Loading user…" />;
+  if (loading) return <DetailSkeleton label="Loading user…" />;
   if (error) {
     return (
       <>

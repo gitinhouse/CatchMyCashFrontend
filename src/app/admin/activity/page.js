@@ -2,11 +2,11 @@
 
 import React, { Suspense } from 'react';
 import ActivityClient from './ActivityClient';
-import { LoadingBlock } from '../_components/ui';
+import { ListSkeleton } from '../_components/ui';
 
 export default function Page() {
   return (
-    <Suspense fallback={<LoadingBlock label="Loading audit log…" />}>
+    <Suspense fallback={<ListSkeleton rows={7} label="Loading audit log…" />}>
       <ActivityClient />
     </Suspense>
   );

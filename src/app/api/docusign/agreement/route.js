@@ -21,6 +21,8 @@ import UserDocs from '../../../models/userDocs';
 import UserDetails from '../../../models/userDetails';
 import UserCases from '../../../models/userCases';
 import { NOTARY_CLAIM_THRESHOLD, requiresNotary } from '../../../lib/notary';
+import { resolveAccountUserIds, userIdFilter } from '../../../lib/accountIdentity';
+import { notifyAgreementReadyOnce } from '../../../lib/agreementReady';
 import {
   createAuthenticatedDocuSignClient,
   docuSignErrorResponse,
@@ -574,11 +576,54 @@ function buildAgreementTextTabs(userDetails, pageNumber, layout) {
     });
 }
 
+/**
+ * The document record that actually carries this claimant's agreement.
+ *
+ * Three things went wrong with a plain `findOne({ user_id })`, all of which
+ * made the signing step announce that no agreement had been uploaded while one
+ * sat in the database:
+ *
+ *  - no sort, so Mongo returned whichever record it met first — usually the
+ *    oldest. A claimant with more than one case got a record from an earlier
+ *    case that has no agreement on it.
+ *  - no case, so even the newest record is the wrong one when the claimant is
+ *    resuming a specific case from their dashboard.
+ *  - one id, when a claimant owns several: `UserInformation` is created afresh
+ *    by each anonymous search, so the agreement can be filed against an id the
+ *    current session no longer carries.
+ *
+ * So: the named case first, then the newest record that actually has an
+ * agreement, then the newest record at all — across every id of the account.
+ */
+async function findAgreementRecord({ user_id, case_id }) {
+  const { ids } = await resolveAccountUserIds(user_id);
+  const owner = userIdFilter(ids) || { user_id };
+
+  if (case_id && mongoose.Types.ObjectId.isValid(case_id)) {
+    const byCase = await UserDocs.findOne({
+      case_id: new mongoose.Types.ObjectId(case_id),
+    }).sort({ createdAt: -1 });
+    if (byCase) return byCase;
+  }
+
+  // A record with an agreement beats a newer one without: the claimant asked
+  // whether they can sign, and somewhere they can.
+  const withAgreement = await UserDocs.findOne({
+    ...owner,
+    agreement_doc: { $nin: [null, ''] },
+  }).sort({ createdAt: -1 });
+
+  if (withAgreement) return withAgreement;
+
+  return UserDocs.findOne(owner).sort({ createdAt: -1 });
+}
+
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
     const user_id = searchParams.get('user_id');
-    
+    const case_id = searchParams.get('case_id');
+
     if (!user_id) {
       return NextResponse.json(
         { error: 'user_id is required' },
@@ -587,14 +632,36 @@ export async function GET(req) {
     }
     
     await connectToDatabase();
-    
-    // Check if user has an agreement document
-    const userDocs = await UserDocs.findOne({ user_id });
-    const hasAgreement = !!(userDocs?.agreement_doc);
-    
+
+    const userDocs = await findAgreementRecord({ user_id, case_id });
+    const hasAgreement = !!userDocs?.agreement_doc;
+
+    console.log('[docusign/agreement] availability check', {
+      user_id,
+      case_id: case_id || null,
+      matched_docs_id: userDocs?._id ? String(userDocs._id) : null,
+      matched_case_id: userDocs?.case_id ? String(userDocs.case_id) : null,
+      has_agreement: hasAgreement,
+    });
+
+    // Noticing the document is the only moment this app learns it exists, so
+    // it is also where the claimant gets told. Sending is guarded against
+    // repeats inside, because this endpoint is polled.
+    let notified = null;
+    if (hasAgreement) {
+      try {
+        notified = await notifyAgreementReadyOnce(userDocs);
+      } catch (error) {
+        // Telling the claimant is secondary to answering whether they can sign.
+        console.error('[docusign/agreement] ready notice failed', error.message);
+      }
+    }
+
     return NextResponse.json({
       hasAgreement,
       agreement_doc: userDocs?.agreement_doc || null,
+      case_id: userDocs?.case_id ? String(userDocs.case_id) : null,
+      notified: notified?.sent === true,
       user_id
     });
     

@@ -45,7 +45,7 @@ import {
   EmptyState,
   ErrorState,
   Field,
-  LoadingBlock,
+  DetailSkeleton,
   Mono,
   Panel,
   ProgressBar,
@@ -108,7 +108,7 @@ export default function CaseDetailClient({ caseId }) {
     setTimeout(() => setToast(null), 4500);
   }, []);
 
-  if (loading) return <LoadingBlock label="Loading case…" />;
+  if (loading) return <DetailSkeleton label="Loading case…" />;
   if (error) {
     return (
       <>

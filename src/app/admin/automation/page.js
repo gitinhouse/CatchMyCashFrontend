@@ -2,11 +2,11 @@
 
 import React, { Suspense } from 'react';
 import AutomationClient from './AutomationClient';
-import { LoadingBlock } from '../_components/ui';
+import { ListSkeleton } from '../_components/ui';
 
 export default function Page() {
   return (
-    <Suspense fallback={<LoadingBlock label="Loading automation monitor…" />}>
+    <Suspense fallback={<ListSkeleton rows={5} label="Loading automation monitor…" />}>
       <AutomationClient />
     </Suspense>
   );

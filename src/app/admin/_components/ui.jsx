@@ -188,6 +188,172 @@ export function TextArea({ label, className = '', ...props }) {
 /* States                                                              */
 /* ------------------------------------------------------------------ */
 
+/**
+ * One shimmering placeholder block.
+ *
+ * `width` and `height` are passed as inline styles rather than classes because
+ * skeletons are sized to whatever they stand in for, and Tailwind cannot emit
+ * a class it never sees written down.
+ */
+export function Skeleton({ width = '100%', height = 12, rounded = 6, className = '' }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`cmc-skeleton block ${className}`}
+      style={{
+        width: typeof width === 'number' ? `${width}px` : width,
+        height: typeof height === 'number' ? `${height}px` : height,
+        borderRadius: typeof rounded === 'number' ? `${rounded}px` : rounded,
+      }}
+    />
+  );
+}
+
+/**
+ * A stand-in for a block of prose: the last line is short, the way real text
+ * ends part-way across.
+ */
+export function SkeletonText({ lines = 2, className = '' }) {
+  return (
+    <div className={`space-y-2 ${className}`}>
+      {Array.from({ length: lines }).map((_, i) => (
+        <Skeleton key={i} width={i === lines - 1 ? '60%' : '100%'} height={10} />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Wraps any skeleton so the wait is announced to screen readers, which see
+ * nothing of the shimmer itself.
+ */
+export function LoadingRegion({ label = 'Loading…', children }) {
+  return (
+    <div role="status" aria-busy="true" aria-live="polite">
+      <span className="sr-only">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+/** Rows of a table that has not arrived yet, in the shape it will arrive in. */
+export function TableSkeleton({ columns = 5, rows = 6, label = 'Loading…' }) {
+  // A little variety across the columns, so the placeholder reads as a table
+  // of differing values rather than a block of identical bars.
+  const widths = ['70%', '85%', '55%', '75%', '45%', '65%', '80%'];
+
+  return (
+    <LoadingRegion label={label}>
+      <div className="px-5">
+        <div className="flex items-center gap-4 py-3 border-b border-[#E8E6E3]">
+          {Array.from({ length: columns }).map((_, c) => (
+            <div key={c} className="flex-1 min-w-0">
+              <Skeleton width="50%" height={8} />
+            </div>
+          ))}
+        </div>
+        {Array.from({ length: rows }).map((_, r) => (
+          <div
+            key={r}
+            className="flex items-center gap-4 py-4 border-b border-[#F0EEEB] last:border-0"
+          >
+            {Array.from({ length: columns }).map((_, c) => (
+              <div key={c} className="flex-1 min-w-0 space-y-1.5">
+                <Skeleton width={widths[(r + c) % widths.length]} height={11} />
+                {c === 0 && <Skeleton width="40%" height={8} />}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </LoadingRegion>
+  );
+}
+
+/** A queue or card list waiting on its rows. */
+export function ListSkeleton({ rows = 5, label = 'Loading…' }) {
+  return (
+    <LoadingRegion label={label}>
+      <div className="divide-y divide-[#F0EEEB]">
+        {Array.from({ length: rows }).map((_, r) => (
+          <div key={r} className="px-5 py-4 flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="flex items-center gap-2">
+                <Skeleton width={110} height={12} />
+                <Skeleton width={70} height={18} rounded={999} />
+              </div>
+              <Skeleton width="45%" height={9} />
+              <div className="flex gap-1.5 pt-0.5">
+                <Skeleton width={84} height={16} rounded={999} />
+                <Skeleton width={64} height={16} rounded={999} />
+              </div>
+            </div>
+            <div className="shrink-0 space-y-2 text-right">
+              <Skeleton width={80} height={12} />
+              <Skeleton width={56} height={9} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </LoadingRegion>
+  );
+}
+
+/** The row of headline figures on the dashboard. */
+export function StatsSkeleton({ count = 4, label = 'Loading…' }) {
+  return (
+    <LoadingRegion label={label}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {Array.from({ length: count }).map((_, i) => (
+          <div
+            key={i}
+            className="rounded-xl border border-[#E8E6E3] bg-white p-5 space-y-3"
+          >
+            <div className="flex items-center justify-between">
+              <Skeleton width={90} height={9} />
+              <Skeleton width={28} height={28} rounded={8} />
+            </div>
+            <Skeleton width="55%" height={26} />
+            <Skeleton width="40%" height={9} />
+          </div>
+        ))}
+      </div>
+    </LoadingRegion>
+  );
+}
+
+/** A record page — heading, a grid of fields, then a body. */
+export function DetailSkeleton({ label = 'Loading…' }) {
+  return (
+    <LoadingRegion label={label}>
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Skeleton width={220} height={22} />
+          <Skeleton width={320} height={10} />
+        </div>
+        <div className="rounded-xl border border-[#E8E6E3] bg-white p-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton width={70} height={8} />
+                <Skeleton width="80%" height={12} />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-xl border border-[#E8E6E3] bg-white p-5 space-y-3">
+          <Skeleton width={160} height={14} />
+          <SkeletonText lines={4} />
+        </div>
+      </div>
+    </LoadingRegion>
+  );
+}
+
+/**
+ * The plain spinner, kept for the few places a skeleton cannot describe what
+ * is coming — an action in flight rather than a shape being filled.
+ */
 export function LoadingBlock({ label = 'Loading…', className = '' }) {
   return (
     <div
