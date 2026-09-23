@@ -17,7 +17,7 @@ import {
   CaseLink,
   EmptyState,
   ErrorState,
-  LoadingBlock,
+  ListSkeleton,
   Mono,
   Pagination,
   Panel,
@@ -159,7 +159,7 @@ export default function DocumentsClient() {
 
       <Panel bodyClassName="p-0">
         {loading ? (
-          <LoadingBlock label="Loading documents…" />
+          <ListSkeleton rows={6} label="Loading documents…" />
         ) : error ? (
           <ErrorState message={error} onRetry={load} />
         ) : result.data.length === 0 ? (

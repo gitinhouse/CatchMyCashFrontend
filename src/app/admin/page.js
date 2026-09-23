@@ -31,7 +31,8 @@ import {
   CaseLink,
   EmptyState,
   ErrorState,
-  LoadingBlock,
+  ListSkeleton,
+  StatsSkeleton,
   Panel,
   ProgressBar,
   Select,
@@ -120,8 +121,20 @@ export default function AdminDashboardPage() {
   if (loading) {
     return (
       <>
-        <PageHeader title="Dashboard" description="Loading claim analytics…" />
-        <LoadingBlock label="Crunching claim data…" />
+        {/* No "loading…" subtitle: the skeleton below already says the page
+            is filling, and a line of text saying so twice is the thing the
+            shimmer replaces. */}
+        <PageHeader title="Dashboard" />
+        <div className="space-y-6">
+          <StatsSkeleton count={4} label="Loading claim analytics…" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {[0, 1].map((i) => (
+              <Panel key={i} bodyClassName="p-0">
+                <ListSkeleton rows={4} label="Loading claim analytics…" />
+              </Panel>
+            ))}
+          </div>
+        </div>
       </>
     );
   }

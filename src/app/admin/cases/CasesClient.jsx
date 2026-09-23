@@ -12,7 +12,7 @@ import {
   CaseLink,
   EmptyState,
   ErrorState,
-  LoadingBlock,
+  TableSkeleton,
   Mono,
   Pagination,
   Panel,
@@ -375,7 +375,7 @@ export default function CasesClient() {
 
       <Panel bodyClassName="p-0">
         {loading ? (
-          <LoadingBlock label="Loading claims…" />
+          <TableSkeleton columns={8} rows={8} label="Loading claims…" />
         ) : error ? (
           <ErrorState message={error} onRetry={load} />
         ) : result.data.length === 0 ? (

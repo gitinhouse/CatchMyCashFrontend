@@ -11,7 +11,7 @@ import {
   CaseLink,
   EmptyState,
   ErrorState,
-  LoadingBlock,
+  ListSkeleton,
   Mono,
   Pagination,
   Panel,
@@ -181,7 +181,7 @@ export default function AutomationClient() {
 
       <Panel bodyClassName="p-0">
         {loading ? (
-          <LoadingBlock label="Loading automation state…" />
+          <ListSkeleton rows={5} label="Loading automation state…" />
         ) : error ? (
           <ErrorState message={error} onRetry={load} />
         ) : result.data.length === 0 ? (

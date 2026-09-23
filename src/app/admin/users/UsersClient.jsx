@@ -11,7 +11,7 @@ import {
   Button,
   EmptyState,
   ErrorState,
-  LoadingBlock,
+  TableSkeleton,
   Pagination,
   Panel,
   Select,
@@ -213,7 +213,7 @@ export default function UsersClient() {
 
       <Panel bodyClassName="p-0">
         {loading ? (
-          <LoadingBlock label="Loading users…" />
+          <TableSkeleton columns={8} rows={8} label="Loading users…" />
         ) : error ? (
           <ErrorState message={error} onRetry={load} />
         ) : result.data.length === 0 ? (

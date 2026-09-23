@@ -21,6 +21,7 @@ import { adminFetch, getAdminSession, isAdminSession } from '../_lib/api';
 import { clearClientSession } from '../../lib/session';
 import { useSearchStore } from '../../store/searchStore';
 import { initials } from '../_lib/format';
+import { Skeleton, StatsSkeleton } from './ui';
 
 const NAV = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -115,11 +116,7 @@ export default function AdminShell({ children }) {
   }, [pathname]);
 
   if (authState === 'checking') {
-    return (
-      <div className="min-h-screen bg-[#F7F5F2] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-[#E1261C] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <ShellSkeleton />;
   }
 
   if (authState === 'denied') {
@@ -260,6 +257,66 @@ export function PageHeader({ title, description, actions, breadcrumb }) {
           )}
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The console itself, before we know who is looking at it.
+ *
+ * Drawn in the shape of the real shell — sidebar, header, content — so the
+ * layout does not jump once the session check comes back, and so the wait
+ * looks like the page arriving rather than the page being broken.
+ */
+function ShellSkeleton() {
+  return (
+    <div
+      className="min-h-screen bg-[#F7F5F2]"
+      style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+    >
+      <span className="sr-only">Loading the admin console…</span>
+
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-60 bg-white border-r border-[#E8E6E3] flex-col z-40">
+        <div className="px-5 py-5 border-b border-[#E8E6E3] flex items-center gap-2.5">
+          <Skeleton width={32} height={32} rounded={8} />
+          <div className="flex-1 space-y-1.5">
+            <Skeleton width="70%" height={11} />
+            <Skeleton width="45%" height={8} />
+          </div>
+        </div>
+        <div className="flex-1 px-3 py-4 space-y-2">
+          {Array.from({ length: NAV.length }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 px-3 py-2">
+              <Skeleton width={16} height={16} rounded={4} />
+              <Skeleton width={`${55 + ((i * 7) % 30)}%`} height={10} />
+            </div>
+          ))}
+        </div>
+        <div className="px-3 py-4 border-t border-[#E8E6E3] flex items-center gap-3">
+          <Skeleton width={32} height={32} rounded={999} />
+          <div className="flex-1 space-y-1.5">
+            <Skeleton width="80%" height={10} />
+            <Skeleton width="50%" height={8} />
+          </div>
+        </div>
+      </aside>
+
+      <div className="lg:pl-60">
+        <header className="bg-white border-b border-[#E8E6E3] px-5 py-4 flex items-center justify-between">
+          <Skeleton width={180} height={16} />
+          <Skeleton width={96} height={32} rounded={8} />
+        </header>
+        <main className="p-5 sm:p-6 space-y-6">
+          <div className="space-y-2">
+            <Skeleton width={220} height={22} />
+            <Skeleton width={320} height={10} />
+          </div>
+          <StatsSkeleton count={4} label="Loading the admin console…" />
+        </main>
       </div>
     </div>
   );

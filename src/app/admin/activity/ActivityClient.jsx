@@ -11,7 +11,7 @@ import {
   Button,
   EmptyState,
   ErrorState,
-  LoadingBlock,
+  ListSkeleton,
   Mono,
   Pagination,
   Panel,
@@ -167,7 +167,7 @@ export default function ActivityClient() {
 
       <Panel bodyClassName="p-0">
         {loading ? (
-          <LoadingBlock label="Loading audit log…" />
+          <ListSkeleton rows={7} label="Loading audit log…" />
         ) : error ? (
           <ErrorState message={error} onRetry={load} />
         ) : result.data.length === 0 ? (

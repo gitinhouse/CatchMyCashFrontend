@@ -20,6 +20,11 @@ const UserDocsSchema = new mongoose.Schema({
   claim_doc: { type: String, required: false },
   agreement_doc: { type: String, required: false },
   filled_agreement_doc: { type: String, required: false },
+  // When the claimant was told their agreement is ready. The agreement itself
+  // is written by the automation server, so this app notices it afterwards;
+  // stamping the moment the notice goes out is what stops every later check
+  // from sending the same email again.
+  agreement_ready_notified_at: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
 });
 
