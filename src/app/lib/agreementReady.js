@@ -1,4 +1,4 @@
-import UserDocs from '../models/userDocs';
+import UserDocs from '../models/userDocs.js';
 import UserDetails from '../models/userDetails';
 import UserCases from '../models/userCases';
 import { sendEmailTwilio } from './sendgrid';
