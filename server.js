@@ -2,6 +2,7 @@
 import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
 import startCronJobs from './src/app/lib/cron.js';
+import startAgreementReadyCron from './src/app/lib/agreementReadyCron.js';
 //import startRenewWatchCron from './src/app/lib/renewWatch.js';
 //import sqsCronJob from './src/app/lib/sqsCronJob.js';
 
@@ -95,6 +96,10 @@ app.prepare().then(() => {
   //startCronJobs();
   // startRenewWatchCron();
   //sqsCronJob();
+
+  // Agreements are written into the database by the automation server, so this
+  // is what notices them and emails the claimant.
+  startAgreementReadyCron();
   // Graceful shutdown
   const shutdown = () => {
     console.log('\n🛑 Shutting down gracefully...');

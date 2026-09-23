@@ -6,9 +6,10 @@ import mongoose from 'mongoose';
 import { sendEmail } from '../../lib/mailer';
 import { sendEmailTwilio } from '../../lib/sendgrid';
 import {
-  sendPasswordSetupLink,
-  unusablePasswordHash,
+  generatePassword,
+  sendCredentialsEmail,
 } from '../../lib/passwordSetup';
+import bcrypt from 'bcryptjs';
 import { createNotification } from '../../lib/createNotification.js';
 import EmailVerification from '../../models/emailVerification';
 import {
@@ -139,11 +140,11 @@ export async function POST(req) {
 
     // ================= CREATE NEW USER =================
     // This email has never been registered, so the claimant gets a fresh
-    // account and the normal welcome mail.
-    // No password is generated for the claimant: the account is created with
-    // an unusable placeholder hash and they choose their own password through
-    // the emailed set-password link.
-    const hashedPassword = await unusablePasswordHash();
+    // account. The account is created on their behalf while they file a claim,
+    // so they never chose a password — one is generated here and sent to them
+    // with the address it belongs to. Only the hash is stored.
+    const generatedPassword = generatePassword();
+    const hashedPassword = await bcrypt.hash(generatedPassword, 10);
 
     // UserLogin.user_id is unique, so a search session that already produced a
     // login under a different address is moved to the new one instead of
@@ -178,14 +179,12 @@ export async function POST(req) {
       { expiresIn: process.env.JWT_EXPIRES_IN || "1d" }
     );
 
-    // The claimant sets their own password via this link; no password is
-    // generated or emailed.
-    await sendPasswordSetupLink(newUser, { isNewAccount: true });
+    await sendCredentialsEmail(newUser, generatedPassword);
 
     await createNotification(
       newUser.user_id,
-      "Set your password",
-      "We emailed you a link to choose your password and sign in."
+      "Login details sent",
+      "We emailed your login email and password so you can sign in and track your claim."
     );
 
     return NextResponse.json(

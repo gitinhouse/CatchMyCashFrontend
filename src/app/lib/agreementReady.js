@@ -57,11 +57,15 @@ export async function notifyAgreementReadyOnce(userDocs) {
       ? await UserCases.findById(claimed.case_id).select('case_id').lean()
       : null;
 
+    // Straight to the signing step for this case, so a claimant who is already
+    // signed in lands on their agreement rather than the home page.
+    const signUrl = `${appBaseUrl()}/?step=documents&case_id=${String(claimed.case_id || '')}`;
+
     const result = await sendEmailTwilio({
       to: details.email_id,
       subject: 'Your Agreement is Ready to Sign',
-      text: agreementReadyText(details.legal_name, kase?.case_id),
-      html: agreementReadyHtml(details.legal_name, kase?.case_id),
+      text: agreementReadyText(details.legal_name, kase?.case_id, signUrl),
+      html: agreementReadyHtml(details.legal_name, kase?.case_id, signUrl),
     });
 
     console.log(`${LOG_PREFIX} agreement ready email`, {
@@ -99,6 +103,63 @@ export async function notifyAgreementReadyOnce(userDocs) {
   }
 }
 
+/**
+ * Announce every agreement that has been saved but never announced.
+ *
+ * Noticing the document when a claimant opens the signing step only reaches
+ * the claimants who happen to be looking, and most agreements land while
+ * nobody is on that page — which is why the notice went missing. This is the
+ * half that does not depend on anyone watching.
+ *
+ * Idempotent by construction: the query excludes anything already stamped, and
+ * each notice stamps its own record.
+ *
+ * @param {object} [options]
+ * @param {number} [options.limit] Most records to handle in one pass.
+ * @returns {Promise<{examined: number, sent: number, skipped: number, failed: number, remaining: number, details: object[]}>}
+ */
+export async function sweepAgreementReadyNotices({ limit = 50 } = {}) {
+  // Matches records written before the field existed, where it is absent
+  // rather than null.
+  const query = {
+    agreement_doc: { $nin: [null, ''] },
+    agreement_ready_notified_at: null,
+  };
+
+  const pending = await UserDocs.find(query).sort({ createdAt: 1 }).limit(limit);
+  const outstanding = await UserDocs.countDocuments(query);
+  const remaining = Math.max(outstanding - pending.length, 0);
+
+  const summary = { examined: pending.length, sent: 0, skipped: 0, failed: 0, remaining, details: [] };
+
+  for (const docs of pending) {
+    const outcome = await notifyAgreementReadyOnce(docs);
+
+    if (outcome.sent) summary.sent += 1;
+    else if (outcome.reason === 'already_notified') summary.skipped += 1;
+    else summary.failed += 1;
+
+    summary.details.push({
+      user_docs_id: String(docs._id),
+      case_id: docs.case_id ? String(docs.case_id) : null,
+      sent: outcome.sent === true,
+      reason: outcome.reason || null,
+    });
+  }
+
+  if (summary.examined > 0 || summary.remaining > 0) {
+    console.log(`${LOG_PREFIX} sweep`, {
+      examined: summary.examined,
+      sent: summary.sent,
+      skipped: summary.skipped,
+      failed: summary.failed,
+      remaining: summary.remaining,
+    });
+  }
+
+  return summary;
+}
+
 async function releaseStamp(id) {
   try {
     await UserDocs.updateOne(
@@ -129,59 +190,57 @@ async function resolveClaimant(userDocs) {
     .lean();
 }
 
-function agreementReadyText(legalName, caseId) {
+/** Where this deployment lives, for links that have to work in email. */
+function appBaseUrl() {
+  const configured =
+    process.env.APP_BASE_URL ||
+    process.env.BASE_URL ||
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    'https://catchmycash.com';
+  return configured.replace(/\/$/, '');
+}
+
+function agreementReadyText(legalName, caseId, signUrl) {
   return (
     `Hi ${legalName || 'there'},\n\n` +
     `Your investigator agreement is ready to sign.\n\n` +
     (caseId ? `Case ID: ${caseId}\n\n` : '') +
-    `Sign in at https://catchmycash.com to review and sign it — your claim ` +
-    `cannot be submitted to the State Controller's Office until it is signed.\n\n` +
-    `Best Regards,\nCatch My Cash Team`
+    `Review and sign it here: ${signUrl}\n\n` +
+    `Your claim cannot be submitted to the State Controller's Office until ` +
+    `the agreement is signed.\n\n` +
+    `The CatchMyCash Team`
   );
 }
 
 /**
- * The same branded layout the claimant already receives for case messages, so
- * this notice does not arrive looking like it came from somewhere else.
+ * Written in the same plain, red-accented style as the claim confirmation and
+ * password emails, so everything a claimant receives from us looks like it
+ * came from the same place.
  */
-function agreementReadyHtml(legalName, caseId) {
+function agreementReadyHtml(legalName, caseId, signUrl) {
   return `
-      <div style="font-family: Arial, sans-serif; background-color: #f8f9fa; padding: 30px;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden;">
-          <div style="background-color: #4f46e5; color: #ffffff; text-align: center; padding: 20px 10px;">
-            <h1 style="margin: 0; font-size: 24px;">Your Agreement is Ready</h1>
-          </div>
-          <div style="padding: 30px;">
-            <p style="font-size: 16px; color: #333;">Hi ${legalName || 'there'},</p>
-            <p style="font-size: 16px; color: #333;">
-              Your investigator agreement is ready to sign. Sign in to review and
-              sign it — your claim cannot be submitted to the State Controller's
-              Office until it is signed.
-            </p>
-            ${
-              caseId
-                ? `<table style="width:100%; border-collapse:collapse; margin-top:16px;">
-              <tr>
-                <td style="padding:10px; border:1px solid #eaeaea; background:#f9fafb;"><strong>Case ID:</strong></td>
-                <td style="padding:10px; border:1px solid #eaeaea; font-family:monospace;">${caseId}</td>
-              </tr>
-            </table>`
-                : ''
-            }
-            <p style="margin-top:24px;">
-              <a href="https://catchmycash.com/userLogin"
-                 style="background-color:#4f46e5; color:#ffffff; padding:12px 24px; border-radius:6px; text-decoration:none; font-weight:bold; display:inline-block;">
-                Review and Sign
-              </a>
-            </p>
-            <p style="margin-top: 30px; font-size: 14px; color: #555;">
-              Best Regards,<br><strong>Catch My Cash Team</strong>
-            </p>
-          </div>
-          <div style="background-color: #f1f3f5; text-align: center; padding: 12px; font-size: 12px; color: #888;">
-            © ${new Date().getFullYear()} Catch My Cash. All rights reserved.
-          </div>
-        </div>
-      </div>
-    `;
+    <p>Hi ${legalName || 'there'},</p>
+    <p>Your investigator agreement is ready to sign.</p>
+    ${
+      caseId
+        ? `<table style="width:100%; border-collapse:collapse; margin-top:16px;">
+      <tr>
+        <td style="padding:10px; border:1px solid #eaeaea; background:#f9fafb;"><strong>Case ID:</strong></td>
+        <td style="padding:10px; border:1px solid #eaeaea; font-family:monospace;">${caseId}</td>
+      </tr>
+    </table>`
+        : ''
+    }
+    <p style="margin-top:20px;">
+      <a href="${signUrl}"
+         style="color:#E1261C; text-decoration:none; font-weight:bold;">
+        Review and Sign Your Agreement
+      </a>
+    </p>
+    <p style="margin-top:10px; color:#4A4A4A; font-size:13px;">
+      Your claim cannot be submitted to the State Controller&rsquo;s Office
+      until the agreement is signed.
+    </p>
+    <p style="margin-top:20px; color:#4A4A4A;">The CatchMyCash Team</p>
+  `;
 }

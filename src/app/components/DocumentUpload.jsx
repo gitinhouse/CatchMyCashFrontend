@@ -1146,6 +1146,21 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
 
   const isLoading =
     isDocuSignLoading || isAgreementDocuSignLoading || isSubmitted;
+
+  // Hold the page still behind the overlay. Without this the document can be
+  // scrolled while the redirect is in flight, which moved the spinner out of
+  // view — it was positioned against the page, not the window.
+  useEffect(() => {
+    if (!isLoading) return undefined;
+
+    const { body } = document;
+    const previous = body.style.overflow;
+    body.style.overflow = 'hidden';
+
+    return () => {
+      body.style.overflow = previous;
+    };
+  }, [isLoading]);
   let loadingText = '';
   if (isDocuSignLoading) {
     loadingText = 'Redirecting you to DocuSign...';
@@ -1162,7 +1177,10 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center z-50"
+          role="status"
+          aria-live="polite"
+          data-testid="docusign-loader"
+          className="fixed inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center z-[100] px-6 text-center"
         >
           <motion.div
             animate={{ rotate: 360 }}
@@ -1172,7 +1190,9 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
           <p className="mt-4 text-lg font-semibold text-[#0A0A0A]">
             {loadingText}
           </p>
-          <p className="text-[#4A4A4A]">Please wait, this may take a moment.</p>
+          <p className="text-[#4A4A4A] mt-1">
+            Please wait, this may take a moment.
+          </p>
         </motion.div>
       )}
 
