@@ -1,4 +1,4 @@
-import connectToDatabase from "../lib/mongodb";
+import connectToDatabase from "../lib/mongodb.js";
 import UserNotifications from "../models/notifications.js";
 
 export async function createNotification(userId, title, message) {
