@@ -188,6 +188,9 @@ export default function EmailVerificationModal({ open, onClose, onVerified }) {
                   <p className="text-sm font-semibold text-[#B11912]">
                     This email is already registered. Please log in to continue.
                   </p>
+                  <p className="text-xs text-[#4A4A4A] mt-1">
+                    We&rsquo;ve emailed this address a reminder of how to sign in.
+                  </p>
                   <div className="flex flex-wrap items-center gap-4 mt-3">
                     <button
                       onClick={() => router.push('/userLogin')}

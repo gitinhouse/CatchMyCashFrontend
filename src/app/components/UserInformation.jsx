@@ -695,6 +695,26 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
           userLoginRes = { data: JSON.parse(existingSession) };
         } else {
           userLoginRes = await axios.post('/api/register', payloadData);
+
+          // The address already has an account and this visit has not proved
+          // it belongs to whoever is filing. The claim has to be filed from
+          // that account, so it stops here — carrying on would file it against
+          // a session the address does not belong to, and the claim would be
+          // refused a step later with nothing useful to say.
+          if (
+            userLoginRes.data?.account_exists &&
+            !userLoginRes.data?.user?.user_id
+          ) {
+            setErrorModal({
+              show: true,
+              title: 'Account Already Exists',
+              message:
+                'An account already exists for this email address. We have emailed it a reminder of how to sign in. Please log in and file your claim from there, or use a different email address.',
+            });
+            setLoading(false);
+            return;
+          }
+
           setUserLogin(userLoginRes.data);
           localStorage.setItem('userLogin', JSON.stringify(userLoginRes.data));
           window.dispatchEvent(new Event('authChange'));

@@ -193,6 +193,17 @@ function deriveCaseStatus(caseItem) {
     };
 }
 
+/**
+ * What the action button on a claim should say.
+ *
+ * The button carries on from wherever the claim stopped, and for a claim with
+ * nothing left to claim that is a fresh search — so "Continue Filing" was
+ * telling claimants to resume something that had already ended.
+ */
+function continueLabel(status) {
+    return status?.resumeStep === 'search' ? 'Search Properties' : 'Continue Filing';
+}
+
 const toneStyles = {
     approved: 'bg-[#E1261C] text-white', // Changed from green to red
     review: 'bg-[#4A4A4A] text-white',
@@ -885,7 +896,7 @@ export default function MyAccountPage() {
                                                         onClick={() => handleContinueFiling(caseItem)}
                                                         className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm"
                                                     >
-                                                        Continue Filing
+                                                        {continueLabel(status)}
                                                         <ArrowRight className="h-4 w-4" />
                                                     </button>
                                                 )}
@@ -1060,8 +1071,13 @@ export default function MyAccountPage() {
                                                     <div className="space-y-6 text-sm">
                                                         {(() => {
                                                             const retryStatus = retryStatuses[caseItem.case_id];
-                                                            const allClaimed = caseItem.user_properties?.every(p => p.is_claimed === true);
-                                                            const someClaimed = caseItem.user_properties?.some(p => p.is_claimed === true);
+                                                            // every() answers true for an empty list, so a case whose
+                                                            // properties had gone missing announced that all of them were
+                                                            // already claimed — under a $0 total and an empty asset list.
+                                                            const allClaimed =
+                                                                properties.length > 0 &&
+                                                                properties.every(p => p.is_claimed === true);
+                                                            const someClaimed = properties.some(p => p.is_claimed === true);
 
                                                             // 🔥 RULE 1: Retry active hai toh SIRF processing message dikhao
                                                             if (retryStatus?.claim_retryable) {
@@ -1127,14 +1143,54 @@ export default function MyAccountPage() {
                                                                             <div className="w-8 h-8 bg-[#E1261C] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                                                                                 <AlertCircle className="h-4 w-4 text-white" />
                                                                             </div>
-                                                                            <div>
+                                                                            <div className="flex-1 min-w-0">
                                                                                 <p className="font-bold text-[#0A0A0A]">⚠️ All Properties Already Claimed</p>
                                                                                 <p className="text-[#4A4A4A] mt-1">
-                                                                                    All properties have already been claimed by another user.
+                                                                                    All {properties.length} propert{properties.length === 1 ? 'y' : 'ies'} on this
+                                                                                    claim have already been claimed by another user.
                                                                                 </p>
+
+                                                                                {/* What the claim was worth and what it covered. Losing
+                                                                                    the properties is not a reason to stop showing them:
+                                                                                    the claimant still needs to recognise which claim
+                                                                                    this was. */}
+                                                                                <div className="mt-4 bg-white border border-[#E8E6E3] rounded-lg p-4">
+                                                                                    <div className="flex items-center justify-between gap-3 pb-3 border-b border-[#F0EEEB]">
+                                                                                        <span className="text-xs uppercase text-[#888888] font-['JetBrains_Mono']">
+                                                                                            Claim Value
+                                                                                        </span>
+                                                                                        <span className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
+                                                                                            ${formatMoney(caseTotal)}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                    <ul className="mt-3 space-y-3">
+                                                                                        {properties.map((p, idx) => (
+                                                                                            <li
+                                                                                                key={p._id || p.property_id || idx}
+                                                                                                className="flex items-start justify-between gap-3"
+                                                                                            >
+                                                                                                <div className="min-w-0">
+                                                                                                    <p className="text-sm font-semibold text-[#0A0A0A]">
+                                                                                                        {p.property_title || p.property_type}
+                                                                                                    </p>
+                                                                                                    <p className="text-xs text-[#888888] font-['JetBrains_Mono']">
+                                                                                                        ID: {p.property_id}
+                                                                                                    </p>
+                                                                                                    <p className="text-xs text-[#E1261C] font-['JetBrains_Mono']">
+                                                                                                        Claim ID: {propertyClaimId(p, caseItem) || 'pending'}
+                                                                                                    </p>
+                                                                                                </div>
+                                                                                                <p className="text-sm font-bold text-[#0A0A0A] shrink-0">
+                                                                                                    ${formatMoney(parseAmount(p.amount))}
+                                                                                                </p>
+                                                                                            </li>
+                                                                                        ))}
+                                                                                    </ul>
+                                                                                </div>
+
                                                                                 <button
                                                                                     onClick={() => router.push('/?step=search')}
-                                                                                    className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all"
+                                                                                    className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all"
                                                                                 >
                                                                                     Search New Properties
                                                                                     <ArrowRight className="h-4 w-4" />
@@ -1175,7 +1231,7 @@ export default function MyAccountPage() {
                                                                             onClick={() => handleContinueFiling(caseItem)}
                                                                             className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all"
                                                                         >
-                                                                            Continue Filing
+                                                                            {continueLabel(status)}
                                                                             <ArrowRight className="h-4 w-4" />
                                                                         </button>
                                                                     </div>
