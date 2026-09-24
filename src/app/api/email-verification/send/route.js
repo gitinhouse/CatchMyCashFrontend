@@ -13,6 +13,7 @@ import {
   normalizeEmail,
   otpEmailContent,
 } from '../../../lib/emailVerification';
+import { sendExistingAccountEmail } from '../../../lib/existingAccountEmail';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,6 +52,13 @@ export async function POST(req) {
       .lean();
 
     if (existing) {
+      // The address is turned away here rather than verified, so this is the
+      // one moment the account holder can be told anything at all. Without it
+      // nobody trying to claim under an address they already registered ever
+      // received a word about it — the panel on screen was the only notice,
+      // and it is gone the moment they close the tab. Nothing is written.
+      await sendExistingAccountEmail(email);
+
       // Not an error the visitor caused, so it reads as guidance rather than a
       // failure: the account is theirs, they just need to be in it.
       return NextResponse.json(

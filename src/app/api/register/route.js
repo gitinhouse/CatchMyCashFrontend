@@ -4,7 +4,7 @@ import connectToDatabase from '../../lib/mongodb';
 import UserLogin from '../../models/userLogin';
 import mongoose from 'mongoose';
 import { sendEmail } from '../../lib/mailer';
-import { sendEmailTwilio } from '../../lib/sendgrid';
+import { sendExistingAccountEmail } from '../../lib/existingAccountEmail';
 import {
   generatePassword,
   sendCredentialsEmail,
@@ -18,15 +18,16 @@ import {
 } from '../../lib/emailVerification';
 import UserCases from '../../models/userCases';
 import UserInformation from '../../models/UserInformation';
+import UserProperty from '../../models/userProperty';
 import { verifyToken } from '../../lib/verifyToken';
 import { Types } from 'mongoose';
 
 
 export async function POST(req) {
   try {
-    // Everything that can be decided from the request alone is decided before
-    // opening a database connection, so a malformed or unauthorised request
-    // answers with its own status rather than a connection error.
+    // A malformed request is answered from the request alone, before a
+    // database connection is opened, so it reports what is wrong with it
+    // rather than a connection error.
     let body;
     try {
       body = await req.json();
@@ -53,23 +54,7 @@ export async function POST(req) {
     // would let anyone file under a stranger's address.
     const ownership = confirmEmailOwnership(req, body, userEmail);
 
-    if (!ownership.ok) {
-      return NextResponse.json(
-        {
-          message:
-            'Please verify your email address before continuing with your claim.',
-          reason: ownership.reason,
-          email_verification_required: true,
-        },
-        { status: 403 },
-      );
-    }
-
     await connectToDatabase();
-
-    if (ownership.via === 'otp') {
-      await markVerificationConsumed(userEmail);
-    }
 
     // A missing or malformed user_id must never reach findOne(): Mongoose drops
     // undefined values, so findOne({ user_id }) would become findOne({}) and
@@ -92,30 +77,37 @@ export async function POST(req) {
       // session happens to be in the browser is how a claim filed from one
       // session started dragging an unrelated account around with it. The
       // account is only told it exists.
+      //
+      // This is answered before the ownership check on purpose. The check can
+      // only pass for an address whose owner proved it, and an address that
+      // already has an account can never be proved — the code endpoint refuses
+      // to send one to it — so refusing first meant this reply, and the mail
+      // that goes with it, were unreachable. Nothing here acts on the account
+      // or gives anything away that the login page does not.
       console.log('[register] existing account, no changes written', {
         email: userEmail,
-        account_user_id: String(existingUser.user_id || ''),
+        proved: ownership.ok === true,
       });
 
-      await sendEmailTwilio({
-        to: userEmail,
-        subject: "Your CatchMyCash Account",
-        text: `Hi, you already have an account with us. Please check your previous email for your login credentials, or log in at https://catchmycash.com/userLogin. If you've forgotten your password, use the "Forgot Password" option on the login page.`,
-        html: `
-          <p>Hi ${userEmail},</p>
-          <p>We found that you already have an account with CatchMyCash.</p>
-          <p>Please check your previous email for your login credentials (email and password).</p>
-          <p style="margin-top:20px;">
-            <a href="https://catchmycash.com/userLogin"
-               style="color:#E1261C; text-decoration:none; font-weight:bold;">
-              Login to CatchMyCash
-            </a>
-          </p>
-          <p style="margin-top:10px; color:#4A4A4A; font-size:13px;">
-            If you've forgotten your password, use the "Forgot Password" option on the login page.
-          </p>
-        `,
-      });
+      await sendExistingAccountEmail(userEmail);
+
+      if (!ownership.ok) {
+        // Whoever is asking has not shown the address is theirs, so they are
+        // told to check it rather than handed the account it belongs to.
+        return NextResponse.json(
+          {
+            message:
+              "An account already exists for this email. We've emailed it a reminder of how to sign in.",
+            account_exists: true,
+            user: { user_type: "Existing" },
+          },
+          { status: 200 },
+        );
+      }
+
+      if (ownership.via === 'otp') {
+        await markVerificationConsumed(userEmail);
+      }
 
       await createNotification(
         existingUser.user_id,
@@ -126,6 +118,7 @@ export async function POST(req) {
       return NextResponse.json(
         {
           message: "Existing user found. Please check your previous email for login details.",
+          account_exists: true,
           user: {
             id: existingUser._id,
             email: existingUser.userEmail,
@@ -136,6 +129,24 @@ export async function POST(req) {
         },
         { status: 200 }
       );
+    }
+
+    // Creating an account is the part that needs the address proved, so the
+    // check is enforced here rather than at the top.
+    if (!ownership.ok) {
+      return NextResponse.json(
+        {
+          message:
+            'Please verify your email address before continuing with your claim.',
+          reason: ownership.reason,
+          email_verification_required: true,
+        },
+        { status: 403 },
+      );
+    }
+
+    if (ownership.via === 'otp') {
+      await markVerificationConsumed(userEmail);
     }
 
     // ================= CREATE NEW USER =================
@@ -338,5 +349,44 @@ async function cloneSearchIdentity(sourceId) {
     to: String(created._id),
   });
 
+  await moveSelectedProperties(sourceId, created._id);
+
   return created._id;
+}
+
+/**
+ * Bring the properties this visit picked over to the identity that now owns it.
+ *
+ * The properties are saved while the claimant is choosing them, long before
+ * they give an address, so they are filed under whatever identity the search
+ * created. When registration has to mint a new identity, the case is opened
+ * under the new one and those rows are left behind: the claim then shows no
+ * properties at all — no amount, no assets — even though it was filed with
+ * them.
+ *
+ * Only rows no case has taken move. A row already stamped with a case is part
+ * of a claim somebody has filed, and that claim keeps it.
+ */
+async function moveSelectedProperties(fromId, toId) {
+  if (!fromId || !toId) return;
+
+  try {
+    const result = await UserProperty.updateMany(
+      {
+        user_id: fromId,
+        $or: [{ case_id: null }, { case_id: { $exists: false } }],
+      },
+      { $set: { user_id: toId } },
+    );
+
+    console.log('[register] moved the selected properties to the new identity', {
+      from: String(fromId),
+      to: String(toId),
+      moved: result?.modifiedCount ?? 0,
+    });
+  } catch (error) {
+    // The claim itself is what matters; a bookkeeping failure here must not
+    // stop the account being created.
+    console.error('[register] could not move selected properties', error.message);
+  }
 }

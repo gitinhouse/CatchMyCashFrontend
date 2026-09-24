@@ -7,6 +7,83 @@ import { verifyToken } from '../../lib/verifyToken';
 import { generateCaseNumber } from '../../lib/generateCaseNumber';
 
 
+/**
+ * Stages that fill in the properties a case submitted but holds no rows for.
+ *
+ * A property row is written while the claimant is still choosing properties,
+ * so it is filed under whatever identity the search created and is stamped
+ * with the first case that picks it up. Two ordinary things therefore leave a
+ * case with no rows of its own: opening it under a different identity, which
+ * is what "use a different email" does, and re-filing a property an earlier
+ * case already holds. The case still records exactly which properties it
+ * covers, but the dashboard read it as $0 with an empty asset list.
+ *
+ * Only the property_ids with nothing attached are filled in, so a property is
+ * never listed twice, and the claimant's own row is always preferred. A row
+ * borrowed from another claimant describes the same state property, so its
+ * amount and title are right, but the claim number on it belongs to their
+ * claim and is dropped rather than shown against this one.
+ */
+const RECOVER_CASE_PROPERTY_STAGES = [
+  {
+    $lookup: {
+      from: 'userproperties',
+      let: {
+        userId: '$user_id',
+        propertyIds: { $ifNull: ['$property_ids', []] },
+      },
+      pipeline: [
+        { $match: { $expr: { $in: ['$property_id', '$$propertyIds'] } } },
+        {
+          $addFields: {
+            own_row: { $cond: [{ $eq: ['$user_id', '$$userId'] }, 1, 0] },
+          },
+        },
+        // One row per property: the claimant's own if there is one, and the
+        // most recent of whatever is left otherwise.
+        { $sort: { own_row: -1, createdAt: -1 } },
+        { $group: { _id: '$property_id', row: { $first: '$$ROOT' } } },
+        { $replaceRoot: { newRoot: '$row' } },
+        {
+          $addFields: {
+            claim_id: { $cond: [{ $eq: ['$own_row', 1] }, '$claim_id', null] },
+          },
+        },
+      ],
+      as: 'recovered_properties',
+    },
+  },
+  {
+    $addFields: {
+      user_properties: {
+        $let: {
+          vars: {
+            attached: {
+              $map: {
+                input: '$user_properties',
+                as: 'p',
+                in: '$$p.property_id',
+              },
+            },
+          },
+          in: {
+            $concatArrays: [
+              '$user_properties',
+              {
+                $filter: {
+                  input: '$recovered_properties',
+                  as: 'p',
+                  cond: { $not: [{ $in: ['$$p.property_id', '$$attached'] }] },
+                },
+              },
+            ],
+          },
+        },
+      },
+    },
+  },
+];
+
 export async function POST(req) {
   try {
     const body = await req.json();
@@ -258,6 +335,7 @@ export async function GET(req) {
             as: 'status_history',
           },
         },
+        ...RECOVER_CASE_PROPERTY_STAGES,
         {
           $project: {
             _id: 1,
@@ -565,6 +643,7 @@ export async function GET(req) {
           as: 'status_history',
         },
       },
+      ...RECOVER_CASE_PROPERTY_STAGES,
       {
         $project: {
           _id: 1,

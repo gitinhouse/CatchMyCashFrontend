@@ -43,6 +43,9 @@ export async function POST(req) {
       .map((p) => p.case_id)
       .filter(Boolean);
 
+    // Cases whose rows are handed back to the pool below.
+    const releasedCaseIds = new Set();
+
     if (stampedCaseIds.length > 0) {
       const relatedCases = await UserCases.find({ _id: { $in: stampedCaseIds } })
         .select(
@@ -63,13 +66,26 @@ export async function POST(req) {
           },
           { $set: { case_id: null, is_claimed: false, status: false } },
         );
+
+        for (const id of failedCaseIds) releasedCaseIds.add(id);
       }
     }
 
-    const existingPropertyIds = existingProperties.map((p) => p.property_id);
+    // Only a row that no case has taken can stand for this selection.
+    // linkPropertiesToCase fills in empty case_ids and leaves the rest alone,
+    // so treating a row that still belongs to a live case as "already saved"
+    // left the next claim with no properties at all — which is how a case came
+    // to show $0 and an empty asset list after the same property was filed
+    // twice. A row of its own means each case keeps its own amount and its own
+    // claim number.
+    const reusablePropertyIds = new Set(
+      existingProperties
+        .filter((p) => !p.case_id || releasedCaseIds.has(String(p.case_id)))
+        .map((p) => p.property_id),
+    );
 
     const newProperties = properties
-      .filter((p) => !existingPropertyIds.includes(p.id.toString()))
+      .filter((p) => !reusablePropertyIds.has(p.id.toString()))
       .map((p) => ({
         user_id,
         property_id: p.id.toString(),

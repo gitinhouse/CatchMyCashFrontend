@@ -346,6 +346,18 @@ export default function PrivacyPage() {
       const [dobYear, dobMonth, dobDay] = formData.dateOfBirth.split('-');
 
       const res = await axios.post('/api/register', payloadData);
+
+      // The address already has an account, so nothing was created and there
+      // is no session to store. The message stays on this page rather than
+      // redirecting: being moved to the login page with no explanation is what
+      // makes this look like a failure, and the reminder email says the rest.
+      if (res.data?.account_exists && !res.data?.user?.user_id) {
+        setApiError(
+          'An account already exists for this email address. We have emailed it a reminder of how to sign in. Please log in to continue your claim.',
+        );
+        return;
+      }
+
       setUserLogin(res.data);
       localStorage.setItem('userLogin', JSON.stringify(res.data));
       window.dispatchEvent(new Event('authChange'));
