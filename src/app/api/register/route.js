@@ -89,7 +89,7 @@ export async function POST(req) {
         proved: ownership.ok === true,
       });
 
-      await sendExistingAccountEmail(userEmail);
+      const notice = await sendExistingAccountEmail(userEmail);
 
       if (!ownership.ok) {
         // Whoever is asking has not shown the address is theirs, so they are
@@ -109,11 +109,17 @@ export async function POST(req) {
         await markVerificationConsumed(userEmail);
       }
 
-      await createNotification(
-        existingUser.user_id,
-        "Account Found",
-        "You already have an account. Please check your previous email for your login details."
-      );
+      // The bell agrees with the inbox. A signed-in claimant reaches this on
+      // every claim they file, and without the same restraint the email is
+      // under they would collect a notice each time saying what the last one
+      // already said.
+      if (notice.sent) {
+        await createNotification(
+          existingUser.user_id,
+          "Account Found",
+          "You already have an account. Please check your previous email for your login details."
+        );
+      }
 
       return NextResponse.json(
         {

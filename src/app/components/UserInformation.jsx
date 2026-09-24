@@ -681,18 +681,42 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
       try {
         // The email is locked for two different people: a signed-in claimant,
         // who already has an account, and a signed-out visitor who verified an
-        // address by code and still needs one. Only the first can skip
-        // registration — keying this on the lock alone would leave a guest
-        // with no account at all.
+        // address by code and still needs one. The two are told apart by the
+        // session, not by the lock — keying it on the lock alone would leave a
+        // guest with no account at all.
         const existingSession = sessionEmail()
           ? localStorage.getItem('userLogin')
           : null;
 
         if (existingSession) {
-          // Already signed in: the account exists and the session is valid, so
-          // registering again would only re-send the "you already have an
-          // account" mail on every additional claim.
-          userLoginRes = { data: JSON.parse(existingSession) };
+          // Already signed in, so registration creates nothing. It is still
+          // called: it is what tells the claimant, by email, that this claim
+          // is going on the account they already have. The server writes
+          // nothing on that path and will not repeat the notice for the same
+          // address in quick succession.
+          //
+          // The session already in hand is what carries on. The reply to an
+          // existing account has no token in it, so storing it over the
+          // session would sign the claimant out in the middle of their claim.
+          const session = JSON.parse(existingSession);
+          userLoginRes = { data: session };
+
+          try {
+            await axios.post('/api/register', payloadData, {
+              // Signed in as the address being filed under, which is what
+              // lets the server answer as the account holder rather than as
+              // somebody merely asking about the address.
+              headers: session?.token
+                ? { Authorization: `Bearer ${session.token}` }
+                : undefined,
+            });
+          } catch (err) {
+            // A courtesy notice is not worth failing a claim over.
+            console.error(
+              '[claim] could not send the existing-account notice',
+              err.response?.data?.message || err.message,
+            );
+          }
         } else {
           userLoginRes = await axios.post('/api/register', payloadData);
 
