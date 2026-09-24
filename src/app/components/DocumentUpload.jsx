@@ -163,6 +163,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   const searchParams = useSearchParams();
   const caseIdFromUrl = searchParams.get('case_id'); // NEW
   const [isAgreementAvailable, setIsAgreementAvailable] = useState(false);
+  const AGREEMENT_MISSING_TITLE = 'Agreement Document Not Found';
 
   const {
     userData,
@@ -342,6 +343,14 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     if (docId === 'agreement') return agreementDocuSignComplete;
     return uploadedDocs.includes(docId);
   };
+
+  // Supporting documents were gated on an *unsigned* agreement existing, which
+  // read as "complete agreement first" — and then kept saying it after the
+  // agreement had been signed, locking the uploads the claimant had just
+  // earned. Signing is the thing that opens this gate; an agreement waiting to
+  // be signed opens it too, which is how it behaved before.
+  const canUploadSupportingDocs =
+    agreementDocuSignComplete || isAgreementAvailable;
 
   const getRequiredCompletedCount = () =>
     requiredDocuments.filter((doc) => doc.required && isDocComplete(doc.id))
@@ -564,13 +573,13 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     }
   }, [docusignComplete]);
 
-  // How long to keep looking before telling the claimant there is nothing to
-  // sign. The agreement is produced by the automation server moments after the
-  // claim is filed, so arriving at this step a little early is normal — and
-  // announcing "no agreement" to somebody whose agreement is seconds away is
-  // the failure this retry exists to prevent.
+  // The claimant is told straight away when there is nothing to sign — waiting
+  // a minute before saying so just looked broken. The check then keeps running
+  // quietly in the background, because the agreement is produced by the
+  // automation server moments after the claim is filed: when it lands the
+  // message is withdrawn and the step unlocks itself.
   const AGREEMENT_POLL_INTERVAL_MS = 5000;
-  const AGREEMENT_POLL_ATTEMPTS = 12; // ~1 minute
+  const AGREEMENT_POLL_ATTEMPTS = 12; // ~1 minute of quiet re-checking
 
   useEffect(() => {
     if (!userData?._id) {
@@ -618,23 +627,35 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
           agreementAvailable,
         });
 
-        if (data.hasAgreement || !detailsPresent) {
-          // Either there is something to sign, or the claimant has not got far
-          // enough for the question to mean anything yet.
+        if (data.hasAgreement) {
+          // It arrived. If we had already said otherwise, take that back.
+          setErrorModal((prev) =>
+            prev.show && prev.title === AGREEMENT_MISSING_TITLE
+              ? { show: false, title: '', message: '' }
+              : prev,
+          );
           return;
+        }
+
+        if (!detailsPresent) {
+          // The claimant has not got far enough for the question to mean
+          // anything yet, so there is nothing to tell them.
+          return;
+        }
+
+        // Say so on the first answer rather than after a minute of silence.
+        if (attempts === 1) {
+          setErrorModal({
+            show: true,
+            title: AGREEMENT_MISSING_TITLE,
+            message:
+              'No agreement document has been uploaded for your account. Please contact support to get your agreement document uploaded so you can proceed with the signing process.',
+          });
         }
 
         if (attempts < AGREEMENT_POLL_ATTEMPTS) {
           timer = setTimeout(checkAgreementDocumentExists, AGREEMENT_POLL_INTERVAL_MS);
-          return;
         }
-
-        setErrorModal({
-          show: true,
-          title: 'Agreement Document Not Found',
-          message:
-            'No agreement document has been uploaded for your account. Please contact support to get your agreement document uploaded so you can proceed with the signing process.',
-        });
       } catch (error) {
         if (cancelled) return;
         console.error('Error checking agreement document:', error);
@@ -860,8 +881,9 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   };
 
   const handleUploadClick = (docId) => {
-    // Check if agreement is available before allowing upload
-    if (!isAgreementAvailable) {
+    // Same gate as the button: a signed agreement counts, and so does one
+    // waiting to be signed.
+    if (!canUploadSupportingDocs) {
       setErrorModal({
         show: true,
         title: 'Cannot Upload Documents',
@@ -955,8 +977,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   };
 
   const handleScanDocument = (docId) => {
-    // Check if agreement is available before allowing scan
-    if (!isAgreementAvailable) {
+    if (!canUploadSupportingDocs) {
       setErrorModal({
         show: true,
         title: 'Cannot Scan Documents',
@@ -1498,7 +1519,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
                         )}
 
                         {doc.id !== 'agreement' && (
-                          !isAgreementAvailable ? (
+                          !canUploadSupportingDocs ? (
                             <div className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium bg-[#FFF4E5] border border-[#FFB347] rounded-lg text-[#FF8C00] cursor-not-allowed">
                               <Info className="h-4 w-4" />
                               <span>Complete agreement first</span>
@@ -1507,7 +1528,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
                             <>
                               <button
                                 onClick={() => handleUploadClick(doc.id)}
-                                disabled={isScanning || !isAgreementAvailable}
+                                disabled={isScanning || !canUploadSupportingDocs}
                                 className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium border border-[#E8E6E3] rounded-lg text-[#0A0A0A] hover:bg-[#FCE9E7] hover:border-[#E1261C]/50 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-[#E8E6E3]"
                               >
                                 <Upload className="h-4 w-4" />
@@ -1515,7 +1536,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
                               </button>
                               <button
                                 onClick={() => handleScanDocument(doc.id)}
-                                disabled={isScanning || !isAgreementAvailable}
+                                disabled={isScanning || !canUploadSupportingDocs}
                                 className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium border border-[#E8E6E3] rounded-lg text-[#0A0A0A] hover:bg-[#FCE9E7] hover:border-[#E1261C]/50 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-[#E8E6E3]"
                               >
                                 <Camera className="h-4 w-4" />
