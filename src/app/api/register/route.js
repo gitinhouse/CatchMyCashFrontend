@@ -17,6 +17,7 @@ import {
   readVerifiedEmailToken,
 } from '../../lib/emailVerification';
 import UserCases from '../../models/userCases';
+import UserInformation from '../../models/UserInformation';
 import { verifyToken } from '../../lib/verifyToken';
 import { Types } from 'mongoose';
 
@@ -86,16 +87,15 @@ export async function POST(req) {
     const existingUser = await UserLogin.findOne({ userEmail });
 
     if (existingUser) {
-      // Same email, so the address needs no change. Re-point the account at the
-      // current search session only when we were given a usable id.
-      if (userObjectId) {
-        existingUser.user_id = userObjectId;
-      }
-      if (userType) {
-        existingUser.userType = userType;
-      }
-
-      await existingUser.save();
+      // Nothing is written here, deliberately. This account belongs to somebody
+      // who already signed up; re-pointing its user_id at whatever search
+      // session happens to be in the browser is how a claim filed from one
+      // session started dragging an unrelated account around with it. The
+      // account is only told it exists.
+      console.log('[register] existing account, no changes written', {
+        email: userEmail,
+        account_user_id: String(existingUser.user_id || ''),
+      });
 
       await sendEmailTwilio({
         to: userEmail,
@@ -146,27 +146,39 @@ export async function POST(req) {
     const generatedPassword = generatePassword();
     const hashedPassword = await bcrypt.hash(generatedPassword, 10);
 
-    // UserLogin.user_id is unique, so a search session that already produced a
-    // login under a different address is moved to the new one instead of
-    // failing on the index.
+    // UserLogin.user_id is unique, so this id may already belong to somebody.
+    // It does exactly when a claimant reaches this form from a browser that
+    // has already filed under a different address — which is what happens
+    // after "use a different email". That account is left completely alone:
+    // overwriting its address is what locked people out of their own logins.
+    // The new claimant gets an identity of their own instead.
     const sessionAccount = userObjectId
       ? await UserLogin.findOne({ user_id: userObjectId })
       : null;
 
-    let newUser;
+    let ownerId = userObjectId;
+
     if (sessionAccount) {
-      sessionAccount.userEmail = userEmail;
-      sessionAccount.userPassword = hashedPassword;
-      sessionAccount.userType = userType || sessionAccount.userType;
-      newUser = await sessionAccount.save();
-    } else {
-      newUser = await UserLogin.create({
-        user_id: userObjectId,
-        userEmail,
-        userPassword: hashedPassword,
-        userType: userType || "User",
+      console.log('[register] search session belongs to another account', {
+        taken_by: sessionAccount.userEmail,
+        registering: userEmail,
       });
+      ownerId = await cloneSearchIdentity(userObjectId);
     }
+
+    if (!ownerId) {
+      return NextResponse.json(
+        { message: "A valid user_id is required to register" },
+        { status: 400 },
+      );
+    }
+
+    const newUser = await UserLogin.create({
+      user_id: ownerId,
+      userEmail,
+      userPassword: hashedPassword,
+      userType: userType || "User",
+    });
 
     const token = jwt.sign(
       {
@@ -294,4 +306,37 @@ async function markVerificationConsumed(userEmail) {
   } catch (error) {
     console.error('[register] could not mark verification consumed', error.message);
   }
+}
+
+/**
+ * A search identity of this claimant's own.
+ *
+ * `UserLogin.user_id` is unique, so two accounts cannot share the record a
+ * search produced. When the one in the browser is already spoken for — the
+ * "use a different email" path lands here every time — the new claimant needs
+ * their own, rather than taking over somebody else's account.
+ *
+ * The details are copied from the search that is already in progress, because
+ * that is genuinely this claimant's search; only the identity row is new.
+ *
+ * @returns {Promise<import('mongoose').Types.ObjectId|null>}
+ */
+async function cloneSearchIdentity(sourceId) {
+  const source = sourceId ? await UserInformation.findById(sourceId).lean() : null;
+
+  const created = await UserInformation.create({
+    first_name: source?.first_name || 'Claimant',
+    last_name: source?.last_name || 'Unknown',
+    address: source?.address || 'Not provided',
+    city: source?.city || 'Not provided',
+    zip_code: source?.zip_code || '00000',
+    state: source?.state || 'CA',
+  });
+
+  console.log('[register] created a separate identity for this claimant', {
+    from: sourceId ? String(sourceId) : null,
+    to: String(created._id),
+  });
+
+  return created._id;
 }

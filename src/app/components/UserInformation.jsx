@@ -127,6 +127,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
   const [nextPageData, setNextPageData] = useState(null);
   const {
     userData,
+    setUserData,
     setUserAgreement,
     setUserLogin,
     searchResults,
@@ -697,6 +698,25 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
           setUserLogin(userLoginRes.data);
           localStorage.setItem('userLogin', JSON.stringify(userLoginRes.data));
           window.dispatchEvent(new Event('authChange'));
+
+          // Registration can hand back a different identity than the search
+          // produced: it does whenever this browser has already filed under
+          // another address, because that account keeps the id it had. The
+          // claim has to follow the identity the account was actually created
+          // under, or it would be filed against somebody else's record.
+          const registeredUserId = userLoginRes.data?.user?.user_id;
+          if (registeredUserId && registeredUserId !== userData._id) {
+            console.log('[claim] following the identity registration returned', {
+              from: userData._id,
+              to: registeredUserId,
+            });
+            payload.user_id = registeredUserId;
+            claimSubmissionPayloadData.userId = registeredUserId;
+
+            const movedUserData = { ...userData, _id: registeredUserId };
+            setUserData(movedUserData);
+            localStorage.setItem('userData', JSON.stringify(movedUserData));
+          }
         }
       } catch (err) {
         const msg =
