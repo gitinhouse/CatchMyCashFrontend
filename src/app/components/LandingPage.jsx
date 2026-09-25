@@ -734,11 +734,11 @@ const ClaimProgressModal = ({ claim, onClose }) => {
                 <h2 className="text-2xl font-bold text-[#0A0A0A] font-['Fraunces']">
                   Claim Progress
                 </h2>
-                <span className="px-3 py-1 bg-[#FCE9E7] text-[#E1261C] text-xs font-semibold rounded-full font-['JetBrains_Mono']">
-                  {claimIdSummary(claim)
-                    ? `Claim ID: ${claimIdSummary(claim)}`
-                    : ''}
-                </span>
+                {claimIdSummary(claim) && (
+                  <span className="px-3 py-1 bg-[#FCE9E7] text-[#E1261C] text-xs font-semibold rounded-full font-['JetBrains_Mono']">
+                    Claim ID: ${claimIdSummary(claim)}
+                  </span>
+                )}
               </div>
               <p className="text-sm text-[#4A4A4A]">
                 Case #{claim.case_id || String(claim._id).slice(-8).toUpperCase()}

@@ -259,7 +259,9 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
       current: hasUserInfo && !claimFiled && !claimFilingFailed,
       failed: claimFilingFailed,
       description: claimFiled
-        ? `Claim filed successfully${caseData.claim_id ? ` (Claim ID: ${caseData.claim_id})` : ''}`
+        ? caseData.claim_id
+          ? `Claim filed successfully (Claim ID: ${caseData.claim_id})`
+          : 'Claim filed successfully'
         : claimFilingFailed
           ? 'Claim filing failed. Please contact support.'
           : "Your claim is being filed with the State Controller's Office",
