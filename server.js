@@ -1,13 +1,15 @@
 // server.js
-import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
 import startCronJobs from './src/app/lib/cron.js';
 import startAgreementReadyCron from './src/app/lib/agreementReadyCron.js';
+import {
+  attachDocumentSocket,
+  closeDocumentSocket,
+} from './src/app/lib/documentSocket.js';
 //import startRenewWatchCron from './src/app/lib/renewWatch.js';
 //import sqsCronJob from './src/app/lib/sqsCronJob.js';
 
 import next from 'next';
-import { parse } from 'url';
 
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
@@ -22,61 +24,10 @@ app.prepare().then(() => {
     handle(req, res);
   });
 
-  // Create WebSocket server without attaching to HTTP server yet
-  const wss = new WebSocketServer({ noServer: true });
-
-  // Handle upgrade requests manually
-  httpServer.on('upgrade', (request, socket, head) => {
-    const { pathname } = parse(request.url);
-
-    // ✅ Let Next.js handle its own HMR WebSocket
-    if (pathname === '/_next/webpack-hmr') {
-      // Do nothing, Next.js will handle this
-      return;
-    }
-
-    // ✅ Handle custom WebSocket connections on /api/ws
-    if (pathname === '/api/ws') {
-      wss.handleUpgrade(request, socket, head, (ws) => {
-        wss.emit('connection', ws, request);
-      });
-    } else {
-      // Close any other upgrade requests
-      socket.destroy();
-    }
-  });
-
-  wss.on('connection', (ws, req) => {
-    const clientIp = req.socket.remoteAddress;
-    console.log(`✅ New WebSocket client connected from ${clientIp}`);
-
-    ws.send(
-      JSON.stringify({
-        type: 'welcome',
-        message: 'Connected to WebSocket',
-        environment: dev ? 'development' : 'production',
-      }),
-    );
-
-    ws.on('message', (message) => {
-      console.log('📩 Received from client:', message.toString());
-
-      // Broadcast message to all connected clients except sender
-      wss.clients.forEach((client) => {
-        if (client !== ws && client.readyState === WebSocket.OPEN) {
-          client.send(message.toString());
-        }
-      });
-    });
-
-    ws.on('close', () => {
-      console.log(`❌ Client disconnected from ${clientIp}`);
-    });
-
-    ws.on('error', (error) => {
-      console.error('⚠️ WebSocket error:', error);
-    });
-  });
+  // Carries a document uploaded from a claimant's phone back to the browser
+  // they started the claim in. The wiring lives in its own module so it can be
+  // exercised on its own.
+  const wss = attachDocumentSocket(httpServer, { path: '/api/ws' });
 
   // Start the HTTP server
   httpServer.listen(PORT, () => {
@@ -108,11 +59,7 @@ app.prepare().then(() => {
       console.log('✅ HTTP server closed');
     });
 
-    wss.clients.forEach((client) => {
-      client.close(1000, 'Server shutting down');
-    });
-
-    wss.close(() => {
+    closeDocumentSocket(wss, () => {
       console.log('✅ WebSocket server closed');
       process.exit(0);
     });

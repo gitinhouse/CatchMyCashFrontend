@@ -12,6 +12,15 @@ import { adminFetch } from '../_lib/api';
  * a backlog list had often gone stale and opened nothing. Resolving on demand
  * also surfaces the real reason when a document cannot be served.
  */
+/** The label is written into the placeholder page, so it goes in as text. */
+function escapeHtml(value) {
+  return String(value).replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+  );
+}
+
 export default function DocumentLink({
   caseId,
   field,
@@ -29,7 +38,35 @@ export default function DocumentLink({
     // The tab is opened synchronously, inside the click, and pointed at the
     // document once it resolves. Opening it after the await instead would be
     // outside the user gesture, which is exactly what pop-up blockers stop.
-    const tab = window.open('', '_blank', 'noopener,noreferrer');
+    //
+    // No 'noopener' in the feature string: asking for it makes the browser
+    // return null by design, and without a handle there was nothing to point
+    // at the document. The blank tab stayed on about:blank and the fallback
+    // below took over the tab the admin was working in, which is how the
+    // document ended up opening over the page instead of beside it. The opener
+    // is severed on the new tab itself, which keeps the handle and still
+    // leaves the opened page no reference back here.
+    const tab = window.open('', '_blank');
+
+    if (tab) {
+      try {
+        tab.opener = null;
+        // Something to read while the signed URL is being minted, rather than
+        // a blank tab that looks like a dead end.
+        const name = escapeHtml(label || 'document');
+        tab.document.write(
+          `<!doctype html><title>Opening ${name}…</title>` +
+            '<body style="margin:0;display:flex;align-items:center;' +
+            'justify-content:center;height:100vh;font:15px system-ui;' +
+            'color:#4A4A4A;background:#F7F5F2">' +
+            `Opening ${name}…</body>`,
+        );
+        tab.document.close();
+      } catch {
+        // A browser that refuses either of these still gets the document: the
+        // handle is what matters, and the URL is pointed at it below.
+      }
+    }
 
     const fail = (message) => {
       try {

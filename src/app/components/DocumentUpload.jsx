@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from './uicomponents/Button';
 import { Card } from './uicomponents/Card';
 import { Badge } from './uicomponents/Badge';
@@ -139,6 +139,52 @@ const validateDocumentFile = async (file) => {
   return { valid: true, error: null };
 };
 
+// ---------------------------------------------------------------------------
+// What a document is called
+//
+// The same document has two names: the one this screen uses ('id') and the one
+// the database column uses ('proof_id'). Both have been sent over the socket —
+// the phone names it the front-end way, this tab's own echo names it the
+// database way — so anything reading a message has to accept either. Keeping
+// the pair in one place is what stops them drifting apart again.
+// ---------------------------------------------------------------------------
+const DOC_FIELD_TO_ID = {
+  proof_id: 'id',
+  ssn_id: 'ssn',
+  adress_proof: 'address',
+  brith_proof: 'birth',
+  employee_proof: 'employment',
+  claim_doc: 'claim',
+};
+
+const DOC_ID_TO_FIELD = Object.fromEntries(
+  Object.entries(DOC_FIELD_TO_ID).map(([field, id]) => [id, field]),
+);
+
+/** The documents a saved UserDocs record already holds, as this screen names them. */
+function uploadedIdsFromDocs(userDocs) {
+  if (!userDocs || typeof userDocs !== 'object') return [];
+  return Object.entries(DOC_FIELD_TO_ID)
+    .filter(([field]) => Boolean(userDocs[field]))
+    .map(([, id]) => id);
+}
+
+/** Which document a socket message is about, whichever name it used. */
+function documentIdFromMessage(message) {
+  const named = String(message?.document || message?.field || '').trim();
+  if (!named) return null;
+  if (DOC_FIELD_TO_ID[named]) return DOC_FIELD_TO_ID[named];
+  if (DOC_ID_TO_FIELD[named]) return named;
+  return null;
+}
+
+// A scan finishes on the claimant's phone, so nothing in this tab took part in
+// it. The socket is what says so; these are the fallback for when it cannot —
+// a proxy that will not upgrade the connection, a message that arrived before
+// anyone was listening. They only run while a scan is outstanding.
+const SCAN_WATCH_MS = 5 * 60 * 1000;
+const SCAN_POLL_INTERVAL_MS = 4000;
+
 const DocumentUpload = ({ onNext, onFieldFilled }) => {
   const [uploadedDocs, setUploadedDocs] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState({});
@@ -213,9 +259,10 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     },
   ];
 
-  const [connectSocket, setConnectSocket] = useState(false);
-
   const [wsUrl, setWsUrl] = useState(null);
+  // Set while the claimant has a QR code in front of them, so the fallback
+  // below knows a phone upload is expected.
+  const [scanWatch, setScanWatch] = useState(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -226,73 +273,138 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     }
   }, []);
 
-  const { socket, isConnected, message } = useWebSocket(wsUrl, connectSocket);
+  // Connected for as long as this step is on screen. It used to wait for
+  // DocuSign to finish, but a document is scanned before that — while the QR
+  // code is on screen — so the one message that says "the phone has uploaded
+  // it" arrived with nobody listening, and the upload never showed up here.
+  const { socket, isConnected, message, sendMessage } = useWebSocket(
+    wsUrl,
+    Boolean(wsUrl),
+  );
 
-  // Update the useEffect that handles WebSocket messages (around line 145)
   useEffect(() => {
-    if (message) {
-      console.log('📨 WebSocket message received:', message);
+    if (!message || message.type !== 'documents_submitted') return;
 
-      if (message.type === 'documents_submitted') {
-        console.log('📄 Document uploaded event:', message);
+    console.log('📄 Document uploaded event:', message);
 
-        // Get the document ID from the message
-        const docId = message.document;
+    // Everyone on the socket used to hear about every claim, so a message is
+    // only acted on when it is about the claim this tab is filing.
+    if (
+      message.caseId &&
+      userCase?._id &&
+      String(message.caseId) !== String(userCase._id)
+    ) {
+      return;
+    }
 
-        // Map the document ID to the frontend ID
-        const docKeyMap = {
-          proof_id: 'id',
-          ssn_id: 'ssn',
-          adress_proof: 'address',
-          brith_proof: 'birth',
-          employee_proof: 'employment',
-          claim_doc: 'claim',
-        };
+    const docId = documentIdFromMessage(message);
 
-        // If we have a specific document, update it
-        if (docId && docKeyMap[docId]) {
-          const frontendId = docKeyMap[docId];
-          setUploadedDocs((prev) => {
-            if (!prev.includes(frontendId)) {
-              return [...prev, frontendId];
-            }
-            return prev;
-          });
+    if (docId) {
+      markDocumentUploaded(
+        docId,
+        `✅ ${message.file_name || 'Document'} uploaded successfully from mobile!`,
+      );
+    }
 
-          // Show success notification
-          setSocketMessage({
-            type: 'success',
-            message: `✅ ${message.file_name || 'Document'} uploaded successfully from mobile!`,
-            document: frontendId
-          });
+    // Whether or not the message named a document this screen knows, the record
+    // is what decides: read it back so what is shown is what was actually
+    // saved.
+    refreshUploadedDocs();
+  }, [message, userCase?._id]);
 
-          // Clear notification after 5 seconds
-          setTimeout(() => setSocketMessage(null), 5000);
-        }
-        // Fallback: update all documents
-        else {
-          const docs = message.documents || {};
-          const uploadedIds = Object.entries(docs)
-            .filter(([key, value]) => value === true)
-            .map(([key]) => docKeyMap[key])
-            .filter(Boolean);
+  /** Show a document as uploaded, and stop waiting for it. */
+  const markDocumentUploaded = (docId, note) => {
+    setUploadedDocs((prev) => (prev.includes(docId) ? prev : [...prev, docId]));
+    setScanWatch((prev) => (prev?.docId === docId ? null : prev));
 
-          if (uploadedIds.length > 0) {
-            setUploadedDocs((prev) => {
-              const merged = new Set([...prev, ...uploadedIds]);
-              return Array.from(merged);
-            });
+    if (note) {
+      setSocketMessage({ type: 'success', message: note, document: docId });
+      setTimeout(() => setSocketMessage(null), 5000);
+    }
+  };
 
-            setSocketMessage({
-              type: 'success',
-              message: `✅ ${uploadedIds.length} document(s) uploaded successfully!`,
-            });
-            setTimeout(() => setSocketMessage(null), 5000);
-          }
+  /**
+   * Read back which documents this case actually holds.
+   *
+   * The phone uploads straight to the server, so the record is the only thing
+   * that knows what arrived. Used both when the socket reports an upload and,
+   * below, when it never does.
+   *
+   * @returns {Promise<string[]>} the documents on file, as this screen names them
+   */
+  const refreshUploadedDocs = useCallback(async () => {
+    const caseId = userCase?._id;
+    const token = userLogin?.token;
+    if (!caseId || !token) return [];
+
+    try {
+      const { data } = await axios.get(`/api/case?case_id=${caseId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const docs = data?.data?.[0]?.user_docs?.[0];
+      const uploadedIds = uploadedIdsFromDocs(docs);
+
+      if (uploadedIds.length > 0) {
+        setUploadedDocs((prev) => Array.from(new Set([...prev, ...uploadedIds])));
+        // Keep the copy the rest of the flow reads in step with the record.
+        try {
+          const saved = JSON.parse(localStorage.getItem('userAllDocs') || '{}');
+          localStorage.setItem(
+            'userAllDocs',
+            JSON.stringify({ ...saved, ...docs }),
+          );
+        } catch {
+          // A broken localStorage value is not worth failing the refresh over.
         }
       }
+
+      return uploadedIds;
+    } catch (error) {
+      console.error('Could not re-read the uploaded documents:', error.message);
+      return [];
     }
-  }, [message]);
+  }, [userCase?._id, userLogin?.token]);
+
+  /**
+   * Watch for a scanned document when the socket does not report it.
+   *
+   * The phone says "uploaded" and this tab showed nothing, which is what a
+   * blocked or dropped socket looks like from the desk. This asks the record
+   * directly, for as long as the claimant could still be scanning.
+   */
+  useEffect(() => {
+    if (!scanWatch) return undefined;
+
+    let cancelled = false;
+    let timer = null;
+
+    const check = async () => {
+      if (cancelled) return;
+
+      if (Date.now() > scanWatch.until) {
+        setScanWatch(null);
+        return;
+      }
+
+      const uploadedIds = await refreshUploadedDocs();
+      if (cancelled) return;
+
+      if (uploadedIds.includes(scanWatch.docId)) {
+        markDocumentUploaded(scanWatch.docId, '✅ Document uploaded from your phone!');
+        return;
+      }
+
+      timer = setTimeout(check, SCAN_POLL_INTERVAL_MS);
+    };
+
+    timer = setTimeout(check, SCAN_POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [scanWatch, refreshUploadedDocs]);
 
   const getDocPath = (value) => {
     if (!value) return '';
@@ -435,13 +547,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
 
           redirectToTrackingIfComplete(allDocs);
 
-          const uploadedIds = [];
-          if (allDocs.proof_id) uploadedIds.push('id');
-          if (allDocs.ssn_id) uploadedIds.push('ssn');
-          if (allDocs.adress_proof) uploadedIds.push('address');
-          if (allDocs.brith_proof) uploadedIds.push('birth');
-          if (allDocs.employee_proof) uploadedIds.push('employment');
-          if (allDocs.claim_doc) uploadedIds.push('claim');
+          const uploadedIds = uploadedIdsFromDocs(allDocs);
           if (uploadedIds.length > 0) {
             setUploadedDocs((prev) =>
               Array.from(new Set([...prev, ...uploadedIds])),
@@ -550,14 +656,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
             ' Your claim is currently being processed. Please check back later for updates.',
         });
       }
-      const uploadedIds = [];
-
-      if (userDocs.proof_id) uploadedIds.push('id');
-      if (userDocs.ssn_id) uploadedIds.push('ssn');
-      if (userDocs.adress_proof) uploadedIds.push('address');
-      if (userDocs.brith_proof) uploadedIds.push('birth');
-      if (userDocs.employee_proof) uploadedIds.push('employment');
-      if (userDocs.claim_doc) uploadedIds.push('claim');
+      const uploadedIds = uploadedIdsFromDocs(userDocs);
 
       setUploadedDocs(uploadedIds);
       console.log('Preloaded uploaded documents:', uploadedIds);
@@ -566,12 +665,12 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     }
   };
 
+  // Say which claim this tab is watching, so the server has no reason to send
+  // it another claimant's uploads.
   useEffect(() => {
-    if (docusignComplete && !connectSocket) {
-      console.log('DocuSign complete — starting WebSocket listener...');
-      setConnectSocket(true);
-    }
-  }, [docusignComplete]);
+    if (!isConnected || !userCase?._id) return;
+    sendMessage({ type: 'subscribe', caseId: String(userCase._id) });
+  }, [isConnected, userCase?._id, sendMessage]);
 
   // The claimant is told straight away when there is nothing to sign — waiting
   // a minute before saying so just looked broken. The check then keeps running
@@ -992,6 +1091,9 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       docId: doc.id,
       docName: doc.name,
     });
+    // From here on a phone may upload at any moment, and this tab has to notice
+    // whether or not the socket tells it.
+    setScanWatch({ docId: doc.id, until: Date.now() + SCAN_WATCH_MS });
   };
 
   const handleScanChange = async (event) => {
@@ -1016,16 +1118,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     setIsScanning(true);
 
     try {
-      const docKeyMap = {
-        id: 'proof_id',
-        ssn: 'ssn_id',
-        address: 'adress_proof',
-        birth: 'brith_proof',
-        employment: 'employee_proof',
-        claim: 'claim_doc',
-      };
-
-      const backendKey = docKeyMap[scanTargetDocId];
+      const backendKey = DOC_ID_TO_FIELD[scanTargetDocId];
       if (!backendKey) {
         throw new Error('Invalid document type');
       }
@@ -1064,7 +1157,10 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
           type: 'documents_submitted',
           caseId: userCase?._id,
           userId: userId,
-          document: backendKey,
+          // Both names, so whoever reads this does not have to guess which one
+          // it speaks.
+          document: scanTargetDocId,
+          field: backendKey,
           file_name: file.name,
           timestamp: new Date().toISOString()
         };
@@ -1107,16 +1203,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     try {
       setIsSubmitted(true);
 
-      const docKeyMap = {
-        id: 'proof_id',
-        ssn: 'ssn_id',
-        address: 'adress_proof',
-        birth: 'brith_proof',
-        employment: 'employee_proof',
-        claim: 'claim_doc',
-      };
-
-      const filesToUpload = Object.entries(docKeyMap).filter(
+      const filesToUpload = Object.entries(DOC_ID_TO_FIELD).filter(
         ([frontendKey]) => uploadedFiles[frontendKey],
       );
 
