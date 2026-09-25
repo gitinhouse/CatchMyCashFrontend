@@ -6,6 +6,19 @@ import { Card } from "../components/uicomponents/Card";
 import { jsPDF } from "jspdf";
 import { FileText, CheckCircle } from "lucide-react";
 
+// The QR link names the document the way the upload screen does ('id'); the
+// database column is called something else ('proof_id'). Both names travel in
+// the socket message below, because the tab at the other end was written
+// against the database name and heard nothing when only the other arrived.
+const DOC_ID_TO_FIELD = {
+  id: "proof_id",
+  ssn: "ssn_id",
+  address: "adress_proof",
+  birth: "brith_proof",
+  employment: "employee_proof",
+  claim: "claim_doc",
+};
+
 const UserDocs = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -113,16 +126,8 @@ const UserDocs = () => {
     const formData = new FormData();
     formData.append("case_id", caseId);
 
-    const docKeyMap = {
-      id: "proof_id",
-      ssn: "ssn_id",
-      address: "adress_proof",
-      birth: "brith_proof",
-      employment: "employee_proof",
-      claim: "claim_doc",
-    };
-
-    const backendKey = docKeyMap[docId];
+    const backendKey = DOC_ID_TO_FIELD[docId];
+    if (!backendKey) throw new Error("Unknown document type");
     formData.append(backendKey, file);
 
     const res = await fetch("/api/docs", {
@@ -147,7 +152,9 @@ const UserDocs = () => {
           type: "documents_submitted",
           caseId: caseId,
           userId: userId,
-          document: docId,  // ← Send which document was uploaded
+          // Which document was uploaded, under both names it goes by.
+          document: docId,
+          field: DOC_ID_TO_FIELD[docId] || null,
           file_name: uploadedFiles[docId]?.name || 'document',
           timestamp: new Date().toISOString(),
         };
