@@ -737,7 +737,7 @@ const ClaimProgressModal = ({ claim, onClose }) => {
                 <span className="px-3 py-1 bg-[#FCE9E7] text-[#E1261C] text-xs font-semibold rounded-full font-['JetBrains_Mono']">
                   {claimIdSummary(claim)
                     ? `Claim ID: ${claimIdSummary(claim)}`
-                    : 'Claim ID pending'}
+                    : ''}
                 </span>
               </div>
               <p className="text-sm text-[#4A4A4A]">
@@ -878,9 +878,11 @@ const ClaimProgressModal = ({ claim, onClose }) => {
                           <p className="text-xs text-[#888888] font-['JetBrains_Mono']">
                             ID: {p.property_id}
                           </p>
-                          <p className="text-xs text-[#E1261C] font-['JetBrains_Mono'] mt-1">
-                            Claim ID: {propertyClaimId(p, claim) || 'pending'}
-                          </p>
+                          {propertyClaimId(p, claim) && (
+                            <p className="text-xs text-[#E1261C] font-['JetBrains_Mono'] mt-1">
+                              Claim ID: {propertyClaimId(p, claim)}
+                            </p>
+                          )}
                         </div>
                         <div className="text-right">
                           <p className="font-bold text-[#0A0A0A]">

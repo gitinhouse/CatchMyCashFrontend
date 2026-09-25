@@ -629,7 +629,7 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
               <p className="text-[#E1261C] mt-0.5 font-['JetBrains_Mono'] text-xs break-all">
                 {claimIds.length > 0
                   ? `Claim ID${claimIds.length > 1 ? 's' : ''}: ${claimIds.join(', ')}`
-                  : 'Claim ID: pending'}
+                  : ''}
               </p>
             </div>
             <div className="flex items-center space-x-3 flex-wrap gap-2">
@@ -877,9 +877,11 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                     <p className="text-xs text-[#888888] font-['JetBrains_Mono'] mt-0.5 break-all">
                       Property ID: {p.property_id}
                     </p>
-                    <p className="text-xs text-[#E1261C] font-['JetBrains_Mono'] mt-0.5 break-all">
-                      Claim ID: {propertyClaimId(p, caseData) || 'pending'}
-                    </p>
+                    {propertyClaimId(p, caseData) && (
+                      <p className="text-xs text-[#E1261C] font-['JetBrains_Mono'] mt-0.5 break-all">
+                        Claim ID: {propertyClaimId(p, caseData)}
+                      </p>
+                    )}
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-bold text-[#0A0A0A]">
@@ -1145,12 +1147,12 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
                         <p className="text-xs text-[#888888] mt-0.5">
                           {h.createdAt
                             ? new Date(h.createdAt).toLocaleString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                                hour: 'numeric',
-                                minute: '2-digit',
-                              })
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })
                             : ''}
                         </p>
                       </div>

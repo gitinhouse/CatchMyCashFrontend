@@ -68,7 +68,7 @@ export async function POST(req) {
         ? [properties]
         : [];
 
-   
+
     // Brand palette (from catchmycash.com)
     const COLORS = {
       cream: '#f7f4ee',
