@@ -344,7 +344,7 @@ const ClaimProgressModal = ({ claim, onClose }) => {
                                 </h2>
                                 {claimIdSummary(claim) && (
                                     <span className="px-3 py-1 bg-[#FCE9E7] text-[#E1261C] text-xs font-semibold rounded-full font-['JetBrains_Mono']">
-                                        Claim ID: ${claimIdSummary(claim)}
+                                        Claim ID: {claimIdSummary(claim)}
                                     </span>
                                 )}
                             </div>
