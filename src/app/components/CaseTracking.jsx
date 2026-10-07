@@ -562,9 +562,16 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
     ? caseData.status_history
     : [];
 
+  // Whatever the processor said about the refusal, where it said anything. The
+  // generic sentence on its own told the claimant nothing they could act on.
+  const failureReason = String(failure.message || '').trim();
   const failureText = failure.claimFailed
-    ? "Your claim submission to the State Controller's Office failed. Please contact support."
-    : 'Document verification failed. Please re-upload your documents or contact support.';
+    ? failureReason
+      ? `Your claim submission to the State Controller's Office failed: ${failureReason}`
+      : "Your claim submission to the State Controller's Office failed. Please contact support."
+    : failureReason
+      ? `Document verification failed: ${failureReason}`
+      : 'Document verification failed. Please re-upload your documents or contact support.';
 
   // ✅ Check if any properties are already claimed
   const properties = caseData?.user_properties || [];

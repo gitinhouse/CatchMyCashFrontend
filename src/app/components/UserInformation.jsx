@@ -379,6 +379,9 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
     claimantRelationship: '',
   });
   const [apiError, setApiError] = useState('');
+  // Kept apart from apiError, which is rendered in two other places: sharing one
+  // string meant the consent warning appeared three times for one unticked box.
+  const [smsError, setSmsError] = useState('');
   const [agreeSMS, setAgreeSMS] = useState(false);
   const addressInputRef = useRef(null);
   const autocompleteRef = useRef(null);
@@ -842,11 +845,16 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
     }
 
     if (!agreeSMS) {
-      setApiError('You must agree to receive SMS updates before continuing.');
-      return;
-    } else {
+      setSmsError('You must agree to receive SMS updates before continuing.');
+      // The fields have just passed, so a "fix the highlighted errors" line left
+      // over from an earlier attempt would be stale — and would read as a second
+      // complaint about the box.
       setApiError('');
+      return;
     }
+
+    setSmsError('');
+    setApiError('');
 
     try {
       setLoading(true);
@@ -1068,11 +1076,27 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
 
         setNextPageData(data);
 
+        // Some properties can be refused while others are filed. The claim does
+        // carry on, but saying nothing about the refused ones left the claimant
+        // reading "in process" over a property that had already been turned down.
+        const someRefused = Number(claimSubmission?.failed) > 0;
+        const refused = someRefused
+          ? readFailedResults(claimSubmission?.results).map(({ propertyId, reason }) =>
+              propertyId ? `Property ${propertyId}: ${forDisplay(reason)}` : forDisplay(reason),
+            )
+          : [];
+
         setErrorModal({
           show: true,
           title: 'Claim is in Process',
-          message:
-            'We have sent an email with your login details, and your claim is currently being processed. Please wait. We will send updates to your email.',
+          message: someRefused
+            ? 'Your claim is being processed for the properties we could file, and we have emailed your login details. Some properties could not be filed:'
+            : 'We have sent an email with your login details, and your claim is currently being processed. Please wait. We will send updates to your email.',
+          details: refused.length
+            ? refused
+            : someRefused
+              ? ['One of your properties could not be filed, and no reason was given.']
+              : [],
         });
       } catch (err) {
         setErrorModal({
@@ -1674,7 +1698,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
 
               {/* SMS Agreement */}
               <div
-                className={`mt-4 rounded-lg p-3 ${apiError?.includes('SMS')
+                className={`mt-4 rounded-lg p-3 ${smsError
                   ? 'border border-[#E1261C]/40 bg-[#FCE9E7]'
                   : ''
                   }`}
@@ -1685,7 +1709,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                     checked={agreeSMS}
                     onChange={(e) => {
                       setAgreeSMS(e.target.checked);
-                      if (e.target.checked) setApiError('');
+                      if (e.target.checked) setSmsError('');
                     }}
                     className="h-4 w-4 text-[#E1261C] rounded border-[#E8E6E3] focus:ring-[#E1261C]"
                   />
@@ -1694,9 +1718,9 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                     claim.
                   </span>
                 </label>
-                {apiError?.includes('SMS') && (
+                {smsError && (
                   <p className="text-[#E1261C] text-xs mt-2 font-medium">
-                    {apiError}
+                    {smsError}
                   </p>
                 )}
               </div>

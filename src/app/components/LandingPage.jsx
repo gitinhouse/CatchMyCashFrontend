@@ -92,22 +92,39 @@ const ResonsArray = [
 // would never be seen. Each condition latches, so a drawn rule stays drawn and never replays.
 const SectionTopBorder = ({ revealed, sheenDuration }) => {
   const ref = useRef(null);
-  // The negative bottom viewport margin holds the wipe back until a slice of the card is on
-  // screen; `amount` cannot stand in for that here, the rule itself is only 4px tall.
-  const inView = useInView(ref, { once: true, margin: '0px 0px -120px 0px' });
+  // The negative bottom viewport margin holds the wipe back until a good slice of the card
+  // is on screen; `amount` cannot stand in for that here, the rule itself is only 4px tall.
+  // At 120px the wipe was often finishing while the card was still arriving from below,
+  // which is most of why nobody noticed it.
+  const inView = useInView(ref, { once: true, margin: '0px 0px -220px 0px' });
   const reduceMotion = useReducedMotion();
   const drawn = reduceMotion || (inView && revealed);
 
   return (
     <motion.div
       ref={ref}
-      className="absolute top-0 left-0 w-full h-1 origin-left bg-gradient-to-r from-[#E1261C] to-[#B11912]"
-      initial={{ scaleX: 0 }}
-      animate={{ scaleX: drawn ? 1 : 0 }}
+      // origin-top-left so the height it gains while sweeping grows downwards
+      // into the card's own padding and never nudges anything.
+      className="absolute top-0 left-0 w-full h-1 origin-top-left bg-gradient-to-r from-[#E1261C] to-[#B11912]"
+      // A 4px rule sliding in is almost impossible to catch, so it sweeps across
+      // at three times its height and then settles back to a hairline: the eye
+      // has something to follow, and what is left behind is the same rule as
+      // before. The settle is deliberately slower than the sweep and starts
+      // before it ends, which is what keeps it reading as one movement.
+      initial={{ scaleX: 0, scaleY: 3, opacity: 0.75 }}
+      animate={
+        drawn
+          ? { scaleX: 1, scaleY: 1, opacity: 1 }
+          : { scaleX: 0, scaleY: 3, opacity: 0.75 }
+      }
       transition={
         reduceMotion
           ? { duration: 0 }
-          : { duration: 0.9, ease: [0.16, 1, 0.3, 1] }
+          : {
+              scaleX: { duration: 1.1, ease: [0.22, 1, 0.36, 1] },
+              scaleY: { duration: 0.7, delay: 0.55, ease: [0.33, 1, 0.68, 1] },
+              opacity: { duration: 0.35, ease: 'easeOut' },
+            }
       }
     >
       {/* Opt-in, so a card that never carried a travelling sheen does not acquire one. */}

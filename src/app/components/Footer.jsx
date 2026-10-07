@@ -2,7 +2,29 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import {
+  FaEnvelope,
+  FaInstagram,
+  FaLinkedinIn,
+  FaXTwitter,
+} from 'react-icons/fa6';
 import { useSearchStore } from '../store/searchStore';
+
+// Real icons rather than the lookalike characters that were here before: 𝕏, "in",
+// ◉ and @ rendered at whatever each platform's font decided, and screen readers
+// read them out as the symbols they are.
+const SOCIAL_LINKS = [
+  { label: 'X', href: 'https://x.com/', Icon: FaXTwitter },
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/feed/', Icon: FaLinkedinIn },
+  {
+    label: 'Instagram',
+    href: 'https://www.instagram.com/accounts/log_in/',
+    Icon: FaInstagram,
+  },
+  // The symbol here used to link to Google's Gmail product page, which is not
+  // anybody's inbox; an envelope should open a message to support.
+  { label: 'Email', href: 'mailto:help@catchmycash.com', Icon: FaEnvelope },
+];
 
 export default function Footer() {
   const pathname = usePathname();
@@ -142,34 +164,24 @@ export default function Footer() {
 
           {/* Social Links */}
           <div className="flex gap-4">
-            <a
-              href="https://x.com/"
-              className="w-9 h-9 border border-[#1A1A1A] rounded flex items-center justify-center text-[#D4D4D4] hover:border-[#E1261C] hover:text-[#E1261C] transition-all duration-200"
-              aria-label="Twitter"
-            >
-              𝕏
-            </a>
-            <a
-              href="https://www.linkedin.com/feed/"
-              className="w-9 h-9 border border-[#1A1A1A] rounded flex items-center justify-center text-[#D4D4D4] hover:border-[#E1261C] hover:text-[#E1261C] transition-all duration-200"
-              aria-label="LinkedIn"
-            >
-              in
-            </a>
-            <a
-              href="https://www.instagram.com/accounts/log_in/"
-              className="w-9 h-9 border border-[#1A1A1A] rounded flex items-center justify-center text-[#D4D4D4] hover:border-[#E1261C] hover:text-[#E1261C] transition-all duration-200"
-              aria-label="Instagram"
-            >
-              ◉
-            </a>
-            <a
-              href="https://workspace.google.com/intl/en-US/gmail/"
-              className="w-9 h-9 border border-[#1A1A1A] rounded flex items-center justify-center text-[#D4D4D4] hover:border-[#E1261C] hover:text-[#E1261C] transition-all duration-200"
-              aria-label="Email"
-            >
-              @
-            </a>
+            {SOCIAL_LINKS.map(({ label, href, Icon }) => {
+              // A mail client is not a tab, so only the web links open in one.
+              const external = href.startsWith('http');
+              return (
+                <a
+                  key={label}
+                  href={href}
+                  {...(external
+                    ? { target: '_blank', rel: 'noopener noreferrer' }
+                    : {})}
+                  className="w-9 h-9 border border-[#1A1A1A] rounded flex items-center justify-center text-[#D4D4D4] hover:border-[#E1261C] hover:text-[#E1261C] transition-all duration-200"
+                  aria-label={label}
+                  title={label}
+                >
+                  <Icon className="w-4 h-4" aria-hidden="true" />
+                </a>
+              );
+            })}
           </div>
         </div>
       </div>
