@@ -12,6 +12,17 @@
   --red: #e1261c;
   --red-deep: #b11912;
   --red-tint: #fce9e7;
+  /* Highlight reds for the "Why Most People Never Get Their Money Back" copy. Tailwind's
+     own red-300/400 sit around #fca5a5/#f87171, which never clear 3:1 on that section's white
+     card, so the two steps are pinned to the brand reds instead: 4.7:1 for the headings,
+     7:1 for the smaller body copy.
+     These two names were asked for by name, and declaring them in an unlayered :root also
+     overrides Tailwind v4's own red-300/red-400 theme values app-wide: anywhere in this app
+     `text-red-300` paints #e1261c and `text-red-400` paints #b11912, not the pale Tailwind
+     reds. Nothing uses those utilities today — reach for a brand token knowingly, or pick a
+     different shade. */
+  --color-red-300: var(--red);
+  --color-red-400: var(--red-deep);
   --gray-900: #1a1a1a;
   --gray-700: #4a4a4a;
   --gray-500: #888888;

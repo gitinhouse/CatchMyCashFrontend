@@ -204,6 +204,26 @@ function continueLabel(status) {
     return status?.resumeStep === 'search' ? 'Search Properties' : 'Continue Filing';
 }
 
+/**
+ * Who the dashboard is being shown to, taken from the stored session.
+ *
+ * There is no username column anywhere in the data model — src/app/models/userLogin.js
+ * holds only userEmail/userPassword/userType — and login and registration put
+ * nothing but the email on the session, so the part before the @ is the only
+ * username-shaped value the client has. Nothing further to look up.
+ */
+function deriveAccountIdentity(session) {
+    const user = session?.user;
+    const email = typeof user?.email === 'string' ? user.email.trim() : '';
+    const firstName = typeof user?.first_name === 'string' ? user.first_name.trim() : '';
+
+    return {
+        email,
+        firstName,
+        username: email ? email.split('@')[0] : '',
+    };
+}
+
 const toneStyles = {
     approved: 'bg-[#E1261C] text-white', // Changed from green to red
     review: 'bg-[#4A4A4A] text-white',
@@ -589,6 +609,7 @@ export default function MyAccountPage() {
     const [openCaseId, setOpenCaseId] = useState(null);
     const [activeTab, setActiveTab] = useState({});
     const [userName, setUserName] = useState('');
+    const [account, setAccount] = useState({ email: '', firstName: '', username: '' });
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [retryStatuses, setRetryStatuses] = useState({});
     const [selectedClaim, setSelectedClaim] = useState(null);
@@ -605,8 +626,20 @@ export default function MyAccountPage() {
             setLoading(true);
             setErrorMsg('');
 
-            const storedLoginRaw = localStorage.getItem('userLogin');
-            const storedLogin = storedLoginRaw ? JSON.parse(storedLoginRaw) : null;
+            let storedLogin = null;
+            try {
+                const storedLoginRaw = localStorage.getItem('userLogin');
+                // A half-written or cleared session can leave the literal string
+                // "undefined" behind, which JSON.parse rejects. A session we
+                // cannot read is no session, so it falls through to the login
+                // redirect below rather than failing the whole fetch.
+                if (storedLoginRaw && storedLoginRaw !== 'undefined') {
+                    storedLogin = JSON.parse(storedLoginRaw);
+                }
+            } catch (e) {
+                console.error('Failed to read userLogin from localStorage', e);
+            }
+
             const token = storedLogin?.token;
             const realUserId = storedLogin?.user?.user_id;
 
@@ -617,6 +650,7 @@ export default function MyAccountPage() {
             }
 
             setIsLoggedIn(true);
+            setAccount(deriveAccountIdentity(storedLogin));
 
             const { data } = await axios.get(
                 `/api/case?user_id=${realUserId}`,
@@ -642,9 +676,11 @@ export default function MyAccountPage() {
             }
             setRetryStatuses(statuses);
 
-            const firstWithName = list.find((c) => c?.user_info?.first_name);
+            const firstWithName = list.find(
+                (c) => typeof c?.user_info?.first_name === 'string' && c.user_info.first_name.trim(),
+            );
             if (firstWithName) {
-                setUserName(firstWithName.user_info.first_name);
+                setUserName(firstWithName.user_info.first_name.trim());
             }
         } catch (err) {
             console.error('Failed to load cases:', err);
@@ -749,6 +785,11 @@ export default function MyAccountPage() {
     const formatMoney = (n) =>
         n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+    // A real first name reads best in the greeting, but a brand-new account has
+    // no case to take one from — so the session's own username stands in before
+    // falling back to the anonymous "there".
+    const greetingName = userName || account.firstName || account.username || 'there';
+
     return (
         <div className="min-h-screen bg-[#F7F5F2]" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
             {/* Header */}
@@ -757,8 +798,21 @@ export default function MyAccountPage() {
                     <div>
                         <h1 className="text-3xl font-bold text-[#0A0A0A] font-['Fraunces']">
                             Welcome back,{' '}
-                            <span className="text-[#E1261C]">{userName || 'there'}</span>.
+                            <span className="text-[#E1261C]">{greetingName}</span>.
                         </h1>
+                        {account.email && (
+                            <p className="text-xs text-[#4A4A4A] mt-1 font-mono">
+                                {account.username && (
+                                    <>
+                                        Username{' '}
+                                        <span className="font-semibold">{account.username}</span>
+                                        {' · '}
+                                    </>
+                                )}
+                                Account{' '}
+                                <span className="font-semibold">{account.email}</span>
+                            </p>
+                        )}
                         <p className="text-[#4A4A4A] mt-1">
                             You currently have{' '}
                             <span className="text-[#E1261C] font-semibold">

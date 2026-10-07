@@ -15,17 +15,31 @@ import CaseTracking from './components/CaseTracking';
 import ReferralSystem from './components/ReferralSystem';
 import Leaderboard from './components/Leaderboared';
 import { useRouter } from 'next/navigation';
-import { Menu, X } from 'lucide-react';
+import { Loader2, Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchStore } from './store/searchStore';
 import { clearClientSession } from './lib/session';
 import NotificationBell from './components/NotificationBell';
 
+// Last resort against a push that never commits at all (dropped payload, a tab
+// that went offline), not a load budget: on a throttled connection the landing
+// payload plus this chunk can legitimately take tens of seconds, and the loader
+// has to stay up for all of it.
+const SEARCH_NAV_TIMEOUT_MS = 45000;
+
 export const SiteHeader = () => {
   const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-  const { goToSearch, resetAll } = useSearchStore();
+  const { resetAll, currentStep, stepReady, setStepReady } = useSearchStore();
+
+  // Raised synchronously on click so the loader paints on the first frame after
+  // it, instead of the page looking dead until the route commits.
+  const [isOpeningSearch, setIsOpeningSearch] = React.useState(false);
+  const searchNavTimer = React.useRef(null);
+  // Route the push started from, so "still waiting for it" can be told apart
+  // from "the user went somewhere else instead".
+  const searchNavOrigin = React.useRef(null);
 
   // 🔹 ADD: Check if user is logged in
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
@@ -84,8 +98,80 @@ export const SiteHeader = () => {
     router.push('/');
   };
 
+  const stopOpeningSearch = React.useCallback(() => {
+    if (searchNavTimer.current) {
+      clearTimeout(searchNavTimer.current);
+      searchNavTimer.current = null;
+    }
+    setIsOpeningSearch(false);
+  }, []);
+
+  // currentStep stands in for the search params here because this header renders
+  // in the root layout, where useSearchParams() would need a Suspense boundary
+  // and would otherwise fail the build on every statically prerendered page.
+  React.useEffect(() => {
+    if (!isOpeningSearch) return;
+
+    // currentStep flips the instant the URL commits, but Home swaps steps inside
+    // AnimatePresence mode="wait": the old step still has 0.4s of exit and the new
+    // one 0.6s of enter to play. stepReady is the step that is genuinely on screen.
+    const searchStepOnScreen =
+      pathname === '/' && currentStep === 'search' && stepReady;
+
+    // Browser Back out of the pending push, or any other navigation, leaves this
+    // as a full-screen click blocker over a page it was never meant to cover: off
+    // '/' as soon as the route is no longer the one we started from, and on '/'
+    // as soon as some other step has settled there.
+    const navigationAbandoned =
+      pathname === '/'
+        ? stepReady && currentStep !== 'search'
+        : pathname !== searchNavOrigin.current;
+
+    if (!searchStepOnScreen && !navigationAbandoned) return;
+
+    stopOpeningSearch();
+  }, [isOpeningSearch, pathname, currentStep, stepReady, stopOpeningSearch]);
+
+  // Back or Forward while the push is in flight gives up on it. Coming back out to
+  // the route the click started from looks identical to never having left, so the
+  // pathname alone cannot catch this one.
+  React.useEffect(() => {
+    if (!isOpeningSearch) return;
+
+    window.addEventListener('popstate', stopOpeningSearch);
+    return () => window.removeEventListener('popstate', stopOpeningSearch);
+  }, [isOpeningSearch, stopOpeningSearch]);
+
+  React.useEffect(() => {
+    return () => {
+      if (searchNavTimer.current) clearTimeout(searchNavTimer.current);
+    };
+  }, []);
+
   const handleSearchNow = () => {
-    router.push('/?step=search');
+    if (isOpeningSearch) return;
+
+    const params = new URLSearchParams(window.location.search);
+
+    // Already on the search step: there is no navigation to cover, and pushing
+    // would only rewrite the query string we are already sitting on.
+    if (pathname === '/' && params.get('step') === 'search') return;
+
+    // Readiness left over from an earlier visit to a step would otherwise take the
+    // overlay down on the frame the URL commits, before the step is drawn.
+    setStepReady(false);
+    searchNavOrigin.current = pathname;
+    setIsOpeningSearch(true);
+    if (searchNavTimer.current) clearTimeout(searchNavTimer.current);
+    searchNavTimer.current = setTimeout(() => {
+      searchNavTimer.current = null;
+      setIsOpeningSearch(false);
+    }, SEARCH_NAV_TIMEOUT_MS);
+
+    // Carry the rest of the query string over (referral and utm codes), the way
+    // Home's own step navigation does.
+    params.set('step', 'search');
+    router.push(`/?${params.toString()}`);
   };
 
   const navItems = [
@@ -100,138 +186,157 @@ export const SiteHeader = () => {
   if (pathname?.startsWith('/admin')) return null;
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-[#E8E6E3] shadow-sm">
-      <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between gap-3">
-        <Link
-          href="/"
-          className="font-['Fraunces'] font-black text-lg md:text-xl lg:text-[22px] tracking-[-0.02em] flex items-center gap-2 text-black shrink-0"
-        >
-          <span className="w-2.5 h-2.5 bg-[#E1261C] rounded-full inline-block"></span>
-          CatchMyCash
-        </Link>
+    <>
+      <header className="sticky top-0 z-50 bg-white border-b border-[#E8E6E3] shadow-sm">
+        <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between gap-3">
+          <Link
+            href="/"
+            className="font-['Fraunces'] font-black text-lg md:text-xl lg:text-[22px] tracking-[-0.02em] flex items-center gap-2 text-black shrink-0"
+          >
+            <span className="w-2.5 h-2.5 bg-[#E1261C] rounded-full inline-block"></span>
+            CatchMyCash
+          </Link>
 
-        {/* Desktop Navigation — visible from md (tablet) up */}
-        <nav className="hidden md:flex items-center gap-2.5 lg:gap-6 xl:gap-8">
-          {navItems.map((item) => (
-            <Link
-              key={item.name}
-              href={item.path}
-              className={`text-xs lg:text-sm font-medium whitespace-nowrap transition-colors ${pathname === item.path
-                ? 'text-[#0A0A0A]'
-                : 'text-[#4A4A4A] hover:text-[#0A0A0A]'
-                }`}
-            >
-              {item.name}
-            </Link>
-          ))}
-
-          <div className="flex items-center gap-1.5 lg:gap-3">
-            {isLoggedIn && (<NotificationBell />)}
-
-            <button
-              onClick={handleSearchNow}
-              className="inline-flex items-center gap-1.5 px-2 py-1.5 lg:px-5 lg:py-3 bg-[#E1261C] text-white text-xs lg:text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md whitespace-nowrap"
-            >
-              Search Now
-            </button>
-
-            {/* 🔹 MODIFIED: Conditional rendering for Login/Dashboard */}
-            {isLoggedIn ? (
-              <>
-                <button
-                  onClick={handleDashboard}
-                  className="inline-flex items-center gap-1.5 px-2 py-1.5 lg:px-5 lg:py-3 bg-[#E1261C] text-white text-xs lg:text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md whitespace-nowrap"
-                >
-                  My Dashboard
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="inline-flex items-center gap-1.5 px-2 py-1.5 lg:px-5 lg:py-3 border border-[#E1261C] text-[#E1261C] text-xs lg:text-sm font-semibold rounded-lg hover:bg-[#FCE9E7] transition-all whitespace-nowrap"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={handleLogin}
-                className="inline-flex items-center gap-1.5 px-2 py-1.5 lg:px-5 lg:py-3 bg-[#E1261C] text-white text-xs lg:text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md whitespace-nowrap"
-              >
-                Login
-              </button>
-            )}
-          </div>
-        </nav>
-
-        {/* Mobile Menu Button — only below md (phones only) */}
-        <button
-          className="md:hidden p-2 shrink-0"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        >
-          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      </div>
-
-      {/* Mobile Navigation */}
-      {mobileMenuOpen && (
-        <div className="md:hidden border-t border-[#E8E6E3] bg-white shadow-lg">
-          <div className="px-4 sm:px-8 py-4 flex flex-col gap-4">
+          {/* Desktop Navigation — visible from md (tablet) up */}
+          <nav className="hidden md:flex items-center gap-2.5 lg:gap-6 xl:gap-8">
             {navItems.map((item) => (
               <Link
                 key={item.name}
                 href={item.path}
-                className="text-sm font-medium text-[#4A4A4A] hover:text-[#0A0A0A] transition-colors py-2"
-                onClick={() => setMobileMenuOpen(false)}
+                className={`text-xs lg:text-sm font-medium whitespace-nowrap transition-colors ${pathname === item.path
+                  ? 'text-[#0A0A0A]'
+                  : 'text-[#4A4A4A] hover:text-[#0A0A0A]'
+                  }`}
               >
                 {item.name}
               </Link>
             ))}
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                handleSearchNow();
-              }}
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all w-full shadow-sm"
-            >
-              Search Now
-            </button>
 
-            {/* 🔹 MODIFIED: Conditional rendering for Login/Dashboard in mobile */}
-            {isLoggedIn ? (
-              <>
+            <div className="flex items-center gap-1.5 lg:gap-3">
+              {isLoggedIn && (<NotificationBell />)}
+
+              {/* aria rather than the native disabled attribute: disabling the
+                  button the user just pressed drops keyboard focus to <body> for
+                  the whole navigation, and the handler already ignores a second
+                  press. */}
+              <button
+                onClick={handleSearchNow}
+                aria-busy={isOpeningSearch}
+                aria-disabled={isOpeningSearch}
+                className="inline-flex items-center gap-1.5 px-2 py-1.5 lg:px-5 lg:py-3 bg-[#E1261C] text-white text-xs lg:text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md whitespace-nowrap aria-disabled:opacity-70 aria-disabled:cursor-wait"
+              >
+                {isOpeningSearch && <Loader2 className="w-3.5 h-3.5 lg:w-4 lg:h-4 animate-spin" />}
+                Search Now
+              </button>
+
+              {/* 🔹 MODIFIED: Conditional rendering for Login/Dashboard */}
+              {isLoggedIn ? (
+                <>
+                  <button
+                    onClick={handleDashboard}
+                    className="inline-flex items-center gap-1.5 px-2 py-1.5 lg:px-5 lg:py-3 bg-[#E1261C] text-white text-xs lg:text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md whitespace-nowrap"
+                  >
+                    My Dashboard
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="inline-flex items-center gap-1.5 px-2 py-1.5 lg:px-5 lg:py-3 border border-[#E1261C] text-[#E1261C] text-xs lg:text-sm font-semibold rounded-lg hover:bg-[#FCE9E7] transition-all whitespace-nowrap"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
                 <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    handleDashboard();
-                  }}
-                  className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all w-full shadow-sm"
+                  onClick={handleLogin}
+                  className="inline-flex items-center gap-1.5 px-2 py-1.5 lg:px-5 lg:py-3 bg-[#E1261C] text-white text-xs lg:text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md whitespace-nowrap"
                 >
-                  My Dashboard
+                  Login
                 </button>
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    handleLogout();
-                  }}
-                  className="inline-flex items-center justify-center gap-2 px-5 py-3 border border-[#E1261C] text-[#E1261C] text-sm font-semibold rounded-lg hover:bg-[#FCE9E7] transition-all w-full"
+              )}
+            </div>
+          </nav>
+
+          {/* Mobile Menu Button — only below md (phones only) */}
+          <button
+            className="md:hidden p-2 shrink-0"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+
+        {/* Mobile Navigation */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-[#E8E6E3] bg-white shadow-lg">
+            <div className="px-4 sm:px-8 py-4 flex flex-col gap-4">
+              {navItems.map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.path}
+                  className="text-sm font-medium text-[#4A4A4A] hover:text-[#0A0A0A] transition-colors py-2"
+                  onClick={() => setMobileMenuOpen(false)}
                 >
-                  Logout
-                </button>
-              </>
-            ) : (
+                  {item.name}
+                </Link>
+              ))}
+              {/* No busy state on this one: closing the menu and opening the
+                  search batch into a single commit, so this subtree is gone before
+                  it could render one. The overlay is what the mobile user sees. */}
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
-                  handleLogin();
+                  handleSearchNow();
                 }}
                 className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all w-full shadow-sm"
               >
-                Login
+                Search Now
               </button>
-            )}
+
+              {/* 🔹 MODIFIED: Conditional rendering for Login/Dashboard in mobile */}
+              {isLoggedIn ? (
+                <>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleDashboard();
+                    }}
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all w-full shadow-sm"
+                  >
+                    My Dashboard
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3 border border-[#E1261C] text-[#E1261C] text-sm font-semibold rounded-lg hover:bg-[#FCE9E7] transition-all w-full"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleLogin();
+                  }}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all w-full shadow-sm"
+                >
+                  Login
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-    </header>
+        )}
+      </header>
+
+      {/* Owned by the header rather than by Home: Home is unmounted on routes
+          like /faq, so its overlay cannot cover a cross-route Search Now. */}
+      <LoadingOverlay
+        isTransitioning={isOpeningSearch}
+        message="Opening your property search..."
+      />
+    </>
   );
 };
 
@@ -243,6 +348,7 @@ export default function Home() {
     propertyData,
     isTransitioning,
     setCurrentStep,
+    setStepReady,
     setUserLogin,
     navigateToStep,
     goToResults,
@@ -384,6 +490,14 @@ export default function Home() {
           initial="initial"
           animate="in"
           exit="out"
+          onAnimationComplete={() => {
+            // The step leaving the screen reports completion here too, and it
+            // reports it first; only the step that is still the current one has
+            // finished animating in and is what the user is looking at.
+            if (useSearchStore.getState().currentStep === currentStep) {
+              setStepReady(true);
+            }
+          }}
           className="w-full"
         >
           {stepComponents[currentStep] || stepComponents.landing}

@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, useInView, useReducedMotion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import {
@@ -84,6 +84,48 @@ const ResonsArray = [
   },
 ];
 
+// One rule shared by the three cards below, so the three cannot drift apart. It wipes in from
+// the left once two separate things are true: the rule has been scrolled to, and the card it
+// sits on has finished its own mount reveal. Both are needed, because an observer sees layout
+// boxes and not opacity — a visitor who reloads mid-page or scrolls straight down would
+// otherwise spend the one-shot trigger on a card that is still fully transparent, and the wipe
+// would never be seen. Each condition latches, so a drawn rule stays drawn and never replays.
+const SectionTopBorder = ({ revealed, sheenDuration }) => {
+  const ref = useRef(null);
+  // The negative bottom viewport margin holds the wipe back until a slice of the card is on
+  // screen; `amount` cannot stand in for that here, the rule itself is only 4px tall.
+  const inView = useInView(ref, { once: true, margin: '0px 0px -120px 0px' });
+  const reduceMotion = useReducedMotion();
+  const drawn = reduceMotion || (inView && revealed);
+
+  return (
+    <motion.div
+      ref={ref}
+      className="absolute top-0 left-0 w-full h-1 origin-left bg-gradient-to-r from-[#E1261C] to-[#B11912]"
+      initial={{ scaleX: 0 }}
+      animate={{ scaleX: drawn ? 1 : 0 }}
+      transition={
+        reduceMotion
+          ? { duration: 0 }
+          : { duration: 0.9, ease: [0.16, 1, 0.3, 1] }
+      }
+    >
+      {/* Opt-in, so a card that never carried a travelling sheen does not acquire one. */}
+      {sheenDuration && !reduceMotion ? (
+        <motion.div
+          className="h-full w-full bg-gradient-to-r from-transparent via-white/30 to-transparent"
+          animate={{ x: ['-100%', '100%'] }}
+          transition={{
+            duration: sheenDuration,
+            repeat: Infinity,
+            ease: 'linear',
+          }}
+        />
+      ) : null}
+    </motion.div>
+  );
+};
+
 const LandingPage = ({ onNext }) => {
   const router = useRouter();
 
@@ -98,6 +140,12 @@ const LandingPage = ({ onNext }) => {
   const [searchResult, setSearchResult] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [searchError, setSearchError] = useState('');
+
+  // Each of the three cards below tells its own top rule when its mount reveal has landed, so
+  // the rule never wipes in behind a still-transparent card. See SectionTopBorder.
+  const [reasonsRevealed, setReasonsRevealed] = useState(false);
+  const [solutionRevealed, setSolutionRevealed] = useState(false);
+  const [pricingRevealed, setPricingRevealed] = useState(false);
 
 
   useEffect(() => {
@@ -351,15 +399,10 @@ const LandingPage = ({ onNext }) => {
           initial={{ opacity: 0, x: -30 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, delay: 1.4 }}
+          onAnimationComplete={() => setReasonsRevealed(true)}
           className="bg-white border border-[#E8E6E3] rounded-xl p-8 mb-12 relative overflow-hidden shadow-md hover:shadow-lg transition-all duration-300"
         >
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]">
-            <motion.div
-              className="h-full w-full bg-gradient-to-r from-transparent via-white/30 to-transparent"
-              animate={{ x: ['-100%', '100%'] }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-            />
-          </div>
+          <SectionTopBorder revealed={reasonsRevealed} sheenDuration={2} />
 
           <motion.div
             className="flex items-center mb-6"
@@ -371,7 +414,7 @@ const LandingPage = ({ onNext }) => {
             >
               <AlertTriangle className="h-8 w-8 text-[#E1261C] mr-3" />
             </motion.div>
-            <h3 className="sm:text-[24px] text-[20px] font-bold text-[#0A0A0A] font-['Fraunces']">
+            <h3 className="sm:text-[24px] text-[20px] font-bold text-[color:var(--color-red-300)] font-['Fraunces']">
               Why Most People Never Get Their Money Back
             </h3>
           </motion.div>
@@ -407,10 +450,12 @@ const LandingPage = ({ onNext }) => {
                     <item.icon className="h-6 w-6 text-[#E1261C] mr-3 mt-1" />
                   </motion.div>
                   <div>
-                    <div className="font-semibold font-['JetBrains_Mono'] text-[#0A0A0A] group-hover:text-[#E1261C] transition-colors">
+                    {/* Both hover states of the title are brand reds a shade apart, so the
+                        underline is what actually signals the row is interactive. */}
+                    <div className="font-semibold font-['JetBrains_Mono'] text-[color:var(--color-red-300)] group-hover:text-[color:var(--color-red-400)] group-hover:underline group-hover:underline-offset-2 transition-colors">
                       {item.title}
                     </div>
-                    <div className="text-[#4A4A4A] font-['Inter'] group-hover:text-[#0A0A0A] transition-colors text-sm">
+                    <div className="text-[color:var(--color-red-400)] font-['Inter'] text-sm">
                       {item.desc}
                     </div>
                   </div>
@@ -425,15 +470,10 @@ const LandingPage = ({ onNext }) => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 2.4 }}
+          onAnimationComplete={() => setSolutionRevealed(true)}
           className="bg-white border border-[#E8E6E3] rounded-xl p-8 mb-12 relative overflow-hidden shadow-md hover:shadow-lg transition-all duration-300"
         >
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]">
-            <motion.div
-              className="h-full w-full bg-gradient-to-r from-transparent via-white/30 to-transparent"
-              animate={{ x: ['-100%', '100%'] }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-            />
-          </div>
+          <SectionTopBorder revealed={solutionRevealed} sheenDuration={3} />
 
           <motion.h3
             className="sm:text-[24px] text-[20px] font-bold text-[#0A0A0A] mb-8 text-center font-['Fraunces']"
@@ -497,9 +537,10 @@ const LandingPage = ({ onNext }) => {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, delay: 3.4 }}
           whileHover={{ scale: 1.02 }}
+          onAnimationComplete={() => setPricingRevealed(true)}
           className="text-center bg-white border border-[#E8E6E3] rounded-xl p-8 relative overflow-hidden shadow-md hover:shadow-lg transition-all duration-300"
         >
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
+          <SectionTopBorder revealed={pricingRevealed} />
 
           <motion.div
             className="flex items-center justify-center mb-4"

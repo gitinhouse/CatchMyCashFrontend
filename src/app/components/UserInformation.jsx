@@ -94,6 +94,237 @@ const CLAIMANT_RELATIONSHIPS = [
   { value: 'BANKRUPTCY TRUSTEE', label: 'Bankruptcy Trustee' },
 ];
 
+// A refused claim names its reason under whichever of these the layer that
+// refused it happens to use: the state portal, the automation server and our
+// own route each word it differently, and the failure dialog is useless to the
+// claimant without it. `upstream` is where /api/claim-submission parks an
+// answer that was not a plain object.
+const BODY_REASON_KEYS = [
+  'message',
+  'error',
+  'errors',
+  'reason',
+  'detail',
+  'details',
+  'description',
+  'upstream',
+];
+
+// A per-property entry describes the property as much as its refusal, so the
+// keys that carry the property's own metadata are not read as the reason it
+// was refused: a description of "Unclaimed deposit, Bank of X" is what the
+// claim is about, not what went wrong with it.
+const ENTRY_REASON_KEYS = ['message', 'error', 'errors', 'reason', 'detail'];
+
+// Substituted by /api/claim-submission when the layer underneath it said
+// nothing of its own, so they must never be shown in place of a real reason —
+// they only repeat the dialog title.
+const GENERIC_REASONS = ['claim submission failed', 'server error'];
+
+// Whatever punctuation the sender ended it with, a placeholder is still a
+// placeholder: "Claim submission failed?" was being echoed back as a reason.
+const isGenericReason = (reason) =>
+  GENERIC_REASONS.includes(
+    String(reason).trim().toLowerCase().replace(/[^\p{L}\p{N}]+$/u, ''),
+  );
+
+// Said against a property that failed without explaining itself, so the
+// dialog accounts for every failure rather than listing only the explained
+// ones.
+const NO_REASON_GIVEN = 'No reason was given';
+
+const REASON_MAX_LENGTH = 280;
+
+// Reason bodies nest several layers deep — an error wrapping a detail
+// wrapping a message — so what has to be stopped is a cycle, not depth; the
+// cap is only a guard against a runaway body.
+const REASON_MAX_DEPTH = 10;
+
+// Upstream occasionally answers with a stack trace or a whole paragraph; the
+// dialog shows the beginning of it rather than overflowing.
+const forDisplay = (reason) => {
+  const text = String(reason ?? '').replace(/\s+/g, ' ').trim();
+  if (!text) return '';
+  const clipped =
+    text.length > REASON_MAX_LENGTH
+      ? `${text.slice(0, REASON_MAX_LENGTH).trimEnd()}…`
+      : text;
+  return /[.!?:)…]$/.test(clipped) ? clipped : `${clipped}.`;
+};
+
+// A reason arrives as a string, as a list of validation errors, or wrapped in
+// an object, so each shape is unwrapped until readable text falls out.
+const readReason = (value, depth = 0, seen = new Set()) => {
+  if (typeof value === 'string') {
+    const text = value.trim();
+    // An HTML error page is not a reason anybody can read.
+    return text.startsWith('<') ? '' : text;
+  }
+
+  // A number or a boolean is a flag rather than something to show a claimant:
+  // the `{ error: true, message: ... }` envelope used to render as "true".
+  if (!value || typeof value !== 'object') return '';
+
+  if (seen.has(value) || depth > REASON_MAX_DEPTH) return '';
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    // A list of validation errors reads as one clause per fault, so the
+    // sentence punctuation the sender may have added is normalised away.
+    const parts = [];
+    value.forEach((item) => {
+      const part = readReason(item, depth + 1, seen).replace(/[.;]+$/, '');
+      if (part && !parts.includes(part)) parts.push(part);
+    });
+    return parts.join('; ');
+  }
+
+  for (const key of BODY_REASON_KEYS) {
+    const part = readReason(value[key], depth + 1, seen);
+    if (part) return part;
+  }
+
+  // A validation body keys each fault by the field it is about —
+  // `{ errors: { taxID: { message: 'taxID is required' } } }` — so once the
+  // reason keys have missed, the key is half of what the claimant needs.
+  const labelled = [];
+  Object.entries(value).forEach(([key, nested]) => {
+    if (BODY_REASON_KEYS.includes(key)) return;
+    const part = readReason(nested, depth + 1, seen).replace(/[.;]+$/, '');
+    if (!part) return;
+    const text = `${key}: ${part}`;
+    if (!labelled.includes(text)) labelled.push(text);
+  });
+  return labelled.join('; ');
+};
+
+// The reason a payload carries under the keys it is allowed to use, ignoring
+// the placeholders: a specific field sitting beside one is what the claimant
+// needs to see.
+const readReasonFrom = (value, keys) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    const reason = readReason(value);
+    return isGenericReason(reason) ? '' : reason;
+  }
+
+  for (const key of keys) {
+    const reason = readReason(value[key]);
+    if (reason && !isGenericReason(reason)) return reason;
+  }
+
+  return '';
+};
+
+const readBodyReason = (body) => readReasonFrom(body, BODY_REASON_KEYS);
+
+const readEntryReason = (entry) => readReasonFrom(entry, ENTRY_REASON_KEYS);
+
+// The processor words a filed claim in the same `message` field a refusal uses
+// — see extractPropertyClaimIds in src/app/api/legalDetails/route.js — and
+// leaves `success` off its entries altogether on some versions, so a claim
+// that was filed used to be shown as the reason the claim failed.
+const CLAIM_FILED_MESSAGE = /claim\s+\d+\s+filed/i;
+
+const isFailedEntry = (entry) => {
+  if (!entry || typeof entry !== 'object') return false;
+  if (entry.success === true || entry.success === 'true') return false;
+  if (CLAIM_FILED_MESSAGE.test(String(entry.message ?? ''))) return false;
+
+  // An entry has to say it failed, in either of the two wordings used around
+  // the claim process; a silent entry is not a refusal to report.
+  return (
+    entry.success === false ||
+    entry.success === 'false' ||
+    String(entry.status ?? '').toLowerCase() === 'failed'
+  );
+};
+
+// Every property is filed separately and can be refused for its own reason.
+const readFailedResults = (results) => {
+  if (!Array.isArray(results)) return [];
+
+  return results.filter(isFailedEntry).map((entry) => ({
+    // Key casing has varied between processor versions; these are the
+    // variants /api/legalDetails already accepts.
+    propertyId: String(
+      entry.property_id ?? entry.propertyId ?? entry.PropertyId ?? '',
+    ).trim(),
+    reason: readEntryReason(entry),
+  }));
+};
+
+/**
+ * Work out what the claim-failure dialog should say.
+ *
+ * @param {object} args
+ * @param {*} args.body     the response body, whether it came back 200 with
+ *                          failures in it or as an error payload
+ * @param {number} [args.status]  HTTP status, the last thing left to tell
+ *                          support when nobody supplied a reason
+ * @param {*} [args.error]  the axios error, when the request itself failed
+ * @returns {{ message: string, details: string[] }}
+ */
+const buildSubmissionFailure = ({ body, status, error }) => {
+  // A request that never landed — a dropped connection or a timeout — carries
+  // no body at all, and is worth saying plainly instead of as a bare reason.
+  if (error?.isAxiosError && !error.response) {
+    const network = forDisplay(error.message);
+    return {
+      message: network
+        ? `We could not reach our claim submission service: ${network} Please check your connection and try again.`
+        : 'We could not reach our claim submission service. Please check your connection and try again.',
+      details: [],
+    };
+  }
+
+  const failures = readFailedResults(body?.results);
+  const explained = failures.filter((entry) => entry.reason);
+  const distinctReasons = Array.from(new Set(explained.map((entry) => entry.reason)));
+
+  // One reason stands for the whole claim only when it is the reason for
+  // every property that failed. Short of that each property is listed with
+  // its own, including the ones that came back silent — dropping those let
+  // one property's reason read as the reason the claim was refused.
+  if (distinctReasons.length === 1 && explained.length === failures.length) {
+    return {
+      message: `We were unable to submit your claim. ${forDisplay(distinctReasons[0])}`,
+      details: [],
+    };
+  }
+
+  if (explained.length > 0) {
+    return {
+      message:
+        'We were unable to submit your claim. The submission service reported the following for each property:',
+      details: failures.map(({ propertyId, reason }) => {
+        const text = forDisplay(reason || NO_REASON_GIVEN);
+        return propertyId ? `Property ${propertyId}: ${text}` : text;
+      }),
+    };
+  }
+
+  // Nothing per property, so whatever the body itself says stands for the
+  // claim: a portal-wide refusal arrives that way.
+  const bodyReason = readBodyReason(body);
+  if (bodyReason) {
+    return {
+      message: `We were unable to submit your claim. ${forDisplay(bodyReason)}`,
+      details: [],
+    };
+  }
+
+  // Nothing readable came back at all, so the status is the only thing left
+  // that support can work from — and only when the status is itself the
+  // failure, since a 200 quoted at a claimant reads as success.
+  const quotableStatus = Number(status) >= 400 ? status : null;
+  return {
+    message: quotableStatus
+      ? `We were unable to submit your claim, and no reason was given (status ${quotableStatus}). Please try again, and quote that status if you contact support.`
+      : 'We were unable to submit your claim, and no reason was given. Please try again, and contact support if it keeps happening.',
+    details: [],
+  };
+};
+
 const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -123,6 +354,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
     show: false,
     title: '',
     message: '',
+    details: [],
   });
   const [nextPageData, setNextPageData] = useState(null);
   const {
@@ -785,28 +1017,35 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
         console.log('--claimSubmission--', claimSubmission);
 
         if (claimSubmission.failed > 0 && claimSubmission.succeeded === 0) {
-          const failedMessages = claimSubmission.results
-            ?.filter((r) => !r.success)
-            .map((r) => r.message)
-            .join(' ');
+          // No status here: the request itself succeeded, and the failures are
+          // inside the body.
+          const failure = buildSubmissionFailure({ body: claimSubmission });
 
           setErrorModal({
             show: true,
             title: 'Claim Submission Failed',
-            message:
-              failedMessages ||
-              'We were unable to submit your claim. Please try again.',
+            message: failure.message,
+            details: failure.details,
           });
           setLoading(false);
           return;
         }
       } catch (err) {
+        // The reason shown to the claimant is trimmed for the dialog, so the
+        // whole answer is kept in the console for support.
+        console.error('[claim] submission failed', err.response?.data || err);
+
+        const failure = buildSubmissionFailure({
+          body: err.response?.data,
+          status: err.response?.status,
+          error: err,
+        });
+
         setErrorModal({
           show: true,
           title: 'Claim Submission Failed',
-          message:
-            err.response?.data?.message ||
-            'An unexpected error occurred while submitting your claim.',
+          message: failure.message,
+          details: failure.details,
         });
         setLoading(false);
         return;
@@ -1509,11 +1748,13 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
           show={errorModal.show}
           title={errorModal.title}
           message={errorModal.message}
+          details={errorModal.details}
           onClose={() => {
             setErrorModal({
               show: false,
               title: '',
               message: '',
+              details: [],
             });
 
             if (nextPageData) {
@@ -1526,8 +1767,11 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
   );
 };
 
-const ErrorModal = ({ show, title, message, onClose }) => {
+const ErrorModal = ({ show, title, message, details, onClose }) => {
   if (!show) return null;
+
+  // Only the claim-failure dialog has a per-property breakdown to show.
+  const detailList = Array.isArray(details) ? details : [];
 
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/40 px-4">
@@ -1540,7 +1784,24 @@ const ErrorModal = ({ show, title, message, onClose }) => {
             {title}
           </h3>
         </div>
-        <p className="text-sm text-[#4A4A4A] mb-6">{message}</p>
+        <p
+          className={`text-sm text-[#4A4A4A] ${detailList.length ? 'mb-3' : 'mb-6'}`}
+        >
+          {message}
+        </p>
+        {detailList.length > 0 && (
+          <ul className="mb-6 space-y-2 max-h-40 overflow-y-auto pr-1">
+            {detailList.map((detail, index) => (
+              <li
+                key={index}
+                className="flex items-start gap-2 text-sm text-[#4A4A4A]"
+              >
+                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#E1261C] shrink-0"></span>
+                <span className="break-words">{detail}</span>
+              </li>
+            ))}
+          </ul>
+        )}
         <button
           onClick={onClose}
           className="w-full px-4 py-2.5 bg-[#E1261C] hover:bg-[#B11912] text-white font-semibold rounded-lg transition-all duration-300"
