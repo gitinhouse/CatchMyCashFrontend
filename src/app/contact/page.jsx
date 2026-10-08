@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -69,6 +70,17 @@ export default function ContactPage() {
                 you need — a question, a status check, a worry about your data —
                 write to us and someone on the team writes back.
               </p>
+              <p className="text-sm sm:text-base text-[#D4D4D4] leading-relaxed mt-4">
+                Checking on a claim? Your Case ID shows its progress any time on{' '}
+                <Link href="/track-claim" className="text-white underline underline-offset-2 hover:text-[#E1261C]">
+                  Track Your Claim
+                </Link>
+                , and most questions are answered in the{' '}
+                <Link href="/faq" className="text-white underline underline-offset-2 hover:text-[#E1261C]">
+                  FAQ
+                </Link>
+                .
+              </p>
             </div>
 
             <div className="bg-white text-black p-5 sm:p-8 lg:p-10 rounded-lg min-w-0 overflow-hidden w-full">
@@ -129,7 +141,8 @@ export default function ContactPage() {
               </h2>
               <div className="space-y-4">
                 <p className="text-base text-[#4A4A4A] leading-relaxed break-words">
-                  One inbox for everything — questions about a claim, privacy or
+                  One inbox for everything — questions about a claim,{' '}
+                  <Link href="/privacy" className="text-[#E1261C] underline underline-offset-2">privacy</Link> or
                   data requests, partnership inquiries, press, or anything else.
                   A real person reads it and gets back to you, usually within a
                   few hours.

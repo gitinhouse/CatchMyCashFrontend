@@ -10,7 +10,6 @@
         "lint": "eslint"
     },
     "dependencies": {
-        "@anthropic-ai/sdk": "^0.132.1",
         "@aws-sdk/client-s3": "^3.926.0",
         "@aws-sdk/client-sqs": "^3.956.0",
         "@aws-sdk/credential-providers": "^3.926.0",

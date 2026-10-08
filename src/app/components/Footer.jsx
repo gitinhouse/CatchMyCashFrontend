@@ -8,7 +8,6 @@ import {
   FaLinkedinIn,
   FaXTwitter,
 } from 'react-icons/fa6';
-import { useSearchStore } from '../store/searchStore';
 
 // Real icons rather than the lookalike characters that were here before: 𝕏, "in",
 // ◉ and @ rendered at whatever each platform's font decided, and screen readers
@@ -35,7 +34,6 @@ const PRODUCT_PAGES = [
 
 export default function Footer() {
   const pathname = usePathname();
-  const { goToSearch } = useSearchStore();
 
   // The admin console renders its own chrome.
   if (pathname?.startsWith('/admin')) return null;
@@ -69,9 +67,11 @@ export default function Footer() {
             </p>
             <ul className="space-y-2">
               <li>
+                {/* A real address rather than "#" plus a store call: the old
+                    link went nowhere off the home page, and gave crawlers
+                    nothing to follow. Home reads the step from the URL. */}
                 <Link
-                  href="#"
-                  onClick={() => goToSearch()}
+                  href="/?step=search"
                   className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
                 >
                   Search now

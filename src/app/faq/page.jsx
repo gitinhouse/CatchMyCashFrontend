@@ -25,7 +25,9 @@ export default function FAQPage() {
           </h1>
           <p className="text-xl text-[#4A4A4A] max-w-[63ch]">
             If you don't see your question here, write to us at
-            help@catchmycash.com — real human, same day.
+            help@catchmycash.com or through our{' '}
+            <Link href="/contact" className="text-[#E1261C] underline underline-offset-2">contact page</Link> — real human, same
+            day.
           </p>
         </div>
       </section>

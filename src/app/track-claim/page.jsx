@@ -110,7 +110,11 @@ export default function TrackClaimPage() {
               <a href={`mailto:${SUPPORT_EMAIL}`} className="text-[#E1261C] underline underline-offset-2">
                 {SUPPORT_EMAIL}
               </a>{' '}
-              with your Case ID.
+              with your Case ID, or use our{' '}
+              <Link href="/contact" className="text-[#E1261C] underline underline-offset-2">
+                contact form
+              </Link>
+              .
             </p>
           </div>
         </div>

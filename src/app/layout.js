@@ -2,7 +2,6 @@ import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Footer from "./components/Footer";
 import CookieConsent from "./components/CookieConsent";
-import ChatLauncher from "./components/chat/ChatLauncher";
 import { SiteHeader } from "./HomeContent";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "./lib/site";
 
@@ -95,7 +94,6 @@ export default function RootLayout({ children }) {
         <SiteHeader/>
         {children}
         <Footer/>
-        <ChatLauncher/>
         <CookieConsent/>
       </body>
     </html>

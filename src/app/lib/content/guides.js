@@ -1,7 +1,6 @@
 // Plain facts about California unclaimed property and how a claim with us
 // runs. The claim types, eligibility and tracking pages render these, and
-// llms-full.txt and the chat assistant read the same text, so a correction made
-// here reaches all of them.
+// llms.txt reads the same text, so a correction made here reaches all of them.
 import { FEE_PERCENT } from '../site';
 
 export const PROPERTY_BASICS = [

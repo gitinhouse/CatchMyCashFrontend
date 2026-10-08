@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import {
   CONSENT_EVENT,
@@ -163,6 +164,10 @@ export default function CookiesPage() {
           <p className="text-xl text-[#4A4A4A] max-w-[60ch] leading-relaxed">
             We use cookies to keep CatchMyCash working, understand how people
             use our site, and improve your experience.
+          </p>
+          <p className="text-base text-[#4A4A4A] max-w-[60ch] mt-4">
+            For everything else we do with your information, see our{' '}
+            <Link href="/privacy" className="text-[#E1261C] underline underline-offset-2">Privacy Policy</Link>.
           </p>
           <div className="font-['JetBrains_Mono'] text-xs text-[#888888] mt-6 tracking-[0.05em]">
             LAST UPDATED: JANUARY 2026

@@ -1,5 +1,5 @@
 // Facts about the site itself, shared by page metadata, structured data,
-// robots.txt, the sitemap, llms.txt and the chat assistant. Keep them true:
+// robots.txt, the sitemap and llms.txt. Keep them true:
 // search engines and AI assistants repeat what is written here.
 
 // The address the site is served from in production. Canonical links,
@@ -148,9 +148,11 @@ export const PRIVATE_PATH_PREFIXES = [
   '/resetPassword',
 ];
 
-// The home page is the bare origin; every other path has no trailing slash,
-// matching how Next serves them.
+// The home page is the origin with its slash (https://catchmycash.com/), the
+// preferred address every http:// and www. variant redirects to (see
+// lib/canonicalRedirect.js). Every other path has no trailing slash, matching how Next
+// serves them.
 export const absoluteUrl = (path = '/') =>
   path === '/' || path === ''
-    ? SITE_URL
+    ? `${SITE_URL}/`
     : `${SITE_URL}${path.startsWith('/') ? path : `/${path}`}`;

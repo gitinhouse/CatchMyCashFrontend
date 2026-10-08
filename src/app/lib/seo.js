@@ -25,6 +25,7 @@ const SHARE_IMAGE = {
   url: '/opengraph-image.png',
   width: 1200,
   height: 630,
+  type: 'image/png',
   alt: `${SITE_NAME} — Millions in unclaimed property waiting for you. Free search, nothing upfront, 10% only if you get paid.`,
 };
 
@@ -78,7 +79,7 @@ export function organizationJsonLd() {
     '@type': 'Organization',
     '@id': ORGANIZATION_ID,
     name: SITE_NAME,
-    url: SITE_URL,
+    url: absoluteUrl('/'),
     logo: absoluteUrl('/logo.png'),
     description: SITE_DESCRIPTION,
     email: SUPPORT_EMAIL,
@@ -108,7 +109,7 @@ export function websiteJsonLd() {
     '@type': 'WebSite',
     '@id': WEBSITE_ID,
     name: SITE_NAME,
-    url: SITE_URL,
+    url: absoluteUrl('/'),
     description: SITE_DESCRIPTION,
     inLanguage: 'en-US',
     publisher: { '@id': ORGANIZATION_ID },
@@ -125,7 +126,7 @@ export function serviceJsonLd() {
     description: `We search the California State Controller’s unclaimed property records for property held in your name, prepare the claim package and file it for you. Searching is free; the fee is ${FEE_PERCENT}% of what is recovered, charged only on a recovery.`,
     provider: { '@id': ORGANIZATION_ID },
     areaServed: { '@type': 'State', name: 'California' },
-    url: SITE_URL,
+    url: absoluteUrl('/'),
     offers: {
       '@type': 'Offer',
       description: `Free search. ${FEE_PERCENT}% of the amount recovered, deducted at payout; nothing is owed if nothing is recovered.`,

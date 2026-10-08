@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { motion, useInView, useReducedMotion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   AlertTriangle,
   Clock,
@@ -135,6 +136,15 @@ const SectionTopBorder = ({ revealed, sheenDuration }) => {
     </motion.div>
   );
 };
+
+const GUIDE_LINKS = [
+  { href: '/eligibility', label: 'Who can claim' },
+  { href: '/claim-types', label: 'Types of property and claims' },
+  { href: '/how-it-works', label: 'How it works' },
+  { href: '/track-claim', label: 'Track your claim' },
+  { href: '/faq', label: 'FAQ' },
+  { href: '/about', label: 'About us' },
+];
 
 // Shown as they stand rather than counted in after mount, so the server's HTML
 // and every crawler read the same figures the visitor sees.
@@ -517,6 +527,29 @@ const LandingPage = ({ onNext }) => {
             people who have recovered their money
           </motion.div>
         </motion.div>
+
+        {/* Plain links into the guides, so they are reachable from the body of
+            the page and not only from the header and footer. */}
+        <nav
+          aria-label="Guides"
+          className="mt-14 pt-8 border-t border-[#E8E6E3] text-center"
+        >
+          <p className="font-['JetBrains_Mono'] text-[12px] tracking-[0.15em] uppercase text-[#888888] mb-4">
+            Before you start
+          </p>
+          <ul className="flex flex-wrap justify-center gap-x-6 gap-y-3 text-[15px]">
+            {GUIDE_LINKS.map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className="text-[#0A0A0A] underline decoration-[#E1261C] decoration-2 underline-offset-4 hover:text-[#E1261C] transition-colors"
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </div>
     </div>
   );

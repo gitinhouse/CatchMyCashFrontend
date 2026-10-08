@@ -253,7 +253,11 @@ export default function AboutPage() {
                 <a href={`mailto:${SUPPORT_EMAIL}`} className="text-[#E1261C] underline underline-offset-2">
                   {SUPPORT_EMAIL}
                 </a>{' '}
-                and someone on the team replies within one business day,
+                or use our{' '}
+                <Link href="/contact" className="text-[#E1261C] underline underline-offset-2">
+                  contact form
+                </Link>
+                , and someone on the team replies within one business day,
                 usually within a few hours.
               </p>
             </div>

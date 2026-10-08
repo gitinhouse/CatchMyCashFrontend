@@ -10,6 +10,7 @@ import {
 //import sqsCronJob from './src/app/lib/sqsCronJob.js';
 
 import next from 'next';
+import { canonicalRedirectLocation } from './src/app/lib/canonicalRedirect.js';
 
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
@@ -21,6 +22,15 @@ const HOSTNAME =
 
 app.prepare().then(() => {
   const httpServer = createServer((req, res) => {
+    // http:// and www. variants of the site → 301 to https://catchmycash.com.
+    // Checked here, on the headers exactly as the proxy sent them; see
+    // canonicalRedirect.js for why it cannot live inside Next.
+    const location = canonicalRedirectLocation(req);
+    if (location) {
+      res.writeHead(301, { Location: location });
+      res.end();
+      return;
+    }
     handle(req, res);
   });
 

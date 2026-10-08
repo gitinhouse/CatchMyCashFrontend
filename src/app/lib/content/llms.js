@@ -1,6 +1,8 @@
-// The text behind /llms.txt (a short map of the site for AI assistants, in the
-// format proposed at llmstxt.org) and /llms-full.txt (the same facts written
-// out in full, so an assistant can answer without crawling every page).
+// The text behind /llms.txt: everything an AI assistant needs to answer
+// questions about the site in one file, so it never has to crawl every page.
+// It follows the llmstxt.org layout (title, one-line summary, then sections of
+// facts and links) and is built from the same content modules as the pages, so
+// it cannot drift from what the site says.
 import {
   FEE_PERCENT,
   PUBLIC_PAGES,
@@ -34,46 +36,22 @@ const KEY_FACTS = [
 const bullets = (items) => items.map((item) => `- ${item}`).join('\n');
 
 export function llmsTxt() {
-  const pages = PUBLIC_PAGES.filter(
-    (p) => !['/privacy', '/terms', '/cookies'].includes(p.path),
-  );
-  const legal = PUBLIC_PAGES.filter((p) =>
-    ['/privacy', '/terms', '/cookies'].includes(p.path),
-  );
+  const legalPaths = ['/privacy', '/terms', '/cookies'];
+  const pages = PUBLIC_PAGES.filter((p) => !legalPaths.includes(p.path));
+  const legal = PUBLIC_PAGES.filter((p) => legalPaths.includes(p.path));
   return `# ${SITE_NAME}
 
 > ${SITE_DESCRIPTION}
 
-Key facts:
+Source: ${absoluteUrl('/')}. Everything below restates the public pages of the site.
+
+## Key facts
 
 ${bullets(KEY_FACTS)}
 
 ## Pages
 
 ${pages.map((p) => `- [${p.title}](${absoluteUrl(p.path)}): ${p.summary}`).join('\n')}
-
-## Full text
-
-- [llms-full.txt](${absoluteUrl('/llms-full.txt')}): every fact above written out — fees, process, claim types, eligibility, tracking and all FAQ answers — in one file.
-
-## Optional
-
-${legal.map((p) => `- [${p.title}](${absoluteUrl(p.path)}): ${p.summary}`).join('\n')}
-- [California State Controller's unclaimed property search](${STATE_PROGRAM.searchUrl}): the state's own free search.
-- [State Controller's guidance on investigators](${STATE_PROGRAM.investigatorRulesUrl}): the state's rules for recovery services, including the 10% fee limit.
-`;
-}
-
-export function llmsFullTxt() {
-  return `# ${SITE_NAME} — full reference
-
-> ${SITE_DESCRIPTION}
-
-Source: ${absoluteUrl('/')}. This file restates the public pages of the site.
-
-## Key facts
-
-${bullets(KEY_FACTS)}
 
 ## What unclaimed property is
 
@@ -132,5 +110,11 @@ ${FAQS.map((f) => `### ${f.q}\n\n${faqAnswerText(f)}`).join('\n\n')}
 ## Contact
 
 Email ${SUPPORT_EMAIL} or use ${absoluteUrl('/contact')}. A person replies within one business day.
+
+## Optional
+
+${legal.map((p) => `- [${p.title}](${absoluteUrl(p.path)}): ${p.summary}`).join('\n')}
+- [California State Controller's unclaimed property search](${STATE_PROGRAM.searchUrl}): the state's own free search.
+- [State Controller's guidance on investigators](${STATE_PROGRAM.investigatorRulesUrl}): the state's rules for recovery services, including the 10% fee limit.
 `;
 }

@@ -1,4 +1,4 @@
-// The FAQ page, its FAQPage structured data, llms.txt and the chat assistant
+// The FAQ page, its FAQPage structured data and llms.txt
 // all read this list, so an answer only ever has to be corrected here.
 // Paragraphs are separated by a blank line.
 import { FEE_PERCENT, SUPPORT_EMAIL } from '../site';

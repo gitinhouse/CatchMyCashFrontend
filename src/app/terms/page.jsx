@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 
 export default function PrivacyPage() {
@@ -107,6 +108,12 @@ export default function PrivacyPage() {
           {/*<p className="text-xl text-[#4A4A4A] max-w-[60ch] leading-relaxed">
             We collect what we need to file your claim — nothing more. We share the minimum required with the State Controller's Office. We never sell your data.
           </p> */}
+          <p className="text-base text-[#4A4A4A] max-w-[60ch]">
+            How we handle your information is set out in our{' '}
+            <Link href="/privacy" className="text-[#E1261C] underline underline-offset-2">Privacy Policy</Link>{' '}
+            and{' '}
+            <Link href="/cookies" className="text-[#E1261C] underline underline-offset-2">Cookie Policy</Link>.
+          </p>
           <div className="font-['JetBrains_Mono'] text-xs text-[#888888] mt-6 tracking-[0.05em]">
             LAST UPDATED: JANUARY 2026
           </div>
