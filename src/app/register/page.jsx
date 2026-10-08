@@ -413,9 +413,9 @@ export default function PrivacyPage() {
           <div className="w-16 h-16 bg-[#FCE9E7] rounded-full flex items-center justify-center mx-auto mb-4">
             <FileText className="h-8 w-8 text-[#E1261C]" />
           </div>
-          <h2 className="text-3xl font-bold text-[#0A0A0A] mb-4 font-['Fraunces']">
+          <h1 className="text-3xl font-bold text-[#0A0A0A] mb-4 font-['Fraunces']">
             Sign <span className="text-[#E1261C] italic font-normal">Up</span>
-          </h2>
+          </h1>
         </div>
 
         {/* Security Notice - Red Themed */}
@@ -429,12 +429,12 @@ export default function PrivacyPage() {
                   <div className="w-8 h-8 bg-[#FCE9E7] rounded-full flex items-center justify-center">
                     <User className="h-4 w-4 text-[#E1261C]" />
                   </div>
-                  <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
+                  <h2 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
                     Personal{' '}
                     <span className="text-[#E1261C] italic font-normal">
                       Information
                     </span>
-                  </h3>
+                  </h2>
                 </div>
               </div>
 
@@ -543,12 +543,12 @@ export default function PrivacyPage() {
                   <div className="w-8 h-8 bg-[#FCE9E7] rounded-full flex items-center justify-center">
                     <MapPin className="h-4 w-4 text-[#E1261C]" />
                   </div>
-                  <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
+                  <h2 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
                     Current{' '}
                     <span className="text-[#E1261C] italic font-normal">
                       Address
                     </span>
-                  </h3>
+                  </h2>
                 </div>
               </div>
 
@@ -622,12 +622,12 @@ export default function PrivacyPage() {
                   <div className="w-8 h-8 bg-[#FCE9E7] rounded-full flex items-center justify-center">
                     <Building className="h-4 w-4 text-[#E1261C]" />
                   </div>
-                  <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
+                  <h2 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
                     Additional{' '}
                     <span className="text-[#E1261C] italic font-normal">
                       Information
                     </span>
-                  </h3>
+                  </h2>
                 </div>
               </div>
 

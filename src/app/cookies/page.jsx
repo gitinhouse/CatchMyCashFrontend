@@ -173,9 +173,9 @@ export default function CookiesPage() {
       <section className="py-12.5 lg:py-20 max-w-[1240px] mx-auto px-6 sm:px-8">
         <div className="grid md:grid-cols-[280px_1fr] gap-12 md:gap-20">
           <aside className="md:sticky md:top-24 self-start">
-            <h4 className="font-['JetBrains_Mono'] text-xs tracking-[0.15em] uppercase text-[#888888] font-semibold mb-4">
+            <p className="font-['JetBrains_Mono'] text-xs tracking-[0.15em] uppercase text-[#888888] font-semibold mb-4">
               On this page
-            </h4>
+            </p>
             <ul className="space-y-2">
               {sections.map((section) => (
                 <li key={section.id}>

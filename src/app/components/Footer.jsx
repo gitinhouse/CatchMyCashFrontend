@@ -26,6 +26,13 @@ const SOCIAL_LINKS = [
   { label: 'Email', href: 'mailto:help@catchmycash.com', Icon: FaEnvelope },
 ];
 
+// The guides that sit under "How it works" in the Product column.
+const PRODUCT_PAGES = [
+  { href: '/track-claim', label: 'Track your claim' },
+  { href: '/claim-types', label: 'Claim types' },
+  { href: '/eligibility', label: 'Who can claim' },
+];
+
 export default function Footer() {
   const pathname = usePathname();
   const { goToSearch } = useSearchStore();
@@ -57,9 +64,9 @@ export default function Footer() {
 
           {/* Product Links */}
           <div className="text-center sm:text-left">
-            <h4 className="font-['JetBrains_Mono'] text-[11px] tracking-[0.15em] uppercase text-[#888888] mb-4 font-medium">
+            <p className="font-['JetBrains_Mono'] text-[11px] tracking-[0.15em] uppercase text-[#888888] mb-4 font-medium">
               Product
-            </h4>
+            </p>
             <ul className="space-y-2">
               <li>
                 <Link
@@ -78,22 +85,24 @@ export default function Footer() {
                   How it works
                 </Link>
               </li>
-              <li>
-                {/* <Link
-                  href="/pricing"
-                  className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
-                >
-                  Pricing
-                </Link> */}
-              </li>
+              {PRODUCT_PAGES.map((page) => (
+                <li key={page.href}>
+                  <Link
+                    href={page.href}
+                    className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
+                  >
+                    {page.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
           {/* Company Links */}
           <div className="text-center sm:text-left">
-            <h4 className="font-['JetBrains_Mono'] text-[11px] tracking-[0.15em] uppercase text-[#888888] mb-4 font-medium">
+            <p className="font-['JetBrains_Mono'] text-[11px] tracking-[0.15em] uppercase text-[#888888] mb-4 font-medium">
               Company
-            </h4>
+            </p>
             <ul className="space-y-2">
               <li>
                 <Link
@@ -124,9 +133,9 @@ export default function Footer() {
 
           {/* Legal Links */}
           <div className="text-center sm:text-left">
-            <h4 className="font-['JetBrains_Mono'] text-[11px] tracking-[0.15em] uppercase text-[#888888] mb-4 font-medium">
+            <p className="font-['JetBrains_Mono'] text-[11px] tracking-[0.15em] uppercase text-[#888888] mb-4 font-medium">
               Legal
-            </h4>
+            </p>
             <ul className="space-y-2">
               <li>
                 <Link

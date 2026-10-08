@@ -118,9 +118,9 @@ export default function PrivacyPage() {
         <div className="grid md:grid-cols-[280px_1fr] gap-12 md:gap-20">
           {/* Sidebar */}
           <aside className="md:sticky md:top-24 self-start">
-            <h4 className="font-['JetBrains_Mono'] text-xs tracking-[0.15em] uppercase text-[#888888] font-semibold mb-4">
+            <p className="font-['JetBrains_Mono'] text-xs tracking-[0.15em] uppercase text-[#888888] font-semibold mb-4">
               On this page
-            </h4>
+            </p>
             <ul className="space-y-2">
               {sections.map((section) => (
                 <li key={section.id}>

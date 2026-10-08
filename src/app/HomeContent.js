@@ -177,6 +177,7 @@ export const SiteHeader = () => {
   const navItems = [
     { name: 'About', path: '/about' },
     { name: 'How It Works', path: '/how-it-works' },
+    { name: 'Track Claim', path: '/track-claim' },
     { name: 'Privacy', path: '/privacy' },
     { name: 'FAQ', path: '/faq' },
     { name: 'Contact', path: '/contact' },
@@ -370,6 +371,18 @@ export default function Home() {
     }
   }, [activeReferralCode]);
 
+  // The server renders this page, and it has no persisted store to read, so
+  // until the store has been pointed at the URL the step comes from the URL
+  // alone. Reading the persisted step on the first client render would not match
+  // the server's HTML.
+  const urlStep = searchParams.get('step') || 'landing';
+  const [storeSynced, setStoreSynced] = React.useState(false);
+  const step = storeSynced ? currentStep : urlStep;
+  // Only the landing page is drawn before then. The later steps read the claim
+  // the visitor has in progress, which only exists in this browser, so drawing
+  // them on the server would draw them empty.
+  const renderedStep = storeSynced || urlStep === 'landing' ? step : null;
+
   // Restore login session after browser reload and send returning users to documents
 
   useEffect(() => {
@@ -380,7 +393,17 @@ export default function Home() {
       // If no step parameter, ensure we're on the landing page
       setCurrentStep('landing');
     }
+    setStoreSynced(true);
   }, [searchParams, setCurrentStep]);
+
+  // The landing page is painted by the server and skips its entrance animation
+  // (see the step wrapper below), so there is no animation end to report that
+  // it is on screen. It already is.
+  useEffect(() => {
+    if (urlStep === 'landing') setStepReady(true);
+    // Only the step the page was opened on; later steps report themselves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   const handleStepChange = (step, data) => {
@@ -485,22 +508,29 @@ export default function Home() {
     return (
       <AnimatePresence mode="wait">
         <motion.div
-          key={currentStep}
+          key={renderedStep ?? 'pending'}
           variants={pageVariants}
-          initial="initial"
+          // The step on screen when the page opens is already there, painted by
+          // the server, and fading it in from nothing would only hold back the
+          // first paint. Steps mounted after that still animate in. Set here
+          // rather than as initial={false} on AnimatePresence, which would also
+          // switch off every entrance animation inside the step.
+          initial={storeSynced ? 'initial' : false}
           animate="in"
-          exit="out"
+          // The blank stand-in for a step that is not drawn yet has nothing to
+          // fade out, and no reason to hold the step back while it does.
+          exit={renderedStep ? 'out' : undefined}
           onAnimationComplete={() => {
             // The step leaving the screen reports completion here too, and it
             // reports it first; only the step that is still the current one has
             // finished animating in and is what the user is looking at.
-            if (useSearchStore.getState().currentStep === currentStep) {
+            if (renderedStep && useSearchStore.getState().currentStep === renderedStep) {
               setStepReady(true);
             }
           }}
-          className="w-full"
+          className={renderedStep ? 'w-full' : 'w-full min-h-screen'}
         >
-          {stepComponents[currentStep] || stepComponents.landing}
+          {renderedStep ? stepComponents[renderedStep] || stepComponents.landing : null}
         </motion.div>
       </AnimatePresence>
     );
@@ -512,9 +542,9 @@ export default function Home() {
         <FloatingElements />
       </div>
 
-      <ProgressHeader currentStep={currentStep} filledFields={filledFields} />
+      <ProgressHeader currentStep={step} filledFields={filledFields} />
 
-      <div className={currentStep !== 'landing' ? '' : ''}>
+      <div>
         {renderCurrentStep()}
       </div>
       <LoadingOverlay isTransitioning={isTransitioning} />
