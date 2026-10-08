@@ -11,7 +11,7 @@ import {
 import { FEE_PERCENT, STATE_PROGRAM, SUPPORT_EMAIL } from '../lib/site';
 
 const PATH = '/about';
-const TITLE = 'About CatchMyCash';
+const TITLE = 'About us';
 const DESCRIPTION =
   'CatchMyCash helps Californians find and claim unclaimed property held by the State Controller. Meet the founders, see how we work, and why our fee is capped at 10%.';
 
@@ -28,7 +28,7 @@ export default function AboutPage() {
         data={[
           webPageJsonLd({
             type: 'AboutPage',
-            title: TITLE,
+            title: 'About CatchMyCash',
             description: DESCRIPTION,
             path: PATH,
           }),

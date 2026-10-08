@@ -18,11 +18,14 @@ import { faqAnswerText } from './content/faqs';
  * unless absoluteTitle is set), description, canonical URL and the matching
  * Open Graph / Twitter card.
  */
-// The share card from app/opengraph-image.png. A page that sets its own
+// The share card, public/og-image.png. Served from public/ rather than as
+// app/opengraph-image.png: Next serves that file convention as immutable for a
+// year and expects a hash in its URL, so a replacement image would never reach
+// browsers or social sites that had the old one. A page that sets its own
 // openGraph replaces the one it would inherit, image included, so every page
 // names it explicitly.
-const SHARE_IMAGE = {
-  url: '/opengraph-image.png',
+export const SHARE_IMAGE = {
+  url: '/og-image.png',
   width: 1200,
   height: 630,
   type: 'image/png',
@@ -49,7 +52,7 @@ export function pageMetadata({ title, description, path, absoluteTitle = false }
       card: 'summary_large_image',
       title: fullTitle,
       description,
-      images: [SHARE_IMAGE.url],
+      images: [{ url: SHARE_IMAGE.url, alt: SHARE_IMAGE.alt }],
     },
   };
 }

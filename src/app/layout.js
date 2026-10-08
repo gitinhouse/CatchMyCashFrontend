@@ -4,6 +4,7 @@ import Footer from "./components/Footer";
 import CookieConsent from "./components/CookieConsent";
 import { SiteHeader } from "./HomeContent";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "./lib/site";
+import { SHARE_IMAGE } from "./lib/seo";
 
 // Fonts from HTML mockup
 const fraunces = Fraunces({
@@ -58,11 +59,13 @@ export const metadata = {
     locale: "en_US",
     title: `${SITE_NAME} | ${SITE_TAGLINE}`,
     description: SITE_DESCRIPTION,
+    images: [SHARE_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title: `${SITE_NAME} | ${SITE_TAGLINE}`,
     description: SITE_DESCRIPTION,
+    images: [{ url: SHARE_IMAGE.url, alt: SHARE_IMAGE.alt }],
   },
   formatDetection: { telephone: false, address: false, email: false },
   ...(process.env.GOOGLE_SITE_VERIFICATION || process.env.BING_SITE_VERIFICATION

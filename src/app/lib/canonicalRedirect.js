@@ -51,29 +51,49 @@ function canonicalSite() {
   return canonical;
 }
 
+// A host header value without its port, lower-cased; '' when absent.
+const cleanHost = (header) => firstValue(header).replace(/:\d+$/, '');
+
+// The path and query exactly as requested. Parsing the request target as a URL
+// would read "//faq" as a host named "faq" and drop it, so only the absolute
+// form a proxy may send ("http://host/path") is parsed. Leading slashes are
+// collapsed to one: "//faq" lands on /faq in a single hop.
+function requestPath(rawUrl) {
+  let path = rawUrl || '/';
+  if (/^https?:\/\//i.test(path)) {
+    const parsed = new URL(path);
+    path = `${parsed.pathname}${parsed.search}`;
+  }
+  if (!path.startsWith('/')) return null; // "*" (OPTIONS *) and anything odd
+  return path.replace(/^\/{2,}/, '/');
+}
+
 /**
  * The address to permanently redirect a raw Node request to, or null to serve
  * it. API routes and build assets are never redirected: a webhook or form that
  * posts to an old address would be turned into a GET, and assets are only
  * requested from a page that has already redirected.
+ *
+ * Some of the headers this reads can be sent by the visitor, so a crafted
+ * request can make a canonical URL answer with a redirect to itself. That only
+ * ever reaches the visitor who crafted it as long as no shared cache stores the
+ * redirect, which is why server.js marks it private.
  */
 export function canonicalRedirectLocation(req) {
   if (process.env.CANONICAL_REDIRECTS === 'off') return null;
 
-  let path;
-  try {
-    const parsed = new URL(req.url || '/', 'http://placeholder');
-    path = `${parsed.pathname}${parsed.search}`;
-  } catch {
-    return null;
-  }
-  if (/^\/(api|_next)\//.test(path)) return null;
+  const path = requestPath(req.url);
+  if (!path || /^\/(api|_next)\//.test(path)) return null;
 
   const { url, host: canonicalHost, variants } = canonicalSite();
-  const host = firstValue(req.headers['x-forwarded-host'] || req.headers.host).replace(
-    /:\d+$/,
-    '',
-  );
+  // Host first: when it already names the site it is what the visitor asked
+  // for. X-Forwarded-Host is only consulted when a proxy has rewritten Host to
+  // its upstream's name, so a visitor's own X-Forwarded-Host cannot turn an
+  // apex request into a www one.
+  const hostHeader = cleanHost(req.headers.host);
+  const host = variants.has(hostHeader)
+    ? hostHeader
+    : cleanHost(req.headers['x-forwarded-host']);
   if (!variants.has(host)) return null;
 
   const wrongHost = host !== canonicalHost;
@@ -82,8 +102,7 @@ export function canonicalRedirectLocation(req) {
   const wrongScheme = url.protocol === 'https:' && visitorScheme(req.headers) === 'http';
   if (!wrongHost && !wrongScheme) return null;
 
-  // Joined as strings, never resolved: a path such as "//evil.com" (which
-  // "/.//evil.com" normalizes to) would resolve as a protocol-relative URL and
-  // turn this into an open redirect.
+  // Joined as strings, never resolved, so nothing in the path can move the
+  // redirect to another host.
   return `${url.origin}${path}`;
 }

@@ -1,8 +1,11 @@
 import Link from 'next/link';
 import { PUBLIC_PAGES } from './lib/site';
 
+// Spelled out so the root layout's "index, follow" is replaced rather than
+// sent alongside Next's own noindex for a 404.
 export const metadata = {
   title: 'Page not found',
+  robots: { index: false, follow: true },
 };
 
 // A dead link still lands somewhere useful: every public page is one click
