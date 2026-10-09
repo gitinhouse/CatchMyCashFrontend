@@ -458,26 +458,6 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
                         <span className="bg-[#FCE9E7] text-[#E1261C] text-xs font-semibold px-3 py-1 rounded-full border border-[#E8E6E3]">
                           {property.type}
                         </span>
-                        <motion.span
-                          className="text-xl sm:text-2xl font-bold text-[#E1261C] font-['Fraunces'] break-all"
-                          animate={{ scale: [1, 1.05, 1] }}
-                          transition={{
-                            duration: 2,
-                            repeat: Infinity,
-                            delay: index * 0.5,
-                          }}
-                        >
-                          ${' '}
-                          <span className="text-black">
-                            {parseFloat(property.amount).toLocaleString(
-                              'en-US',
-                              {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              },
-                            )}
-                          </span>
-                        </motion.span>
                       </div>
                       <div className="flex items-center flex-wrap gap-4 text-[#4A4A4A] text-sm">
                         <div className="flex items-center min-w-0">
@@ -489,6 +469,33 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
                           <span>Reported: {property.reportDate}</span>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Its own column at the end of the row, so the figure lands
+                        in the same place on every listing instead of trailing the
+                        badges at whatever width they happen to be. */}
+                    <div className="w-full sm:w-auto sm:ml-auto sm:text-right shrink-0">
+                      <p className="text-[11px] uppercase tracking-wide text-[#888888] font-['JetBrains_Mono']">
+                        Amount
+                      </p>
+                      <motion.span
+                        className="block text-xl sm:text-2xl font-bold text-[#E1261C] font-['Fraunces'] whitespace-nowrap"
+                        animate={{ scale: [1, 1.05, 1] }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          delay: index * 0.5,
+                        }}
+                        style={{ transformOrigin: 'right center' }}
+                      >
+                        ${' '}
+                        <span className="text-black">
+                          {parseFloat(property.amount).toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      </motion.span>
                     </div>
                   </div>
                 </div>

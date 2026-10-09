@@ -38,9 +38,9 @@ const ErrorPopup = ({ message, onClose }) => {
             className="bg-white border border-[#E8E6E3] shadow-xl rounded-2xl p-6 max-w-sm w-full text-center"
           >
             <AlertTriangle className="h-10 w-10 text-[#E1261C] mx-auto mb-3" />
-            <h3 className="text-xl font-semibold text-[#0A0A0A] mb-2 font-['Fraunces']">
+            <h2 className="text-xl font-semibold text-[#0A0A0A] mb-2 font-['Fraunces']">
               Login Failed
-            </h3>
+            </h2>
             <p className="text-[#4A4A4A] mb-4">{message}</p>
             <button
               onClick={onClose}

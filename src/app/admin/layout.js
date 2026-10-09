@@ -1,7 +1,8 @@
 import AdminShell from './_components/AdminShell';
+import { privateMetadata } from '../lib/seo';
 
 export const metadata = {
-  title: 'Admin Console · CatchMyCash',
+  ...privateMetadata({ absolute: 'Admin Console · CatchMyCash' }),
   description: 'Manage claims, users, documents and automation.',
 };
 

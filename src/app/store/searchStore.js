@@ -17,6 +17,10 @@ export const useSearchStore = create(persist((set, get) => ({
   currentStep: 'landing',
   propertyData: null,
   isTransitioning: false,
+  // Raised once the step keyed into Home's AnimatePresence has finished
+  // animating in. currentStep flips the moment the URL commits, which is a whole
+  // exit + enter animation before that step is actually on screen.
+  stepReady: false,
 
   // Existing setters
   setUserData: (data) => set({ userData: data }),
@@ -46,10 +50,20 @@ export const useSearchStore = create(persist((set, get) => ({
       currentStep: 'landing',
       propertyData: null,
       isTransitioning: false,
+      stepReady: false,
     }),
 
   // Step management methods
-  setCurrentStep: (step) => set({ currentStep: step }),
+  // Re-setting the step we are already on is not a step change — Home calls this
+  // on every search-param change — so readiness has to survive it.
+  setCurrentStep: (step) =>
+    set((state) =>
+      state.currentStep === step
+        ? state
+        : { currentStep: step, stepReady: false },
+    ),
+
+  setStepReady: (stepReady) => set({ stepReady }),
 
   setPropertyData: (data) => set({ propertyData: data }),
 
@@ -63,6 +77,7 @@ export const useSearchStore = create(persist((set, get) => ({
       set({
         currentStep: step,
         isTransitioning: false,
+        stepReady: false,
       });
 
       if (data) {
@@ -125,7 +140,7 @@ export const useSearchStore = create(persist((set, get) => ({
       userLogin: state.userLogin,
       currentStep: state.currentStep,
       propertyData: state.propertyData,
-      // isTransitioning intentionally excluded
+      // isTransitioning and stepReady intentionally excluded
     }),
   },
 ),

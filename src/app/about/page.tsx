@@ -1,8 +1,43 @@
+import Link from 'next/link';
+import Breadcrumbs from '../components/seo/Breadcrumbs';
+import JsonLd from '../components/seo/JsonLd';
+import CustomerProof from '../components/content/CustomerProof';
+import {
+  organizationJsonLd,
+  pageCrumbs,
+  pageMetadata,
+  webPageJsonLd,
+} from '../lib/seo';
+import { FEE_PERCENT, STATE_PROGRAM, SUPPORT_EMAIL } from '../lib/site';
+
+const PATH = '/about';
+const TITLE = 'About us';
+const DESCRIPTION =
+  'CatchMyCash helps Californians find and claim unclaimed property held by the State Controller. Meet the founders, see how we work, and why our fee is capped at 10%.';
+
+export const metadata = pageMetadata({
+  title: TITLE,
+  description: DESCRIPTION,
+  path: PATH,
+});
+
 export default function AboutPage() {
   return (
     <>
+      <JsonLd
+        data={[
+          webPageJsonLd({
+            type: 'AboutPage',
+            title: 'About CatchMyCash',
+            description: DESCRIPTION,
+            path: PATH,
+          }),
+          organizationJsonLd(),
+        ]}
+      />
       <section className="about-hero py-12.5 lg:py-25 bg-white">
         <div className="max-w-[1240px] mx-auto px-6 sm:px-8">
+          <Breadcrumbs crumbs={pageCrumbs('About', PATH)} className="mb-8" />
           <div className="font-['JetBrains_Mono'] text-[13px] tracking-[0.15em] uppercase text-[#E1261C] mb-6">
             About CatchMyCash
           </div>
@@ -99,17 +134,17 @@ export default function AboutPage() {
 
       <section className="bg-[#F7F5F2] py-12.5 lg:py-25">
         <div className="max-w-[1240px] mx-auto px-6 sm:px-8">
-          <h3 className="font-['Fraunces'] text-[28px] md:text-[32px] font-semibold tracking-[-0.01em] mb-12 max-w-[20ch]">
+          <h2 className="font-['Fraunces'] text-[28px] md:text-[32px] font-semibold tracking-[-0.01em] mb-12 max-w-[20ch]">
             Why people trust us with their information.
-          </h3>
+          </h2>
           <div className="grid md:grid-cols-3 gap-6">
             <div className="bg-white p-8 border border-[#E8E6E3] rounded-lg">
               <div className="w-10 h-10 bg-[#E1261C] text-white rounded flex items-center justify-center mb-5 font-bold">
                 ✓
               </div>
-              <h4 className="font-['Fraunces'] text-[22px] leading-[30px] font-semibold mb-2">
+              <h3 className="font-['Fraunces'] text-[22px] leading-[30px] font-semibold mb-2">
                 Contingency only
-              </h4>
+              </h3>
               <p className="text-[#4A4A4A] leading-relaxed">
                 You pay nothing upfront. If we {"don't"} recover money for you,
                 you owe nothing. Our fee is a percentage of what you receive —
@@ -120,9 +155,9 @@ export default function AboutPage() {
               <div className="w-10 h-10 bg-[#E1261C] text-white rounded flex items-center justify-center mb-5 font-bold">
                 ✓
               </div>
-              <h4 className="font-['Fraunces'] text-[22px] leading-[30px] font-semibold mb-2">
+              <h3 className="font-['Fraunces'] text-[22px] leading-[30px] font-semibold mb-2">
                 Bank-grade security
-              </h4>
+              </h3>
               <p className="text-[#4A4A4A] leading-relaxed">
                 All documents are transmitted over TLS, stored encrypted, and
                 accessible only to the staff handling your claim. We never sell
@@ -133,9 +168,9 @@ export default function AboutPage() {
               <div className="w-10 h-10 bg-[#E1261C] text-white rounded flex items-center justify-center mb-5 font-bold">
                 ✓
               </div>
-              <h4 className="font-['Fraunces'] text-[22px] leading-[30px] font-semibold mb-2">
+              <h3 className="font-['Fraunces'] text-[22px] leading-[30px] font-semibold mb-2">
                 California-compliant process
-              </h4>
+              </h3>
               <p className="text-[#4A4A4A] leading-relaxed">
                 Every claim we file follows the California State{' '}
                 {"Controller's"}{' '}
@@ -146,6 +181,91 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
+
+      <section className="py-12.5 lg:py-25 bg-white">
+        <div className="max-w-[1240px] mx-auto px-6 sm:px-8">
+          <h2 className="font-['Fraunces'] text-3xl md:text-5xl font-semibold tracking-[-0.01em] mb-4">
+            What we hold ourselves to.
+          </h2>
+          <p className="text-lg text-[#4A4A4A] max-w-[62ch] mb-10">
+            Plain commitments, with links to the state’s own pages wherever you
+            can check them yourself.
+          </p>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="border border-[#E8E6E3] p-8 rounded-lg">
+              <h3 className="font-['Fraunces'] text-[22px] leading-[30px] font-semibold mb-2">
+                A {FEE_PERCENT}% fee, within the legal cap
+              </h3>
+              <p className="text-[#4A4A4A] leading-relaxed">
+                California law limits what a recovery service may charge to 10%
+                of the property returned to you (Code of Civil Procedure section
+                1582). Our fee is {FEE_PERCENT}%, written into your agreement,
+                and charged only when you are paid.{' '}
+                <a
+                  href={STATE_PROGRAM.investigatorRulesUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#E1261C] underline underline-offset-2"
+                >
+                  Read the State Controller’s guidance
+                </a>
+                .
+              </p>
+            </div>
+            <div className="border border-[#E8E6E3] p-8 rounded-lg">
+              <h3 className="font-['Fraunces'] text-[22px] leading-[30px] font-semibold mb-2">
+                The free route, stated plainly
+              </h3>
+              <p className="text-[#4A4A4A] leading-relaxed">
+                You can always search and claim directly from the state for
+                free, and we say so before you sign anything.{' '}
+                <a
+                  href={STATE_PROGRAM.searchUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#E1261C] underline underline-offset-2"
+                >
+                  The state’s own search
+                </a>{' '}
+                uses the same records ours does.
+              </p>
+            </div>
+            <div className="border border-[#E8E6E3] p-8 rounded-lg">
+              <h3 className="font-['Fraunces'] text-[22px] leading-[30px] font-semibold mb-2">
+                Every claim is trackable
+              </h3>
+              <p className="text-[#4A4A4A] leading-relaxed">
+                Each case gets a Case ID the moment it opens. You can check
+                every stage — documents, agreements, submission, approval — on
+                the{' '}
+                <Link href="/track-claim" className="text-[#E1261C] underline underline-offset-2">
+                  Track Your Claim
+                </Link>{' '}
+                page, without calling anyone.
+              </p>
+            </div>
+            <div className="border border-[#E8E6E3] p-8 rounded-lg">
+              <h3 className="font-['Fraunces'] text-[22px] leading-[30px] font-semibold mb-2">
+                A person answers
+              </h3>
+              <p className="text-[#4A4A4A] leading-relaxed">
+                Write to{' '}
+                <a href={`mailto:${SUPPORT_EMAIL}`} className="text-[#E1261C] underline underline-offset-2">
+                  {SUPPORT_EMAIL}
+                </a>{' '}
+                or use our{' '}
+                <Link href="/contact" className="text-[#E1261C] underline underline-offset-2">
+                  contact form
+                </Link>
+                , and someone on the team replies within one business day,
+                usually within a few hours.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <CustomerProof />
 
       <section className="about-hero py-12.5 lg:py-25 bg-white">
         <div className="max-w-[1240px] mx-auto px-6 sm:px-8">
@@ -158,9 +278,9 @@ export default function AboutPage() {
                 BC
               </div>
               <div>
-                <h4 className="font-['Fraunces'] text-[22px]  font-semibold mb-1">
+                <h3 className="font-['Fraunces'] text-[22px]  font-semibold mb-1">
                   Brett Carlson
-                </h4>
+                </h3>
                 <div className="font-['JetBrains_Mono'] text-[12px] text-[#E1261C] uppercase tracking-[0.05em] mb-3">
                   Co-Founder
                 </div>
@@ -179,9 +299,9 @@ export default function AboutPage() {
                 EC
               </div>
               <div>
-                <h4 className="font-['Fraunces'] text-[22px] font-semibold mb-1">
+                <h3 className="font-['Fraunces'] text-[22px] font-semibold mb-1">
                   Evan Carter
-                </h4>
+                </h3>
                 <div className="font-['JetBrains_Mono'] text-[12px] text-[#E1261C] uppercase tracking-[0.05em] mb-3">
                   Co-Founder
                 </div>

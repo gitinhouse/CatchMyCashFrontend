@@ -49,10 +49,10 @@ const ForgotPassword = () => {
           <div className="w-16 h-16 bg-[#FCE9E7] rounded-full flex items-center justify-center mx-auto mb-4">
             <Mail className="h-8 w-8 text-[#E1261C]" />
           </div>
-          <h2 className="text-2xl font-bold text-[#0A0A0A] font-['Fraunces']">
+          <h1 className="text-2xl font-bold text-[#0A0A0A] font-['Fraunces']">
             Forgot{' '}
             <span className="text-[#E1261C] italic font-normal">Password</span>
-          </h2>
+          </h1>
           <p className="text-[#4A4A4A] mt-2 text-sm">
             Enter your email and we'll send you a link to reset your password.
           </p>
