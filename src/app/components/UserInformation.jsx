@@ -1154,8 +1154,10 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
 
   return (
     <div className="min-h-screen bg-[#F7F5F2] pt-5 relative">
+      {/* Starts under the step header, which on a phone carries a row for the
+          logo above the step (see ProgressHeader). */}
       {loading && (
-        <div className="fixed inset-x-0 bottom-0 top-[76px] sm:top-[88px] z-[150] flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm overscroll-contain">
+        <div className="fixed inset-x-0 bottom-0 top-[112px] sm:top-[88px] z-[150] flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm overscroll-contain">
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}

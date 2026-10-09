@@ -1,6 +1,6 @@
 import React from 'react';
-import Link from 'next/link';
 import { motion } from 'framer-motion';
+import BrandLogo from './BrandLogo';
 
 // Each step: key, name, startProgress, endProgress, totalFields (0 = no inputs, jumps straight to endProgress)
 const steps = [
@@ -99,34 +99,21 @@ const ProgressHeader = ({ currentStep, filledFields = 0 }) => {
           className="fixed top-0 left-0 right-0 z-[200] bg-white border-b border-[#E8E6E3] shadow-md"
         >
           <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+            {/* This header covers the site header on every step, so it carries
+                the site's logo and the way home itself. A phone has no room for
+                it beside the step and progress, so there it gets a row of its
+                own above them, and the spacer below makes room for that row. */}
+            <div className="sm:hidden flex items-center h-7 mb-2">
+              <BrandLogo aria-label="CatchMyCash home" />
+            </div>
             <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-              <div className="flex items-center gap-2.5 sm:gap-3">
-                {/* This header covers the site header on every step, so it
-                    carries the way home itself: the wordmark from the site
-                    header, or the brand mark where a phone has no room. */}
-                <Link
-                  href="/"
-                  aria-label="CatchMyCash home"
-                  className="flex items-center gap-2 shrink-0 font-['Fraunces'] font-black text-lg tracking-[-0.02em] text-[#0A0A0A] hover:opacity-80 transition-opacity"
-                >
-                  <img
-                    src="/logo.png"
-                    alt=""
-                    width={28}
-                    height={28}
-                    className="sm:hidden w-7 h-7 rounded-md"
-                  />
-                  <span
-                    aria-hidden="true"
-                    className="hidden sm:inline-block w-2.5 h-2.5 bg-[#E1261C] rounded-full"
-                  ></span>
-                  <span className="hidden sm:inline">CatchMyCash</span>
-                </Link>
-                <span aria-hidden="true" className="w-px h-8 bg-[#E8E6E3] shrink-0"></span>
-                {/* On a phone the logo takes the number badge's place, so the
-                    header stays one row; the title still says which step. */}
-                <div className="hidden sm:flex w-10 h-10 rounded-full bg-[#FCE9E7] items-center justify-center flex-shrink-0">
-                  <span className="text-base font-bold text-[#E1261C] font-['Fraunces']">
+              <div className="flex items-center gap-3">
+                <div className="hidden sm:flex items-center gap-3">
+                  <BrandLogo aria-label="CatchMyCash home" />
+                  <span aria-hidden="true" className="w-px h-8 bg-[#E8E6E3]"></span>
+                </div>
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#FCE9E7] flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm sm:text-base font-bold text-[#E1261C] font-['Fraunces']">
                     {displayStepNumber}
                   </span>
                 </div>
@@ -158,6 +145,13 @@ const ProgressHeader = ({ currentStep, filledFields = 0 }) => {
             </div>
           </div>
         </motion.div>
+      )}
+      {/* The header is fixed, so the step under it starts where the site
+          header it covers ends. The logo row a phone adds would sit over the
+          top of the step; this pushes the step down by exactly that row
+          (h-7 + mb-2). */}
+      {currentStep !== 'landing' && (
+        <div aria-hidden="true" className="sm:hidden h-9"></div>
       )}
     </>
   );

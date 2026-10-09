@@ -1309,7 +1309,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
-          className={`fixed top-20 right-4 z-50 p-4 rounded-xl shadow-lg max-w-sm ${socketMessage.type === 'success'
+          className={`fixed top-[124px] sm:top-[104px] right-4 z-50 p-4 rounded-xl shadow-lg max-w-sm ${socketMessage.type === 'success'
             ? 'bg-[#F0FFF4] border border-[#00C896]'
             : socketMessage.type === 'error'
               ? 'bg-[#FCE9E7] border border-[#E1261C]'

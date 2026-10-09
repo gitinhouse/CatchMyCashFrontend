@@ -20,6 +20,7 @@ import Link from 'next/link';
 import { useSearchStore } from './store/searchStore';
 import { clearClientSession } from './lib/session';
 import NotificationBell from './components/NotificationBell';
+import BrandLogo from './components/uicomponents/BrandLogo';
 
 // Last resort against a push that never commits at all (dropped payload, a tab
 // that went offline), not a load budget: on a throttled connection the landing
@@ -190,13 +191,7 @@ export const SiteHeader = () => {
     <>
       <header className="sticky top-0 z-50 bg-white border-b border-[#E8E6E3] shadow-sm">
         <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between gap-3">
-          <Link
-            href="/"
-            className="font-['Fraunces'] font-black text-lg md:text-xl lg:text-[22px] tracking-[-0.02em] flex items-center gap-2 text-black shrink-0"
-          >
-            <span className="w-2.5 h-2.5 bg-[#E1261C] rounded-full inline-block"></span>
-            CatchMyCash
-          </Link>
+          <BrandLogo />
 
           {/* Desktop Navigation — visible from md (tablet) up */}
           <nav className="hidden md:flex items-center gap-2.5 lg:gap-6 xl:gap-8">
