@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { SOCIAL_LINKS } from '../lib/socialLinks';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -102,27 +103,24 @@ export default function ContactPage() {
                 FOLLOW
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 mt-3">
-                <a
-                  href="#"
-                  className="min-w-0 w-full border border-[#D4D4D4] py-2.5 sm:py-3 px-2 sm:px-4 rounded flex items-center justify-center gap-1.5 sm:gap-2.5 text-xs sm:text-sm font-medium hover:border-[#E1261C] hover:text-[#E1261C] transition-all"
-                >
-                  <span className="text-[#E1261C] font-bold shrink-0">𝕏</span>
-                  <span className="truncate">Twitter</span>
-                </a>
-                <a
-                  href="#"
-                  className="min-w-0 w-full border border-[#D4D4D4] py-2.5 sm:py-3 px-2 sm:px-4 rounded flex items-center justify-center gap-1.5 sm:gap-2.5 text-xs sm:text-sm font-medium hover:border-[#E1261C] hover:text-[#E1261C] transition-all"
-                >
-                  <span className="text-[#E1261C] font-bold shrink-0">in</span>
-                  <span className="truncate">LinkedIn</span>
-                </a>
-                <a
-                  href="#"
-                  className="min-w-0 w-full col-span-2 sm:col-span-1 border border-[#D4D4D4] py-2.5 sm:py-3 px-2 sm:px-4 rounded flex items-center justify-center gap-1.5 sm:gap-2.5 text-xs sm:text-sm font-medium hover:border-[#E1261C] hover:text-[#E1261C] transition-all"
-                >
-                  <span className="text-[#E1261C] font-bold shrink-0">◉</span>
-                  <span className="truncate">Instagram</span>
-                </a>
+                {/* The same profiles and icons as the footer, rather than
+                    lookalike characters on links that went nowhere. */}
+                {SOCIAL_LINKS.filter(({ href }) => href.startsWith('http')).map(
+                  ({ label, href, Icon }, index, all) => (
+                    <a
+                      key={label}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`min-w-0 w-full border border-[#D4D4D4] py-2.5 sm:py-3 px-2 sm:px-4 rounded flex items-center justify-center gap-1.5 sm:gap-2.5 text-xs sm:text-sm font-medium hover:border-[#E1261C] hover:text-[#E1261C] transition-all ${
+                        index === all.length - 1 && all.length % 2 ? 'col-span-2 sm:col-span-1' : ''
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 text-[#E1261C] shrink-0" aria-hidden="true" />
+                      <span className="truncate">{label}</span>
+                    </a>
+                  ),
+                )}
               </div>
             </div>
           </div>

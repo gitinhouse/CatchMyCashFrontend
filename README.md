@@ -12,7 +12,7 @@ All optional. Set them in the production environment (or `.env`) before `npm run
 | `NEXT_PUBLIC_SOCIAL_PROFILES` | Comma-separated URLs of the company's own profiles (LinkedIn, X, Instagram, Google Business Profile …), published as `sameAs` in the Organization structured data. | not set |
 | `CANONICAL_REDIRECTS` | Set to `off` to stop `server.js` redirecting `http://` and `www.` requests (see `src/app/lib/canonicalRedirect.js`). | on |
 
-The redirects only see requests that reach this server. The proxy in front of it has to pass `http://` traffic through (not answer port 80 itself) and send `X-Forwarded-Proto`, and `www.catchmycash.com` needs a DNS record and a TLS certificate. Otherwise set the same redirects up at the proxy or CDN.
+The redirects only see requests that reach this server. The proxy in front of it has to pass `http://` traffic through (not answer port 80 itself) and send `X-Forwarded-Proto`, and `www.catchmycash.com` needs a DNS record and a TLS certificate. Otherwise set the same redirects up at the proxy or CDN. The redirect is sent with `Cache-Control: private` so no shared cache stores it; behind CloudFront, keep the cache behaviour's Minimum TTL at 0, since a higher minimum caches responses even when they say `private`.
 
 After deploying, submit `https://catchmycash.com/sitemap.xml` in Google Search Console and Bing Webmaster Tools.
 

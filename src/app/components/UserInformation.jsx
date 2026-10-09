@@ -168,6 +168,17 @@ const readReason = (value, depth = 0, seen = new Set()) => {
   if (seen.has(value) || depth > REASON_MAX_DEPTH) return '';
   seen.add(value);
 
+  // A validation error from a Python (FastAPI) service names the field in
+  // `loc` and the fault in `msg` — { loc: ['body', 'form_data', 'taxID'],
+  // msg: 'field required', type: '...' } — so it reads as "taxID: field
+  // required" rather than as every key it carries.
+  if (!Array.isArray(value) && typeof value.msg === 'string' && value.msg.trim()) {
+    const field = Array.isArray(value.loc)
+      ? [...value.loc].reverse().find((part) => typeof part === 'string' && part.trim())
+      : '';
+    return field ? `${field}: ${value.msg.trim()}` : value.msg.trim();
+  }
+
   if (Array.isArray(value)) {
     // A list of validation errors reads as one clause per fault, so the
     // sentence punctuation the sender may have added is normalised away.
@@ -237,6 +248,21 @@ const isFailedEntry = (entry) => {
     entry.success === 'false' ||
     String(entry.status ?? '').toLowerCase() === 'failed'
   );
+};
+
+// Nothing was filed. Usually said with the counters, but a refusal of the whole
+// submission can also come back as a 200 that only says `success: false` (or
+// `status: 'failed'`) next to its reason; reading that as a success sent the
+// claimant on to "Claim is in Process" over a claim that was never filed.
+const isWholeSubmissionFailed = (body) => {
+  if (!body || typeof body !== 'object') return false;
+  const succeeded = Number(body.succeeded);
+  if (Number(body.failed) > 0 && succeeded === 0) return true;
+  const saysFailed =
+    body.success === false ||
+    body.success === 'false' ||
+    String(body.status ?? '').toLowerCase() === 'failed';
+  return saysFailed && !(succeeded > 0);
 };
 
 // Every property is filed separately and can be refused for its own reason.
@@ -1024,7 +1050,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
         claimSubmission = res.data;
         console.log('--claimSubmission--', claimSubmission);
 
-        if (claimSubmission.failed > 0 && claimSubmission.succeeded === 0) {
+        if (isWholeSubmissionFailed(claimSubmission)) {
           // No status here: the request itself succeeded, and the failures are
           // inside the body.
           const failure = buildSubmissionFailure({ body: claimSubmission });

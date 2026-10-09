@@ -100,7 +100,18 @@ export async function POST(req) {
       body: JSON.stringify(body),
     });
     console.log('--payload--', body);
-    const data = await response.json().catch(() => ({}));
+    // Upstream answers in JSON, but an error can come back as plain text (the
+    // framework's or a proxy's own error response). A plain-text answer is
+    // still the claimant's reason, and is screened like any other below; an
+    // HTML error page is not a reason.
+    const raw = await response.text().catch(() => '');
+    let data;
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch {
+      const text = raw.trim();
+      data = !response.ok && text && !text.startsWith('<') ? text : {};
+    }
     console.log('--data--', data);
     if (!response.ok) {
       console.error('Error from 3rd party API:', {
