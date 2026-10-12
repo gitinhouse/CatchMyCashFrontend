@@ -310,7 +310,9 @@ const ClaimProgressModal = ({ claim, onClose }) => {
         // Step 6: Claim Submitted — reads "Claim Submission Failed" when either
         // the filing or the document-verification run failed. Descriptions stay
         // generic here; the raw processor message is not shown on the dashboard.
-        const submission = deriveSubmissionStep(claim);
+        // The processor's own words on why it was refused: a step that says only
+        // "Claim Submission Failed" leaves the claimant with nothing to act on.
+        const submission = deriveSubmissionStep(claim, { includeMessage: true });
         steps.push({
             id: 6,
             title: submission.title,

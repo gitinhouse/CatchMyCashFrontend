@@ -5,11 +5,17 @@ import { FaXTwitter, FaInstagram, FaLinkedinIn } from "react-icons/fa6";
 import { SiGmail } from "react-icons/si";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useSearchStore } from '../store/searchStore';
+import { SOCIAL_LINKS } from '../lib/socialLinks';
+
+// The guides that sit under "How it works" in the Product column.
+const PRODUCT_PAGES = [
+  { href: '/track-claim', label: 'Track your claim' },
+  { href: '/claim-types', label: 'Claim types' },
+  { href: '/eligibility', label: 'Who can claim' },
+];
 
 export default function Footer() {
   const pathname = usePathname();
-  const { goToSearch } = useSearchStore();
 
   // The admin console renders its own chrome.
   if (pathname?.startsWith('/admin')) return null;
@@ -38,14 +44,16 @@ export default function Footer() {
 
           {/* Product Links */}
           <div className="text-center sm:text-left">
-            <h4 className="font-['JetBrains_Mono'] text-[11px] tracking-[0.15em] uppercase text-[#888888] mb-4 font-medium">
+            <p className="font-['JetBrains_Mono'] text-[11px] tracking-[0.15em] uppercase text-[#888888] mb-4 font-medium">
               Product
-            </h4>
+            </p>
             <ul className="space-y-2">
               <li>
+                {/* A real address rather than "#" plus a store call: the old
+                    link went nowhere off the home page, and gave crawlers
+                    nothing to follow. Home reads the step from the URL. */}
                 <Link
-                  href="#"
-                  onClick={() => goToSearch()}
+                  href="/?step=search"
                   className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
                 >
                   Search now
@@ -59,22 +67,24 @@ export default function Footer() {
                   How it works
                 </Link>
               </li>
-              <li>
-                {/* <Link
-                  href="/pricing"
-                  className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
-                >
-                  Pricing
-                </Link> */}
-              </li>
+              {PRODUCT_PAGES.map((page) => (
+                <li key={page.href}>
+                  <Link
+                    href={page.href}
+                    className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
+                  >
+                    {page.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
           {/* Company Links */}
           <div className="text-center sm:text-left">
-            <h4 className="font-['JetBrains_Mono'] text-[11px] tracking-[0.15em] uppercase text-[#888888] mb-4 font-medium">
+            <p className="font-['JetBrains_Mono'] text-[11px] tracking-[0.15em] uppercase text-[#888888] mb-4 font-medium">
               Company
-            </h4>
+            </p>
             <ul className="space-y-2">
               <li>
                 <Link
@@ -105,9 +115,9 @@ export default function Footer() {
 
           {/* Legal Links */}
           <div className="text-center sm:text-left">
-            <h4 className="font-['JetBrains_Mono'] text-[11px] tracking-[0.15em] uppercase text-[#888888] mb-4 font-medium">
+            <p className="font-['JetBrains_Mono'] text-[11px] tracking-[0.15em] uppercase text-[#888888] mb-4 font-medium">
               Legal
-            </h4>
+            </p>
             <ul className="space-y-2">
               <li>
                 <Link
@@ -145,34 +155,24 @@ export default function Footer() {
 
           {/* Social Links */}
           <div className="flex gap-4">
-            <a
-              href="https://x.com/"
-              className="w-9 h-9 border border-[#1A1A1A] rounded flex items-center justify-center text-[#D4D4D4] hover:border-[#E1261C] hover:text-[#E1261C] transition-all duration-200"
-              aria-label="Twitter"
-            >
-              <FaXTwitter size={16} />
-            </a>
-            <a
-              href="https://www.linkedin.com/feed/"
-              className="w-9 h-9 border border-[#1A1A1A] rounded flex items-center justify-center text-[#D4D4D4] hover:border-[#E1261C] hover:text-[#E1261C] transition-all duration-200"
-              aria-label="LinkedIn"
-            >
-              <FaLinkedinIn size={16} />
-            </a>
-            <a
-              href="https://www.instagram.com/accounts/log_in/"
-              className="w-9 h-9 border border-[#1A1A1A] rounded flex items-center justify-center text-[#D4D4D4] hover:border-[#E1261C] hover:text-[#E1261C] transition-all duration-200"
-              aria-label="Instagram"
-            >
-              <FaInstagram size={17} />
-            </a>
-            <a
-              href="https://workspace.google.com/intl/en-US/gmail/"
-              className="w-9 h-9 border border-[#1A1A1A] rounded flex items-center justify-center text-[#D4D4D4] hover:border-[#E1261C] hover:text-[#E1261C] transition-all duration-200"
-              aria-label="Email"
-            >
-              <SiGmail size={17} />
-            </a>
+            {SOCIAL_LINKS.map(({ label, href, Icon }) => {
+              // A mail client is not a tab, so only the web links open in one.
+              const external = href.startsWith('http');
+              return (
+                <a
+                  key={label}
+                  href={href}
+                  {...(external
+                    ? { target: '_blank', rel: 'noopener noreferrer' }
+                    : {})}
+                  className="w-9 h-9 border border-[#1A1A1A] rounded flex items-center justify-center text-[#D4D4D4] hover:border-[#E1261C] hover:text-[#E1261C] transition-all duration-200"
+                  aria-label={label}
+                  title={label}
+                >
+                  <Icon className="w-4 h-4" aria-hidden="true" />
+                </a>
+              );
+            })}
           </div>
         </div>
       </div>

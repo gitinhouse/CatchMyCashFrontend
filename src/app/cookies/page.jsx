@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import {
   CONSENT_EVENT,
@@ -164,6 +165,10 @@ export default function CookiesPage() {
             We use cookies to keep CatchMyCash working, understand how people
             use our site, and improve your experience.
           </p>
+          <p className="text-base text-[#4A4A4A] max-w-[60ch] mt-4">
+            For everything else we do with your information, see our{' '}
+            <Link href="/privacy" className="text-[#E1261C] underline underline-offset-2">Privacy Policy</Link>.
+          </p>
           <div className="font-['JetBrains_Mono'] text-xs text-[#888888] mt-6 tracking-[0.05em]">
             LAST UPDATED: JANUARY 2026
           </div>
@@ -173,9 +178,9 @@ export default function CookiesPage() {
       <section className="py-12.5 lg:py-20 max-w-[1240px] mx-auto px-6 sm:px-8">
         <div className="grid md:grid-cols-[280px_1fr] gap-12 md:gap-20">
           <aside className="md:sticky md:top-24 self-start">
-            <h4 className="font-['JetBrains_Mono'] text-xs tracking-[0.15em] uppercase text-[#888888] font-semibold mb-4">
+            <p className="font-['JetBrains_Mono'] text-xs tracking-[0.15em] uppercase text-[#888888] font-semibold mb-4">
               On this page
-            </h4>
+            </p>
             <ul className="space-y-2">
               {sections.map((section) => (
                 <li key={section.id}>

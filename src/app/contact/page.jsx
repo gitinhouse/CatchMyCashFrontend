@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { SOCIAL_LINKS } from '../lib/socialLinks';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -69,6 +71,17 @@ export default function ContactPage() {
                 you need — a question, a status check, a worry about your data —
                 write to us and someone on the team writes back.
               </p>
+              <p className="text-sm sm:text-base text-[#D4D4D4] leading-relaxed mt-4">
+                Checking on a claim? Your Case ID shows its progress any time on{' '}
+                <Link href="/track-claim" className="text-white underline underline-offset-2 hover:text-[#E1261C]">
+                  Track Your Claim
+                </Link>
+                , and most questions are answered in the{' '}
+                <Link href="/faq" className="text-white underline underline-offset-2 hover:text-[#E1261C]">
+                  FAQ
+                </Link>
+                .
+              </p>
             </div>
 
             <div className="bg-white text-black p-5 sm:p-8 lg:p-10 rounded-lg min-w-0 overflow-hidden w-full">
@@ -90,27 +103,24 @@ export default function ContactPage() {
                 FOLLOW
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 mt-3">
-                <a
-                  href="#"
-                  className="min-w-0 w-full border border-[#D4D4D4] py-2.5 sm:py-3 px-2 sm:px-4 rounded flex items-center justify-center gap-1.5 sm:gap-2.5 text-xs sm:text-sm font-medium hover:border-[#E1261C] hover:text-[#E1261C] transition-all"
-                >
-                  <span className="text-[#E1261C] font-bold shrink-0">𝕏</span>
-                  <span className="truncate">Twitter</span>
-                </a>
-                <a
-                  href="#"
-                  className="min-w-0 w-full border border-[#D4D4D4] py-2.5 sm:py-3 px-2 sm:px-4 rounded flex items-center justify-center gap-1.5 sm:gap-2.5 text-xs sm:text-sm font-medium hover:border-[#E1261C] hover:text-[#E1261C] transition-all"
-                >
-                  <span className="text-[#E1261C] font-bold shrink-0">in</span>
-                  <span className="truncate">LinkedIn</span>
-                </a>
-                <a
-                  href="#"
-                  className="min-w-0 w-full col-span-2 sm:col-span-1 border border-[#D4D4D4] py-2.5 sm:py-3 px-2 sm:px-4 rounded flex items-center justify-center gap-1.5 sm:gap-2.5 text-xs sm:text-sm font-medium hover:border-[#E1261C] hover:text-[#E1261C] transition-all"
-                >
-                  <span className="text-[#E1261C] font-bold shrink-0">◉</span>
-                  <span className="truncate">Instagram</span>
-                </a>
+                {/* The same profiles and icons as the footer, rather than
+                    lookalike characters on links that went nowhere. */}
+                {SOCIAL_LINKS.filter(({ href }) => href.startsWith('http')).map(
+                  ({ label, href, Icon }, index, all) => (
+                    <a
+                      key={label}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`min-w-0 w-full border border-[#D4D4D4] py-2.5 sm:py-3 px-2 sm:px-4 rounded flex items-center justify-center gap-1.5 sm:gap-2.5 text-xs sm:text-sm font-medium hover:border-[#E1261C] hover:text-[#E1261C] transition-all ${
+                        index === all.length - 1 && all.length % 2 ? 'col-span-2 sm:col-span-1' : ''
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 text-[#E1261C] shrink-0" aria-hidden="true" />
+                      <span className="truncate">{label}</span>
+                    </a>
+                  ),
+                )}
               </div>
             </div>
           </div>
@@ -129,7 +139,8 @@ export default function ContactPage() {
               </h2>
               <div className="space-y-4">
                 <p className="text-base text-[#4A4A4A] leading-relaxed break-words">
-                  One inbox for everything — questions about a claim, privacy or
+                  One inbox for everything — questions about a claim,{' '}
+                  <Link href="/privacy" className="text-[#E1261C] underline underline-offset-2">privacy</Link> or
                   data requests, partnership inquiries, press, or anything else.
                   A real person reads it and gets back to you, usually within a
                   few hours.

@@ -168,6 +168,17 @@ const readReason = (value, depth = 0, seen = new Set()) => {
   if (seen.has(value) || depth > REASON_MAX_DEPTH) return '';
   seen.add(value);
 
+  // A validation error from a Python (FastAPI) service names the field in
+  // `loc` and the fault in `msg` — { loc: ['body', 'form_data', 'taxID'],
+  // msg: 'field required', type: '...' } — so it reads as "taxID: field
+  // required" rather than as every key it carries.
+  if (!Array.isArray(value) && typeof value.msg === 'string' && value.msg.trim()) {
+    const field = Array.isArray(value.loc)
+      ? [...value.loc].reverse().find((part) => typeof part === 'string' && part.trim())
+      : '';
+    return field ? `${field}: ${value.msg.trim()}` : value.msg.trim();
+  }
+
   if (Array.isArray(value)) {
     // A list of validation errors reads as one clause per fault, so the
     // sentence punctuation the sender may have added is normalised away.
@@ -237,6 +248,21 @@ const isFailedEntry = (entry) => {
     entry.success === 'false' ||
     String(entry.status ?? '').toLowerCase() === 'failed'
   );
+};
+
+// Nothing was filed. Usually said with the counters, but a refusal of the whole
+// submission can also come back as a 200 that only says `success: false` (or
+// `status: 'failed'`) next to its reason; reading that as a success sent the
+// claimant on to "Claim is in Process" over a claim that was never filed.
+const isWholeSubmissionFailed = (body) => {
+  if (!body || typeof body !== 'object') return false;
+  const succeeded = Number(body.succeeded);
+  if (Number(body.failed) > 0 && succeeded === 0) return true;
+  const saysFailed =
+    body.success === false ||
+    body.success === 'false' ||
+    String(body.status ?? '').toLowerCase() === 'failed';
+  return saysFailed && !(succeeded > 0);
 };
 
 // Every property is filed separately and can be refused for its own reason.
@@ -379,6 +405,9 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
     claimantRelationship: '',
   });
   const [apiError, setApiError] = useState('');
+  // Kept apart from apiError, which is rendered in two other places: sharing one
+  // string meant the consent warning appeared three times for one unticked box.
+  const [smsError, setSmsError] = useState('');
   const [agreeSMS, setAgreeSMS] = useState(false);
   const addressInputRef = useRef(null);
   const autocompleteRef = useRef(null);
@@ -842,11 +871,16 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
     }
 
     if (!agreeSMS) {
-      setApiError('You must agree to receive SMS updates before continuing.');
-      return;
-    } else {
+      setSmsError('You must agree to receive SMS updates before continuing.');
+      // The fields have just passed, so a "fix the highlighted errors" line left
+      // over from an earlier attempt would be stale — and would read as a second
+      // complaint about the box.
       setApiError('');
+      return;
     }
+
+    setSmsError('');
+    setApiError('');
 
     try {
       setLoading(true);
@@ -1016,7 +1050,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
         claimSubmission = res.data;
         console.log('--claimSubmission--', claimSubmission);
 
-        if (claimSubmission.failed > 0 && claimSubmission.succeeded === 0) {
+        if (isWholeSubmissionFailed(claimSubmission)) {
           // No status here: the request itself succeeded, and the failures are
           // inside the body.
           const failure = buildSubmissionFailure({ body: claimSubmission });
@@ -1068,11 +1102,27 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
 
         setNextPageData(data);
 
+        // Some properties can be refused while others are filed. The claim does
+        // carry on, but saying nothing about the refused ones left the claimant
+        // reading "in process" over a property that had already been turned down.
+        const someRefused = Number(claimSubmission?.failed) > 0;
+        const refused = someRefused
+          ? readFailedResults(claimSubmission?.results).map(({ propertyId, reason }) =>
+              propertyId ? `Property ${propertyId}: ${forDisplay(reason)}` : forDisplay(reason),
+            )
+          : [];
+
         setErrorModal({
           show: true,
           title: 'Claim is in Process',
-          message:
-            'We have sent an email with your login details, and your claim is currently being processed. Please wait. We will send updates to your email.',
+          message: someRefused
+            ? 'Your claim is being processed for the properties we could file, and we have emailed your login details. Some properties could not be filed:'
+            : 'We have sent an email with your login details, and your claim is currently being processed. Please wait. We will send updates to your email.',
+          details: refused.length
+            ? refused
+            : someRefused
+              ? ['One of your properties could not be filed, and no reason was given.']
+              : [],
         });
       } catch (err) {
         setErrorModal({
@@ -1104,8 +1154,10 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
 
   return (
     <div className="min-h-screen bg-[#F7F5F2] pt-5 relative">
+      {/* Starts under the step header, which on a phone carries a row for the
+          logo above the step (see ProgressHeader). */}
       {loading && (
-        <div className="fixed inset-x-0 bottom-0 top-[76px] sm:top-[88px] z-[150] flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm overscroll-contain">
+        <div className="fixed inset-x-0 bottom-0 top-[112px] sm:top-[88px] z-[150] flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm overscroll-contain">
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
@@ -1674,7 +1726,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
 
               {/* SMS Agreement */}
               <div
-                className={`mt-4 rounded-lg p-3 ${apiError?.includes('SMS')
+                className={`mt-4 rounded-lg p-3 ${smsError
                   ? 'border border-[#E1261C]/40 bg-[#FCE9E7]'
                   : ''
                   }`}
@@ -1685,7 +1737,7 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                     checked={agreeSMS}
                     onChange={(e) => {
                       setAgreeSMS(e.target.checked);
-                      if (e.target.checked) setApiError('');
+                      if (e.target.checked) setSmsError('');
                     }}
                     className="h-4 w-4 text-[#E1261C] rounded border-[#E8E6E3] focus:ring-[#E1261C]"
                   />
@@ -1694,9 +1746,9 @@ const UserInformation = ({ onNext, onFieldFilled, onBack }) => {
                     claim.
                   </span>
                 </label>
-                {apiError?.includes('SMS') && (
+                {smsError && (
                   <p className="text-[#E1261C] text-xs mt-2 font-medium">
-                    {apiError}
+                    {smsError}
                   </p>
                 )}
               </div>

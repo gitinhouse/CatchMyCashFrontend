@@ -30,13 +30,15 @@ async function sendClaimSubmittedEmail({ userCase, email, legalName, propertyCou
   }
 
   const caseId = userCase?.case_id || '';
+  // Opens the tracker with this Case ID already looked up.
+  const trackUrl = `https://catchmycash.com/track-claim?case=${encodeURIComponent(caseId)}`;
   const subject = `We received your claim - ${caseId}`;
   const text =
     `Hi ${legalName || 'there'},\n\n` +
     `We have received your claim and it is being processed.\n\n` +
     `Case ID: ${caseId}\n` +
     `Properties in this claim: ${propertyCount}\n\n` +
-    `Track your claim at https://catchmycash.com using your Case ID.\n\n` +
+    `Track your claim at ${trackUrl}\n\n` +
     `The CatchMyCash Team`;
 
   const html = `
@@ -54,8 +56,8 @@ async function sendClaimSubmittedEmail({ userCase, email, legalName, propertyCou
     </table>
     <p style="margin-top:20px;">
       Keep your Case ID — you can track progress any time from the
-      <a href="https://catchmycash.com" style="color:#E1261C; font-weight:bold;">Track Your Claim</a>
-      section.
+      <a href="${trackUrl}" style="color:#E1261C; font-weight:bold;">Track Your Claim</a>
+      page.
     </p>
     <p style="margin-top:20px; color:#4A4A4A;">The CatchMyCash Team</p>
   `;

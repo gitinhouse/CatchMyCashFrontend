@@ -309,6 +309,15 @@ export function taskStatusLabel(value) {
  *
  * @param {object} caseDoc A UserCases document (or the shape the claim APIs return).
  */
+/** The first of these that actually says something. */
+function firstMessage(...candidates) {
+  for (const candidate of candidates) {
+    const text = String(candidate ?? '').trim();
+    if (text) return text;
+  }
+  return '';
+}
+
 export function deriveClaimFailure(caseDoc) {
   const claimProcess = String(caseDoc?.claim_process_task_status || '').toLowerCase();
   const upload = String(caseDoc?.document_upload_task_status || '').toLowerCase();
@@ -320,11 +329,14 @@ export function deriveClaimFailure(caseDoc) {
     claimFailed,
     uploadFailed,
     failed: claimFailed || uploadFailed,
-    // The message the processor sent back for whichever stage failed.
+    // The message the processor sent back for whichever stage failed. A filing
+    // failure is reported under either key depending on where it was detected —
+    // claim_message when the state refused it, claim_process_message when the
+    // run itself fell over — so both are read before giving up on a reason.
     message: claimFailed
-      ? caseDoc?.claim_message || ''
+      ? firstMessage(caseDoc?.claim_message, caseDoc?.claim_process_message)
       : uploadFailed
-        ? caseDoc?.document_upload_message || ''
+        ? firstMessage(caseDoc?.document_upload_message)
         : '',
   };
 }

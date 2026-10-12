@@ -91,10 +91,10 @@ const ResetPasswordInner = () => {
           <div className="w-16 h-16 bg-[#FCE9E7] rounded-full flex items-center justify-center mx-auto mb-4">
             <Lock className="h-8 w-8 text-[#E1261C]" />
           </div>
-          <h2 className="text-2xl font-bold text-[#0A0A0A] font-['Fraunces']">
+          <h1 className="text-2xl font-bold text-[#0A0A0A] font-['Fraunces']">
             Reset{' '}
             <span className="text-[#E1261C] italic font-normal">Password</span>
-          </h2>
+          </h1>
         </div>
 
         {checking && (

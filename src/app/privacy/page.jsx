@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 
 export default function PrivacyPage() {
@@ -105,6 +106,12 @@ export default function PrivacyPage() {
           {/*<p className="text-xl text-[#4A4A4A] max-w-[60ch] leading-relaxed">
             We collect what we need to file your claim — nothing more. We share the minimum required with the State Controller's Office. We never sell your data.
           </p> */}
+          <p className="text-base text-[#4A4A4A] max-w-[60ch]">
+            Read alongside our{' '}
+            <Link href="/terms" className="text-[#E1261C] underline underline-offset-2">Terms &amp; Conditions</Link>{' '}
+            and{' '}
+            <Link href="/cookies" className="text-[#E1261C] underline underline-offset-2">Cookie Policy</Link>.
+          </p>
           <div className="font-['JetBrains_Mono'] text-xs text-[#888888] mt-6 tracking-[0.05em]">
             LAST UPDATED: JANUARY 2026
           </div>
@@ -116,9 +123,9 @@ export default function PrivacyPage() {
         <div className="grid md:grid-cols-[280px_1fr] gap-12 md:gap-20">
           {/* Sidebar */}
           <aside className="md:sticky md:top-24 self-start">
-            <h4 className="font-['JetBrains_Mono'] text-xs tracking-[0.15em] uppercase text-[#888888] font-semibold mb-4">
+            <p className="font-['JetBrains_Mono'] text-xs tracking-[0.15em] uppercase text-[#888888] font-semibold mb-4">
               On this page
-            </h4>
+            </p>
             <ul className="space-y-2">
               {sections.map((section) => (
                 <li key={section.id}>

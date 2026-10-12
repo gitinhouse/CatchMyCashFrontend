@@ -353,6 +353,10 @@ export async function GET(req) {
             claim_id: 1,
             claim_process_task_status: 1,
             document_upload_task_status: 1,
+            // Why a claim was refused, for the failure screens that quote it.
+            claim_message: 1,
+            claim_process_message: 1,
+            document_upload_message: 1,
             submitted_at: 1,
             property_ids: 1,
             createdAt: 1,
@@ -653,6 +657,11 @@ export async function GET(req) {
           claim_id: 1,
           claim_process_task_status: 1,
           document_upload_task_status: 1,
+          // Why a claim was refused. The processor writes it here and the
+          // claimant is shown it; leaving it out of the projection is what left
+          // every failure screen saying only that it had failed.
+          claim_message: 1,
+          claim_process_message: 1,
           document_upload_message: 1,
           submitted_at: 1,
           property_ids: 1,
