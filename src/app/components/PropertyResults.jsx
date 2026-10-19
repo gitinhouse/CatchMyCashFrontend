@@ -473,8 +473,10 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
 
                     {/* Its own column at the end of the row, so the figure lands
                         in the same place on every listing instead of trailing the
-                        badges at whatever width they happen to be. */}
-                    <div className="w-full sm:w-auto sm:ml-auto sm:text-right shrink-0">
+                        badges at whatever width they happen to be. A phone has no
+                        room for a column, so there it is a row of its own under the
+                        details, with the figure still at the far right. */}
+                    <div className="w-full flex items-baseline justify-between gap-3 border-t border-[#E8E6E3] pt-3 sm:block sm:w-auto sm:ml-auto sm:border-t-0 sm:pt-0 sm:text-right shrink-0">
                       <p className="text-[11px] uppercase tracking-wide text-[#888888] font-['JetBrains_Mono']">
                         Amount
                       </p>
