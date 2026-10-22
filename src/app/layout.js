@@ -2,7 +2,7 @@ import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Footer from "./components/Footer";
 import CookieConsent from "./components/CookieConsent";
-import { SiteHeader } from "./HomeContent";
+import SiteHeader from "./components/SiteHeader";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "./lib/site";
 import { SHARE_IMAGE } from "./lib/seo";
 
