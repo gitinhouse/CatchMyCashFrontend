@@ -609,3 +609,50 @@ a {
     background-image: none;
   }
 }
+
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .floating-elements,
+  .pulse-glow,
+  .shimmer {
+    animation: none !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+
+.floating-decoration {
+  animation: floating-decoration 8s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes floating-decoration {
+  0%,
+  100% {
+    transform: translate3d(0, -10px, 0);
+  }
+
+  50% {
+    transform: translate3d(0, 10px, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floating-decoration {
+    animation: none;
+    will-change: auto;
+  }
+}
+

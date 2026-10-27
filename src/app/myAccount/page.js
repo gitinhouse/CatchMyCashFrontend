@@ -427,7 +427,7 @@ const ClaimProgressModal = ({ claim, onClose }) => {
                                 <motion.div
                                     key={step.id}
                                     initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
+                                    animate={{ opacity: 1, x:0  }}
                                     transition={{ delay: index * 0.1 }}
                                     className={`flex items-start gap-4 p-4 rounded-xl border transition-all ${step.failed // ← ADD this branch first
                                         ? 'bg-[#FCE9E7] border-[#E1261C]/40'
@@ -625,7 +625,9 @@ export default function MyAccountPage() {
 
     const fetchCases = useCallback(async () => {
         try {
-            setLoading(true);
+            if (cases.length === 0) {
+                setLoading(true);
+            }
             setErrorMsg('');
 
             let storedLogin = null;

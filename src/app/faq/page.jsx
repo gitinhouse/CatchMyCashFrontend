@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { FAQS } from '../lib/content/faqs';
+import Breadcrumbs from '../components/seo/Breadcrumbs';
+import { pageCrumbs } from '../lib/seo';
 
 export default function FAQPage() {
   const [openItems, setOpenItems] = useState([0]);
@@ -19,6 +21,10 @@ export default function FAQPage() {
     <>
       <section className="py-12.5 lg:py-25">
         <div className="max-w-[1240px] mx-auto px-6 sm:px-8">
+          <Breadcrumbs
+            crumbs={pageCrumbs('FAQ', '/faq')}
+            className="mb-8"
+          />
           <h1 className="font-['Fraunces'] text-[clamp(40px,6vw,78px)] font-semibold tracking-[-0.02em] leading-[1.02] max-w-[14ch] mb-6">
             Questions, answered{' '}
             <em className="italic text-[#E1261C] font-normal">straight.</em>

@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
+import Breadcrumbs from '../components/seo/Breadcrumbs';
+import { pageCrumbs } from '../lib/seo';
 
 export default function PrivacyPage() {
   const [activeSection, setActiveSection] = useState('p-collect');
@@ -99,6 +101,10 @@ export default function PrivacyPage() {
       {/* Privacy Hero Section */}
       <section className="py-12.5 lg:py-25 border-b border-[#E8E6E3] bg-white">
         <div className="max-w-[1240px] mx-auto px-6 sm:px-8">
+          <Breadcrumbs
+            crumbs={pageCrumbs('Terms', '/terms')}
+            className="mb-8"
+          />
           <h1 className="font-['Fraunces'] text-[clamp(40px,6vw,78px)] font-semibold tracking-[-0.02em] leading-[1.02] max-w-[16ch] mb-6">
             Terms & Conditions in{' '}
             <em className="italic text-[#E1261C] font-normal">
