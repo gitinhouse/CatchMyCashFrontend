@@ -3245,21 +3245,6 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
         </motion.div>
       )}
 
-
-      {/* Header */}
-      <div className="bg-white border-b border-[#E8E6E3] shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <Link href="/" className="inline-block">
-            <h1 className="text-3xl font-bold text-[#0A0A0A] font-['Fraunces']">
-              CatchMyCash
-            </h1>
-            <p className="text-[#4A4A4A] mt-1">
-              Document Collection & Signatures
-            </p>
-          </Link>
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-8">
@@ -3710,7 +3695,10 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
         title={errorModal.title}
         message={errorModal.message}
         onClose={() => {
-          const isAgreementMissing = errorModal.title === AGREEMENT_MISSING_TITLE;
+          const shouldReturnToDashboard = [
+            AGREEMENT_MISSING_TITLE,
+            'Claim Process Pending',
+          ].includes(errorModal.title);
 
           setErrorModal({
             show: false,
@@ -3718,9 +3706,8 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
             message: '',
           });
 
-          // Keep the user's session intact when the agreement document is missing.
-          // They can return to the dashboard and continue later.
-          if (isAgreementMissing) {
+          // Preserve the user's session for these informational modals.
+          if (shouldReturnToDashboard) {
             router.push('/dashboard');
             return;
           }

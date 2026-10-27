@@ -169,7 +169,7 @@ useEffect(() => {
       setValidationError('');
       setIsSearching(false);
     }
-  };
+  };      
 
   const isFormValid = email.trim().length > 0 && password.trim().length > 0;
 
