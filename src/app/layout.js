@@ -3,6 +3,7 @@ import "./globals.css";
 import Footer from "./components/Footer";
 import CookieConsent from "./components/CookieConsent";
 import SiteHeader from "./components/SiteHeader";
+import NavigationLoader from "./components/NavigationLoader";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "./lib/site";
 import { SHARE_IMAGE } from "./lib/seo";
 
@@ -98,6 +99,7 @@ export default function RootLayout({ children }) {
         {children}
         <Footer/>
         <CookieConsent/>
+        <NavigationLoader />
       </body>
     </html>
   );
