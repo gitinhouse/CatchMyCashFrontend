@@ -234,8 +234,6 @@
 // }
 
 
-
-
 'use client';
 
 import React, { useEffect } from 'react';
@@ -522,10 +520,10 @@ export default function Home() {
   return (
     <div className="min-h-screen relative overflow-hidden">
 
-      {/* Decorative background elements */}
+      {/* Decorative background elements
       <div className="absolute inset-0 pointer-events-none">
         <FloatingElements />
-      </div>
+      </div> */}
 
       {/* Workflow progress indicator */}
       <ProgressHeader

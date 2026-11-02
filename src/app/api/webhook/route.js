@@ -187,7 +187,7 @@ export async function POST(req) {
                 <tr>
                   <td bgcolor="${COLORS.white}" style="background-color:${COLORS.white}; padding: 32px;">
                     <p style="margin:0 0 16px; color:${COLORS.textBody}; font-size:15px; line-height:1.6; font-family: Arial, Helvetica, sans-serif;">
-                      Dear User,
+                      Dear ${userDetails.legal_name || 'User'},
                     </p>
                     <p style="margin:0 0 20px; color:${COLORS.textBody}; font-size:15px; line-height:1.6; font-family: Arial, Helvetica, sans-serif;">
                       We regret to inform you that there was an issue processing your recent property claim submission.
@@ -205,6 +205,15 @@ export async function POST(req) {
                     ${detailsCards}
                     <p style="margin:0; color:${COLORS.textBody}; font-size:15px; line-height:1.6; font-family: Arial, Helvetica, sans-serif;">
                       Please review the details above carefully and confirm they are correct. If anything looks incorrect or you have questions, please reach out to our support team before resubmitting.
+                    </p>
+                    <p style="margin:12px 0 0; color:${COLORS.textBody}; font-size:14px; line-height:1.6; font-family: Arial, Helvetica, sans-serif;">
+                      Contact Support:
+                      <a
+                        href="mailto:help@catchmycash.com"
+                        style="color:${COLORS.red}; font-weight:600; text-decoration:underline;"
+                      >
+                        help@catchmycash.com
+                      </a>
                     </p>
                   </td>
                 </tr>
@@ -227,7 +236,7 @@ export async function POST(req) {
 
     // ---- Plain text fallback ----
     let textContent = `
-Dear User,
+Dear ${userDetails.legal_name || 'User'},
 
 We regret to inform you that there was an issue processing your recent property claim submission.
 
@@ -255,11 +264,14 @@ ${errorMessage || 'Something went wrong. Please try again.'}
     }
 
     textContent += `
-Please review the details above carefully and confirm they are correct. If anything looks incorrect or you have questions, please reach out to our support team before resubmitting.
+      Please review the details above carefully and confirm they are correct. If anything looks incorrect or you have questions, please reach out to our support team before resubmitting.
 
-Sincerely,
-The CatchMyCash Team
-`;
+      Contact Support:
+      Email: help@catchmycash.com
+
+      Sincerely,
+      The CatchMyCash Team
+    `;
 
     await sendEmailTwilio({
       to: userDetails.email_id,

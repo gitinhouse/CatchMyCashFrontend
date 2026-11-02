@@ -523,25 +523,6 @@ const PropertySearch = ({ onNext, onBack, onFieldFilled }) => {
         }
       `}</style>
 
-      {/* Animated background dots - red themed */}
-      <div className="absolute inset-0 pointer-events-none">
-        {Array.from({ length: 12 }).map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-2 h-2 bg-[#E1261C]/10 rounded-full"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-            }}
-            animate={{ scale: [0, 1, 0], opacity: [0, 0.5, 0] }}
-            transition={{
-              duration: 3 + Math.random() * 2,
-              repeat: Infinity,
-              delay: Math.random() * 2,
-            }}
-          />
-        ))}
-      </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 

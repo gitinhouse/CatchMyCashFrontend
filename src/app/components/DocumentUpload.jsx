@@ -915,7 +915,6 @@
 //     }
 //   };
 
-
 //   const handleAgreementDocuSign = async () => {
 //     const userId = userData?._id;
 //     if (!userId) {
@@ -957,8 +956,6 @@
 //       //   }),
 //       // });
 
-
-
 //       const data = await res.json();
 
 //       if (!res.ok) {
@@ -994,7 +991,6 @@
 //     setSelectedDocId(docId);
 //     if (fileInputRef.current) fileInputRef.current.click();
 //   };
-
 
 //   const handleRemoveDocument = (docId) => {
 //     if (docId === 'agreement') return;
@@ -1339,7 +1335,6 @@
 //           </div>
 //         </motion.div>
 //       )}
-
 
 //       {/* Header */}
 //       <div className="bg-white border-b border-[#E8E6E3] shadow-sm">
@@ -1903,15 +1898,15 @@
 
 // export default DocumentUpload;
 
-'use client';
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Button } from './uicomponents/Button';
-import { Card } from './uicomponents/Card';
-import { Badge } from './uicomponents/Badge';
-import { useWebSocket } from '../hooks/useWebSocket';
-import axios from 'axios';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { motion } from 'framer-motion';
+"use client";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { Button } from "./uicomponents/Button";
+import { Card } from "./uicomponents/Card";
+import { Badge } from "./uicomponents/Badge";
+import { useWebSocket } from "../hooks/useWebSocket";
+import axios from "axios";
+import { useRouter, useSearchParams } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   Upload,
   FileText,
@@ -1922,10 +1917,11 @@ import {
   Shield,
   Trash2,
   Info,
-} from 'lucide-react';
-import { useSearchStore } from '../store/searchStore';
-import { QRCodeSVG } from 'qrcode.react';
-import Link from 'next/link';
+} from "lucide-react";
+import { useSearchStore } from "../store/searchStore";
+import { QRCodeSVG } from "qrcode.react";
+import Link from "next/link";
+import { SUPPORT_EMAIL } from "../lib/site";
 
 // ---------------------------------------------------------------------------
 // Document validation rules
@@ -1938,20 +1934,20 @@ import Link from 'next/link';
 //   - Can only contain letters, numbers, dashes, and underscores
 //   - Cannot exceed 100 characters
 // ---------------------------------------------------------------------------
-const ALLOWED_FILE_EXTENSIONS = ['pdf', 'tif', 'tiff', 'png', 'jpg', 'jpeg'];
+const ALLOWED_FILE_EXTENSIONS = ["pdf", "tif", "tiff", "png", "jpg", "jpeg"];
 const ALLOWED_MIME_TYPES = [
-  'application/pdf',
-  'image/tiff',
-  'image/png',
-  'image/jpeg',
+  "application/pdf",
+  "image/tiff",
+  "image/png",
+  "image/jpeg",
 ];
 const MIN_FILE_SIZE_BYTES = 1; // must be greater than 1 byte
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 const MAX_FILENAME_LENGTH = 100;
 
 const getFileExtension = (fileName) => {
-  const parts = String(fileName || '').split('.');
-  return parts.length > 1 ? parts.pop().toLowerCase() : '';
+  const parts = String(fileName || "").split(".");
+  return parts.length > 1 ? parts.pop().toLowerCase() : "";
 };
 
 // Lightweight client-side heuristic for detecting an encrypted/password
@@ -1964,14 +1960,14 @@ const isPdfPasswordProtected = async (file) => {
   try {
     const buffer = await file.arrayBuffer();
     const bytes = new Uint8Array(buffer);
-    let text = '';
+    let text = "";
     const chunkSize = 20000;
     for (let i = 0; i < bytes.length; i += chunkSize) {
       text += String.fromCharCode(...bytes.slice(i, i + chunkSize));
     }
     return /\/Encrypt/.test(text);
   } catch (err) {
-    console.error('Error inspecting PDF for encryption:', err);
+    console.error("Error inspecting PDF for encryption:", err);
     // If the file can't be inspected, don't block the upload on this check alone.
     return false;
   }
@@ -1979,7 +1975,10 @@ const isPdfPasswordProtected = async (file) => {
 
 const validateDocumentFile = async (file) => {
   if (!file) {
-    return { valid: false, error: 'No file selected. Please choose a file to upload.' };
+    return {
+      valid: false,
+      error: "No file selected. Please choose a file to upload.",
+    };
   }
 
   const extension = getFileExtension(file.name);
@@ -2013,8 +2012,8 @@ const validateDocumentFile = async (file) => {
     };
   }
 
-  const nameWithoutExtension = file.name.includes('.')
-    ? file.name.slice(0, file.name.lastIndexOf('.'))
+  const nameWithoutExtension = file.name.includes(".")
+    ? file.name.slice(0, file.name.lastIndexOf("."))
     : file.name;
 
   if (!/^[A-Za-z0-9_-]+$/.test(nameWithoutExtension)) {
@@ -2031,7 +2030,7 @@ const validateDocumentFile = async (file) => {
     };
   }
 
-  if (extension === 'pdf') {
+  if (extension === "pdf") {
     const encrypted = await isPdfPasswordProtected(file);
     if (encrypted) {
       return {
@@ -2054,12 +2053,12 @@ const validateDocumentFile = async (file) => {
 // the pair in one place is what stops them drifting apart again.
 // ---------------------------------------------------------------------------
 const DOC_FIELD_TO_ID = {
-  proof_id: 'id',
-  ssn_id: 'ssn',
-  adress_proof: 'address',
-  brith_proof: 'birth',
-  employee_proof: 'employment',
-  claim_doc: 'claim',
+  proof_id: "id",
+  ssn_id: "ssn",
+  adress_proof: "address",
+  brith_proof: "birth",
+  employee_proof: "employment",
+  claim_doc: "claim",
 };
 
 const DOC_ID_TO_FIELD = Object.fromEntries(
@@ -2068,7 +2067,7 @@ const DOC_ID_TO_FIELD = Object.fromEntries(
 
 /** The documents a saved UserDocs record already holds, as this screen names them. */
 function uploadedIdsFromDocs(userDocs) {
-  if (!userDocs || typeof userDocs !== 'object') return [];
+  if (!userDocs || typeof userDocs !== "object") return [];
   return Object.entries(DOC_FIELD_TO_ID)
     .filter(([field]) => Boolean(userDocs[field]))
     .map(([, id]) => id);
@@ -2076,7 +2075,7 @@ function uploadedIdsFromDocs(userDocs) {
 
 /** Which document a socket message is about, whichever name it used. */
 function documentIdFromMessage(message) {
-  const named = String(message?.document || message?.field || '').trim();
+  const named = String(message?.document || message?.field || "").trim();
   if (!named) return null;
   if (DOC_FIELD_TO_ID[named]) return DOC_FIELD_TO_ID[named];
   if (DOC_ID_TO_FIELD[named]) return named;
@@ -2112,9 +2111,9 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   const hasRun = useRef(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const caseIdFromUrl = searchParams.get('case_id'); // NEW
+  const caseIdFromUrl = searchParams.get("case_id"); // NEW
   const [isAgreementAvailable, setIsAgreementAvailable] = useState(false);
-  const AGREEMENT_MISSING_TITLE = 'Agreement Document Not Found';
+  const AGREEMENT_MISSING_TITLE = "Agreement Document Not Found";
 
   const {
     userData,
@@ -2134,32 +2133,32 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
 
   const [errorModal, setErrorModal] = useState({
     show: false,
-    title: '',
-    message: '',
+    title: "",
+    message: "",
   });
   const [fileErrorModal, setFileErrorModal] = useState({
     show: false,
-    fileName: '',
-    message: '',
+    fileName: "",
+    message: "",
   });
   const requiredDocuments = [
     {
-      id: 'agreement',
-      name: 'Signed Agreement Form',
+      id: "agreement",
+      name: "Signed Agreement Form",
       required: true,
     },
-    { id: 'id', name: 'Government-issued Photo ID', required: true },
-    { id: 'ssn', name: 'Social Security Card or W2', required: true },
+    { id: "id", name: "Government-issued Photo ID", required: true },
+    { id: "ssn", name: "Social Security Card or W2", required: true },
     {
-      id: 'address',
-      name: 'Proof of Address (utility bill, bank statement)',
+      id: "address",
+      name: "Proof of Address (utility bill, bank statement)",
       required: true,
     },
-    { id: 'claim', name: 'Claim Form', required: false },
-    { id: 'birth', name: 'Birth Certificate', required: false },
+    { id: "claim", name: "Claim Form", required: false },
+    { id: "birth", name: "Birth Certificate", required: false },
     {
-      id: 'employment',
-      name: 'Employment Records (if applicable)',
+      id: "employment",
+      name: "Employment Records (if applicable)",
       required: false,
     },
   ];
@@ -2170,10 +2169,10 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   const [scanWatch, setScanWatch] = useState(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       const baseUrl = process.env.NEXT_PUBLIC_WS_URL || window.location.origin;
-      const protocol = baseUrl.startsWith('https') ? 'wss' : 'ws';
-      const host = baseUrl.replace(/^https?:\/\//, '');
+      const protocol = baseUrl.startsWith("https") ? "wss" : "ws";
+      const host = baseUrl.replace(/^https?:\/\//, "");
       setWsUrl(`${protocol}://${host}/api/ws`);
     }
   }, []);
@@ -2188,9 +2187,9 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   );
 
   useEffect(() => {
-    if (!message || message.type !== 'documents_submitted') return;
+    if (!message || message.type !== "documents_submitted") return;
 
-    console.log('📄 Document uploaded event:', message);
+    console.log("📄 Document uploaded event:", message);
 
     // Everyone on the socket used to hear about every claim, so a message is
     // only acted on when it is about the claim this tab is filing.
@@ -2207,7 +2206,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     if (docId) {
       markDocumentUploaded(
         docId,
-        `✅ ${message.file_name || 'Document'} uploaded successfully from mobile!`,
+        `✅ ${message.file_name || "Document"} uploaded successfully from mobile!`,
       );
     }
 
@@ -2223,7 +2222,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     setScanWatch((prev) => (prev?.docId === docId ? null : prev));
 
     if (note) {
-      setSocketMessage({ type: 'success', message: note, document: docId });
+      setSocketMessage({ type: "success", message: note, document: docId });
       setTimeout(() => setSocketMessage(null), 5000);
     }
   };
@@ -2251,12 +2250,14 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       const uploadedIds = uploadedIdsFromDocs(docs);
 
       if (uploadedIds.length > 0) {
-        setUploadedDocs((prev) => Array.from(new Set([...prev, ...uploadedIds])));
+        setUploadedDocs((prev) =>
+          Array.from(new Set([...prev, ...uploadedIds])),
+        );
         // Keep the copy the rest of the flow reads in step with the record.
         try {
-          const saved = JSON.parse(localStorage.getItem('userAllDocs') || '{}');
+          const saved = JSON.parse(localStorage.getItem("userAllDocs") || "{}");
           localStorage.setItem(
-            'userAllDocs',
+            "userAllDocs",
             JSON.stringify({ ...saved, ...docs }),
           );
         } catch {
@@ -2266,7 +2267,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
 
       return uploadedIds;
     } catch (error) {
-      console.error('Could not re-read the uploaded documents:', error.message);
+      console.error("Could not re-read the uploaded documents:", error.message);
       return [];
     }
   }, [userCase?._id, userLogin?.token]);
@@ -2296,7 +2297,10 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       if (cancelled) return;
 
       if (uploadedIds.includes(scanWatch.docId)) {
-        markDocumentUploaded(scanWatch.docId, '✅ Document uploaded from your phone!');
+        markDocumentUploaded(
+          scanWatch.docId,
+          "✅ Document uploaded from your phone!",
+        );
         return;
       }
 
@@ -2312,23 +2316,23 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   }, [scanWatch, refreshUploadedDocs]);
 
   const getDocPath = (value) => {
-    if (!value) return '';
-    if (typeof value === 'string') return value;
-    return value?.filePath || '';
+    if (!value) return "";
+    if (typeof value === "string") return value;
+    return value?.filePath || "";
   };
 
   const isInvestigatorSignedDoc = (value) => {
     const path = getDocPath(value);
-    return path.includes('signed-document');
+    return path.includes("signed-document");
   };
 
   const isFilledAgreementDoc = (value) => {
     const path = getDocPath(value);
-    return path.includes('FilledAgreement_form');
+    return path.includes("FilledAgreement_form");
   };
 
   const areRequiredDocsComplete = (userDocs) => {
-    if (!userDocs || Array.isArray(userDocs) || typeof userDocs !== 'object') {
+    if (!userDocs || Array.isArray(userDocs) || typeof userDocs !== "object") {
       return false;
     }
 
@@ -2357,7 +2361,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   };
 
   const isDocComplete = (docId) => {
-    if (docId === 'agreement') return agreementDocuSignComplete;
+    if (docId === "agreement") return agreementDocuSignComplete;
     return uploadedDocs.includes(docId);
   };
 
@@ -2374,37 +2378,37 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       .length;
 
   const splitLegalName = (legalName) => {
-    const name = String(legalName || '').trim();
-    if (!name) return { firstName: '', lastName: '' };
+    const name = String(legalName || "").trim();
+    if (!name) return { firstName: "", lastName: "" };
 
     const parts = name.split(/\s+/);
     if (parts.length === 1) {
-      return { firstName: '', lastName: parts[0] };
+      return { firstName: "", lastName: parts[0] };
     }
 
     return {
       firstName: parts[parts.length - 1],
-      lastName: parts.slice(0, -1).join(' '),
+      lastName: parts.slice(0, -1).join(" "),
     };
   };
 
   useEffect(() => {
     if (!userLogin) {
-      const savedUserLoginData = localStorage.getItem('userLogin');
+      const savedUserLoginData = localStorage.getItem("userLogin");
       if (savedUserLoginData) setUserLogin(JSON.parse(savedUserLoginData));
     }
     if (!userData) {
-      const savedUserData = localStorage.getItem('userData');
+      const savedUserData = localStorage.getItem("userData");
       if (savedUserData) setUserData(JSON.parse(savedUserData));
     }
 
     if (!userAgreement) {
-      const savedAgreement = localStorage.getItem('userAgreement');
+      const savedAgreement = localStorage.getItem("userAgreement");
       if (savedAgreement) setUserAgreement(JSON.parse(savedAgreement));
     }
 
     if (!userSignedAgreement) {
-      const savedSigned = localStorage.getItem('signedDoc');
+      const savedSigned = localStorage.getItem("signedDoc");
       if (savedSigned) {
         try {
           const parsed = JSON.parse(savedSigned);
@@ -2420,15 +2424,15 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       setDocusignComplete(true);
     }
     if (!searchResults) {
-      const savedProperty = localStorage.getItem('propertyData');
+      const savedProperty = localStorage.getItem("propertyData");
       if (savedProperty) setSearchResults(JSON.parse(savedProperty));
     }
     if (!userCase) {
-      const savedUserCaseData = localStorage.getItem('userCase');
+      const savedUserCaseData = localStorage.getItem("userCase");
       if (savedUserCaseData) setUserCase(JSON.parse(savedUserCaseData));
     }
 
-    const savedFilledAgreement = localStorage.getItem('filledAgreementDoc');
+    const savedFilledAgreement = localStorage.getItem("filledAgreementDoc");
     if (savedFilledAgreement) {
       try {
         const parsed = JSON.parse(savedFilledAgreement);
@@ -2439,7 +2443,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
         // ignore invalid localStorage value
       }
     } else {
-      const savedAllDocs = localStorage.getItem('userAllDocs');
+      const savedAllDocs = localStorage.getItem("userAllDocs");
       if (savedAllDocs) {
         try {
           const allDocs = JSON.parse(savedAllDocs);
@@ -2466,7 +2470,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   }, [userData, searchResults, userSignedAgreement, userAgreement, userLogin]);
 
   useEffect(() => {
-    if (userLogin?.user.user_type === 'Old') {
+    if (userLogin?.user.user_type === "Old") {
       fetchUserData(userLogin?.token, userLogin?.user?.user_id);
     }
   }, [userLogin]);
@@ -2484,29 +2488,26 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
             Authorization: `Bearer ${token}`,
           },
         });
-        console.log('API Response:', response?.data?._id);
+        console.log("API Response:", response?.data?._id);
         resolvedCaseId = response?.data?._id;
       }
 
-      const { data } = await axios.get(
-        `/api/case?case_id=${resolvedCaseId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const { data } = await axios.get(`/api/case?case_id=${resolvedCaseId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setSearchResults(data?.data?.[0]?.user_properties);
       localStorage.setItem(
-        'propertyData',
+        "propertyData",
         JSON.stringify(data?.data?.[0]?.user_properties),
       );
       setUserData(data?.data?.[0]?.user_info);
       localStorage.setItem(
-        'userData',
+        "userData",
         JSON.stringify(data?.data?.[0]?.user_info),
       );
       setUserAgreement(data?.data?.[0]?.user_details?.[0]);
       localStorage.setItem(
-        'userAgreement',
+        "userAgreement",
         JSON.stringify(data?.data?.[0]?.user_details?.[0]),
       );
       const userDocs = data?.data?.[0]?.user_docs?.[0] || [];
@@ -2516,7 +2517,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
 
       if (isInvestigatorSignedDoc(signedDocValue)) {
         localStorage.setItem(
-          'signedDoc',
+          "signedDoc",
           JSON.stringify({ filePath: signedDocValue }),
         );
         setuserSignedAgreement({ filePath: signedDocValue });
@@ -2537,10 +2538,10 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
         claim_process_task_status: caseData?.claim_process_task_status,
         createdAt: caseData?.createdAt,
       };
-      localStorage.setItem('userCase', JSON.stringify(filteredCase));
+      localStorage.setItem("userCase", JSON.stringify(filteredCase));
       setUserCase(filteredCase);
       localStorage.setItem(
-        'userAllDocs',
+        "userAllDocs",
         JSON.stringify(data?.data?.[0]?.user_docs?.[0]),
       );
 
@@ -2548,25 +2549,25 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       redirectToTrackingIfComplete(userDocs);
 
       if (
-        caseData?.claim_process_task_status === '' ||
+        caseData?.claim_process_task_status === "" ||
         caseData?.claim_process_task_status === null ||
-        caseData?.claim_process_task_status === 'queued' ||
-        caseData?.claim_process_task_status === 'failed' ||
-        caseData?.claim_process_task_status === 'Failed'
+        caseData?.claim_process_task_status === "queued" ||
+        caseData?.claim_process_task_status === "failed" ||
+        caseData?.claim_process_task_status === "Failed"
       ) {
         setErrorModal({
           show: true,
-          title: 'Claim Process Pending',
+          title: "Claim Process Pending",
           message:
-            ' Your claim is currently being processed. Please check back later for updates.',
+            " Your claim is currently being processed. Please check back later for updates.",
         });
       }
       const uploadedIds = uploadedIdsFromDocs(userDocs);
 
       setUploadedDocs(uploadedIds);
-      console.log('Preloaded uploaded documents:', uploadedIds);
+      console.log("Preloaded uploaded documents:", uploadedIds);
     } catch (error) {
-      console.error('Error fetching user data:', error);
+      console.error("Error fetching user data:", error);
     }
   };
 
@@ -2574,7 +2575,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   // it another claimant's uploads.
   useEffect(() => {
     if (!isConnected || !userCase?._id) return;
-    sendMessage({ type: 'subscribe', caseId: String(userCase._id) });
+    sendMessage({ type: "subscribe", caseId: String(userCase._id) });
   }, [isConnected, userCase?._id, sendMessage]);
 
   // The claimant is told straight away when there is nothing to sign — waiting
@@ -2607,7 +2608,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
         // Naming the case matters when a claimant has more than one: without
         // it the check can land on a different case's documents.
         const params = new URLSearchParams({ user_id: userData._id });
-        if (userCase?._id) params.set('case_id', userCase._id);
+        if (userCase?._id) params.set("case_id", userCase._id);
 
         const response = await fetch(`/api/docusign/agreement?${params}`);
         const data = await response.json();
@@ -2615,7 +2616,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
 
         if (!response.ok) {
           setIsAgreementAvailable(false);
-          console.error('Failed to check agreement:', data.error);
+          console.error("Failed to check agreement:", data.error);
           return;
         }
 
@@ -2623,7 +2624,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
         const agreementAvailable = !!data.hasAgreement && detailsPresent;
         setIsAgreementAvailable(agreementAvailable);
 
-        console.log('Agreement check result:', {
+        console.log("Agreement check result:", {
           attempt: attempts,
           hasAgreementDoc: data.hasAgreement,
           agreementDocPath: data.agreement_doc,
@@ -2635,7 +2636,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
           // It arrived. If we had already said otherwise, take that back.
           setErrorModal((prev) =>
             prev.show && prev.title === AGREEMENT_MISSING_TITLE
-              ? { show: false, title: '', message: '' }
+              ? { show: false, title: "", message: "" }
               : prev,
           );
           return;
@@ -2653,19 +2654,25 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
             show: true,
             title: AGREEMENT_MISSING_TITLE,
             message:
-              'No agreement document has been uploaded for your account. Please contact support to get your agreement document uploaded so you can proceed with the signing process.',
+              "No agreement document has been uploaded for your account. Please contact our support team to get your agreement document uploaded so you can proceed with the signing process.",
           });
         }
 
         if (attempts < AGREEMENT_POLL_ATTEMPTS) {
-          timer = setTimeout(checkAgreementDocumentExists, AGREEMENT_POLL_INTERVAL_MS);
+          timer = setTimeout(
+            checkAgreementDocumentExists,
+            AGREEMENT_POLL_INTERVAL_MS,
+          );
         }
       } catch (error) {
         if (cancelled) return;
-        console.error('Error checking agreement document:', error);
+        console.error("Error checking agreement document:", error);
         setIsAgreementAvailable(false);
         if (attempts < AGREEMENT_POLL_ATTEMPTS) {
-          timer = setTimeout(checkAgreementDocumentExists, AGREEMENT_POLL_INTERVAL_MS);
+          timer = setTimeout(
+            checkAgreementDocumentExists,
+            AGREEMENT_POLL_INTERVAL_MS,
+          );
         }
       }
     };
@@ -2679,7 +2686,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   }, [userData?._id, userAgreement, userData, userCase?._id]);
 
   useEffect(() => {
-    const requiredDocIds = ['id', 'ssn', 'address'];
+    const requiredDocIds = ["id", "ssn", "address"];
     const uploadedRequired = requiredDocIds.filter((id) =>
       uploadedDocs.includes(id),
     ).length;
@@ -2695,14 +2702,14 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       if (userSignedAgreement != null) {
         try {
           const userRecord = JSON.parse(
-            localStorage.getItem('userData') || '{}',
+            localStorage.getItem("userData") || "{}",
           );
           const userSignedDoc = JSON.parse(
-            localStorage.getItem('signedDoc') || '{}',
+            localStorage.getItem("signedDoc") || "{}",
           );
           const userId = userData?._id || userRecord?._id;
           if (!userId) {
-            console.error('No user ID found in state or localStorage');
+            console.error("No user ID found in state or localStorage");
             return;
           }
 
@@ -2714,25 +2721,28 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
           }
 
           const propertyIds = JSON.parse(
-            localStorage.getItem('ownPropertyIds') || '[]',
+            localStorage.getItem("ownPropertyIds") || "[]",
           );
 
           const payload = { user_id: userId, property_ids: propertyIds };
-          const response = await axios.post('/api/case', payload);
+          const response = await axios.post("/api/case", payload);
 
-          localStorage.setItem('userCase', JSON.stringify(response.data));
+          localStorage.setItem("userCase", JSON.stringify(response.data));
           setUserCase(response.data);
 
           // ← ADD: attribute this new case back to whoever referred this user
-          const referralCode = localStorage.getItem('referralCode');
+          const referralCode = localStorage.getItem("referralCode");
           if (referralCode) {
             try {
-              const linkRes = await axios.get(`/api/referral-link?code=${referralCode}`);
-              const { user_id: referrerId, case_id: referrerCaseId } = linkRes.data;
+              const linkRes = await axios.get(
+                `/api/referral-link?code=${referralCode}`,
+              );
+              const { user_id: referrerId, case_id: referrerCaseId } =
+                linkRes.data;
 
               // Don't let someone "refer themselves"
               if (String(referrerId) !== String(userId)) {
-                await axios.post('/api/referral', {
+                await axios.post("/api/referral", {
                   user_id: referrerId,
                   case_id: referrerCaseId,
                   referral_code: referralCode,
@@ -2741,9 +2751,9 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
                 });
               }
 
-              localStorage.removeItem('referralCode');
+              localStorage.removeItem("referralCode");
             } catch (referralErr) {
-              console.error('Error attributing referral:', referralErr);
+              console.error("Error attributing referral:", referralErr);
               // non-fatal — don't block this user's own case creation
             }
           }
@@ -2753,12 +2763,12 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
             case_id: response.data._id,
             signed_doc: signedFilePath,
           };
-          const docsResponse = await axios.post('/api/docs', docsPayload);
+          const docsResponse = await axios.post("/api/docs", docsPayload);
 
-          console.log('Docs response:', docsResponse.data);
+          console.log("Docs response:", docsResponse.data);
           setDocusignComplete(true);
         } catch (error) {
-          console.error('Error creating case:', error);
+          console.error("Error creating case:", error);
         }
       }
     }
@@ -2777,22 +2787,23 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
 
     if (!firstName || !lastName || !email) {
       setError(
-        'Missing name or email. Please complete the previous steps first. Agreement document not found for this user.',
+        "Missing name or email. Please complete the previous steps first. Agreement document not found for this user.",
       );
       setIsDocuSignLoading(false);
       // Show error modal for better visibility
       setErrorModal({
         show: true,
-        title: 'Agreement Not Available',
-        message: 'Please complete the Property Selection step first to generate your agreement. This requires your legal name and email address.',
+        title: "Agreement Not Available",
+        message:
+          "Please complete the Property Selection step first to generate your agreement. This requires your legal name and email address.",
       });
       return;
     }
 
     try {
-      const res = await fetch('/api/docusign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/docusign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           firstName,
           lastName,
@@ -2804,7 +2815,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to open DocuSign');
+        throw new Error(data.error || "Failed to open DocuSign");
       }
 
       if (data.signingUrl) {
@@ -2812,7 +2823,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
         return;
       }
 
-      throw new Error('No signing URL received');
+      throw new Error("No signing URL received");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -2820,26 +2831,29 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     }
   };
 
-
   const handleAgreementDocuSign = async () => {
     const userId = userData?._id;
     if (!userId) {
-      setError('User ID missing. Please complete the previous steps first.');
+      setError("User ID missing. Please complete the previous steps first.");
       setErrorModal({
         show: true,
-        title: 'User ID Missing',
-        message: 'Please complete the Property Selection step first to generate your agreement.',
+        title: "User ID Missing",
+        message:
+          "Please complete the Property Selection step first to generate your agreement.",
       });
       return;
     }
 
     // Check if agreement is available
     if (!isAgreementAvailable) {
-      setError('Agreement document not found for this user. Please complete the previous step first.');
+      setError(
+        "Agreement document not found for this user. Please complete the previous step first.",
+      );
       setErrorModal({
         show: true,
-        title: 'Agreement Not Available',
-        message: 'Please complete the Property Selection step first to generate your agreement. This requires your legal name and email address.',
+        title: "Agreement Not Available",
+        message:
+          "Please complete the Property Selection step first to generate your agreement. This requires your legal name and email address.",
       });
       return;
     }
@@ -2848,9 +2862,9 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       setIsAgreementDocuSignLoading(true);
       setError(null);
 
-      const res = await fetch('/api/docusign/agreement', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/docusign/agreement", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId }),
       });
 
@@ -2862,12 +2876,10 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       //   }),
       // });
 
-
-
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to open DocuSign for agreement');
+        throw new Error(data.error || "Failed to open DocuSign for agreement");
       }
 
       if (data.signingUrl) {
@@ -2875,10 +2887,10 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
         return;
       }
 
-      throw new Error('No signing URL received');
+      throw new Error("No signing URL received");
     } catch (err) {
-      console.error('Agreement DocuSign error:', err);
-      setError(err.message || 'Failed to open DocuSign for agreement form');
+      console.error("Agreement DocuSign error:", err);
+      setError(err.message || "Failed to open DocuSign for agreement form");
     } finally {
       setIsAgreementDocuSignLoading(false);
     }
@@ -2890,8 +2902,9 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     if (!canUploadSupportingDocs) {
       setErrorModal({
         show: true,
-        title: 'Cannot Upload Documents',
-        message: 'You cannot upload documents until the agreement is available.',
+        title: "Cannot Upload Documents",
+        message:
+          "You cannot upload documents until the agreement is available.",
       });
       return;
     }
@@ -2900,9 +2913,8 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     if (fileInputRef.current) fileInputRef.current.click();
   };
 
-
   const handleRemoveDocument = (docId) => {
-    if (docId === 'agreement') return;
+    if (docId === "agreement") return;
 
     setUploadedDocs((prev) => prev.filter((id) => id !== docId));
     setUploadedFiles((prev) => {
@@ -2924,7 +2936,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
         fileName: file.name,
         message: validationError,
       });
-      event.target.value = '';
+      event.target.value = "";
       return;
     }
 
@@ -2940,16 +2952,16 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       [selectedDocId]: file,
     }));
 
-    if (selectedDocId === 'agreement') {
+    if (selectedDocId === "agreement") {
       try {
         setLoading(true);
         const formData = new FormData();
-        formData.append('file', file);
-        formData.append('user_id', userId);
-        formData.append('case_id', caseId);
+        formData.append("file", file);
+        formData.append("user_id", userId);
+        formData.append("case_id", caseId);
 
-        const res = await fetch('/api/docusign/notary', {
-          method: 'POST',
+        const res = await fetch("/api/docusign/notary", {
+          method: "POST",
           body: formData,
         });
 
@@ -2958,24 +2970,24 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
         if (data.signingUrl) {
           window.location.href = data.signingUrl;
         } else {
-          throw new Error('No signing URL received');
+          throw new Error("No signing URL received");
         }
       } catch (err) {
-        console.error('RON Error:', err);
-        setError('Failed to start notarization');
+        console.error("RON Error:", err);
+        setError("Failed to start notarization");
       } finally {
         setLoading(false);
       }
     }
 
-    event.target.value = '';
+    event.target.value = "";
   };
 
   const getQrUrl = (docId) => {
-    if (typeof window === 'undefined') return '';
+    if (typeof window === "undefined") return "";
     const userId = userData?._id;
     const caseId = userCase?._id;
-    if (!userId || !caseId || !docId) return '';
+    if (!userId || !caseId || !docId) return "";
     // ✅ Use the correct path with all parameters
     return `${window.location.origin}/userDocs?userId=${userId}&caseId=${caseId}&docId=${docId}`;
   };
@@ -2984,8 +2996,9 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     if (!canUploadSupportingDocs) {
       setErrorModal({
         show: true,
-        title: 'Cannot Scan Documents',
-        message: 'Please complete the Property Selection step first to generate your agreement. You cannot scan documents until the agreement is available.',
+        title: "Cannot Scan Documents",
+        message:
+          "Please complete the Property Selection step first to generate your agreement. You cannot scan documents until the agreement is available.",
       });
       return;
     }
@@ -3004,7 +3017,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   const handleScanChange = async (event) => {
     const file = event.target.files[0];
     if (!file || !scanTargetDocId) {
-      event.target.value = '';
+      event.target.value = "";
       return;
     }
 
@@ -3013,9 +3026,9 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       setFileErrorModal({
         show: true,
         fileName: file.name,
-        message: validationError
+        message: validationError,
       });
-      event.target.value = '';
+      event.target.value = "";
       return;
     }
 
@@ -3025,22 +3038,22 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
     try {
       const backendKey = DOC_ID_TO_FIELD[scanTargetDocId];
       if (!backendKey) {
-        throw new Error('Invalid document type');
+        throw new Error("Invalid document type");
       }
 
       // Upload the scanned file
       const formData = new FormData();
-      formData.append('case_id', userCase?._id);
+      formData.append("case_id", userCase?._id);
       formData.append(backendKey, file);
 
-      const res = await fetch('/api/docs', {
-        method: 'PUT',
+      const res = await fetch("/api/docs", {
+        method: "PUT",
         body: formData,
       });
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data?.error || 'Failed to upload scanned document');
+        throw new Error(data?.error || "Failed to upload scanned document");
       }
 
       // Update local state
@@ -3052,14 +3065,14 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       setUploadedFiles((prev) => ({ ...prev, [scanTargetDocId]: file }));
 
       // Store in localStorage
-      const allDocs = JSON.parse(localStorage.getItem('userAllDocs') || '{}');
+      const allDocs = JSON.parse(localStorage.getItem("userAllDocs") || "{}");
       allDocs[backendKey] = data[backendKey] || file.name;
-      localStorage.setItem('userAllDocs', JSON.stringify(allDocs));
+      localStorage.setItem("userAllDocs", JSON.stringify(allDocs));
 
       // ✅ EMIT WEBSOCKET EVENT for real-time sync
       if (socket && isConnected) {
         const wsMessage = {
-          type: 'documents_submitted',
+          type: "documents_submitted",
           caseId: userCase?._id,
           userId: userId,
           // Both names, so whoever reads this does not have to guess which one
@@ -3067,31 +3080,31 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
           document: scanTargetDocId,
           field: backendKey,
           file_name: file.name,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
         socket.send(JSON.stringify(wsMessage));
-        console.log('📤 WebSocket message sent:', wsMessage);
+        console.log("📤 WebSocket message sent:", wsMessage);
       }
 
       // Show success message
       setSocketMessage({
-        type: 'success',
+        type: "success",
         message: `✅ ${file.name} uploaded successfully!`,
-        document: scanTargetDocId
+        document: scanTargetDocId,
       });
       setTimeout(() => setSocketMessage(null), 3000);
-
     } catch (err) {
-      console.error('Scan upload failed:', err);
-      setError(err.message || 'Failed to upload scanned document');
+      console.error("Scan upload failed:", err);
+      setError(err.message || "Failed to upload scanned document");
       setErrorModal({
         show: true,
-        title: 'Scan Upload Failed',
-        message: err.message || 'There was an error uploading your scanned document.'
+        title: "Scan Upload Failed",
+        message:
+          err.message || "There was an error uploading your scanned document.",
       });
     } finally {
       setIsScanning(false);
-      event.target.value = '';
+      event.target.value = "";
     }
   };
 
@@ -3104,7 +3117,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   const caseId = userCase?._id;
 
   const handleSubmitCase = async () => {
-    if (!userData?._id) return console.error('User ID missing');
+    if (!userData?._id) return console.error("User ID missing");
     try {
       setIsSubmitted(true);
 
@@ -3115,24 +3128,24 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       // Upload any newly selected/replaced files (including re-uploads)
       if (filesToUpload.length > 0) {
         const formData = new FormData();
-        formData.append('case_id', userCase?._id);
+        formData.append("case_id", userCase?._id);
         filesToUpload.forEach(([frontendKey, backendKey]) => {
           formData.append(backendKey, uploadedFiles[frontendKey]);
         });
 
-        const res = await fetch('/api/docs', {
-          method: 'PUT',
+        const res = await fetch("/api/docs", {
+          method: "PUT",
           body: formData,
         });
         const data = await res.json();
         if (!res.ok) {
-          throw new Error(data?.error || 'Failed to upload documents');
+          throw new Error(data?.error || "Failed to upload documents");
         }
-        localStorage.setItem('userAllDocs', JSON.stringify(data));
+        localStorage.setItem("userAllDocs", JSON.stringify(data));
         await axios.get(`/api/docs?user_id=${userData?._id}`);
       }
 
-      await axios.post('/api/document-upload', {
+      await axios.post("/api/document-upload", {
         user_id: userData._id,
         case_id: userCase?._id,
       });
@@ -3140,17 +3153,19 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
       setIsSubmitted(false);
       onNext();
     } catch (err) {
-      console.error('Upload failed:', err);
+      console.error("Upload failed:", err);
 
       // axios errors carry the real backend message in err.response.data.message;
       // fall back to err.message (e.g. network errors) if that's not present.
       const backendMessage =
-        err?.response?.data?.message || err?.message || 'Failed to submit documents';
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to submit documents";
 
       setError(backendMessage);
       setErrorModal({
         show: true,
-        title: 'Submission Failed',
+        title: "Submission Failed",
         message: backendMessage,
       });
       setIsSubmitted(false);
@@ -3168,19 +3183,19 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
 
     const { body } = document;
     const previous = body.style.overflow;
-    body.style.overflow = 'hidden';
+    body.style.overflow = "hidden";
 
     return () => {
       body.style.overflow = previous;
     };
   }, [isLoading]);
-  let loadingText = '';
+  let loadingText = "";
   if (isDocuSignLoading) {
-    loadingText = 'Redirecting you to DocuSign...';
+    loadingText = "Redirecting you to DocuSign...";
   } else if (isAgreementDocuSignLoading) {
-    loadingText = 'Preparing your agreement for signing...';
+    loadingText = "Preparing your agreement for signing...";
   } else if (isSubmitted) {
-    loadingText = 'Submitting your case documents...';
+    loadingText = "Submitting your case documents...";
   }
 
   return (
@@ -3197,7 +3212,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
         >
           <motion.div
             animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
             className="w-12 h-12 border-4 border-[#E1261C]/30 border-t-[#E1261C] rounded-full"
           />
           <p className="mt-4 text-lg font-semibold text-[#0A0A0A]">
@@ -3214,23 +3229,25 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
-          className={`fixed top-[124px] sm:top-[104px] right-4 z-50 p-4 rounded-xl shadow-lg max-w-sm ${socketMessage.type === 'success'
-            ? 'bg-[#F0FFF4] border border-[#00C896]'
-            : socketMessage.type === 'error'
-              ? 'bg-[#FCE9E7] border border-[#E1261C]'
-              : 'bg-[#FFF8F0] border border-[#FFD9B3]'
-            }`}
+          className={`fixed top-[124px] sm:top-[104px] right-4 z-50 p-4 rounded-xl shadow-lg max-w-sm ${
+            socketMessage.type === "success"
+              ? "bg-[#F0FFF4] border border-[#00C896]"
+              : socketMessage.type === "error"
+                ? "bg-[#FCE9E7] border border-[#E1261C]"
+                : "bg-[#FFF8F0] border border-[#FFD9B3]"
+          }`}
         >
           <div className="flex items-start gap-3">
-            {socketMessage.type === 'success' && (
+            {socketMessage.type === "success" && (
               <CheckCircle className="h-5 w-5 text-[#00C896] flex-shrink-0 mt-0.5" />
             )}
-            {socketMessage.type === 'error' && (
+            {socketMessage.type === "error" && (
               <AlertCircle className="h-5 w-5 text-[#E1261C] flex-shrink-0 mt-0.5" />
             )}
-            {socketMessage.type !== 'success' && socketMessage.type !== 'error' && (
-              <Info className="h-5 w-5 text-[#FF8C00] flex-shrink-0 mt-0.5" />
-            )}
+            {socketMessage.type !== "success" &&
+              socketMessage.type !== "error" && (
+                <Info className="h-5 w-5 text-[#FF8C00] flex-shrink-0 mt-0.5" />
+              )}
             <div>
               <p className="text-sm text-[#0A0A0A] font-medium">
                 {socketMessage.message}
@@ -3252,8 +3269,8 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
             <FileText className="h-8 w-8 text-[#E1261C]" />
           </div>
           <h2 className="text-3xl font-bold text-[#0A0A0A] mb-4 font-['Fraunces']">
-            Sign{' '}
-            <span className="text-[#E1261C] italic font-normal">Documents</span>{' '}
+            Sign{" "}
+            <span className="text-[#E1261C] italic font-normal">Documents</span>{" "}
             & Upload ID
           </h2>
           <p className="text-[#4A4A4A] mb-6">
@@ -3275,25 +3292,29 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
             <div className="flex items-start gap-2">
               <FileText className="h-4 w-4 text-[#E1261C] mt-0.5 flex-shrink-0" />
               <p className="text-sm text-[#4A4A4A]">
-                <span className="font-medium text-[#0A0A0A]">Format:</span> PDF, TIF, PNG, or JPEG
+                <span className="font-medium text-[#0A0A0A]">Format:</span> PDF,
+                TIF, PNG, or JPEG
               </p>
             </div>
             <div className="flex items-start gap-2">
               <Upload className="h-4 w-4 text-[#E1261C] mt-0.5 flex-shrink-0" />
               <p className="text-sm text-[#4A4A4A]">
-                <span className="font-medium text-[#0A0A0A]">File size:</span> Greater than 1 byte, less than 10 MB
+                <span className="font-medium text-[#0A0A0A]">File size:</span>{" "}
+                Greater than 1 byte, less than 10 MB
               </p>
             </div>
             <div className="flex items-start gap-2">
               <Shield className="h-4 w-4 text-[#E1261C] mt-0.5 flex-shrink-0" />
               <p className="text-sm text-[#4A4A4A]">
-                <span className="font-medium text-[#0A0A0A]">Security:</span> Cannot be password protected
+                <span className="font-medium text-[#0A0A0A]">Security:</span>{" "}
+                Cannot be password protected
               </p>
             </div>
             <div className="flex items-start gap-2">
               <AlertCircle className="h-4 w-4 text-[#E1261C] mt-0.5 flex-shrink-0" />
               <p className="text-sm text-[#4A4A4A]">
-                <span className="font-medium text-[#0A0A0A]">File name:</span> Letters, numbers, dashes, underscores only; max 100 characters
+                <span className="font-medium text-[#0A0A0A]">File name:</span>{" "}
+                Letters, numbers, dashes, underscores only; max 100 characters
               </p>
             </div>
           </div>
@@ -3304,7 +3325,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
-              Step 1: Digital{' '}
+              Step 1: Digital{" "}
               <span className="text-[#E1261C] italic font-normal">
                 Signatures
               </span>
@@ -3320,7 +3341,8 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
           {!docusignComplete ? (
             <div>
               <p className="text-[#4A4A4A] mb-4">
-                Sign your investigator agreement and authorization forms via DocuSign
+                Sign your investigator agreement and authorization forms via
+                DocuSign
               </p>
               <div className="bg-[#FCE9E7] border border-[#E8E6E3] rounded-lg p-4 mb-4">
                 <h4 className="font-medium text-[#0A0A0A] mb-2 font-['JetBrains_Mono']">
@@ -3345,10 +3367,13 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
                 <div className="bg-[#FFF4E5] border border-[#FFB347] rounded-lg p-4 flex items-start gap-3">
                   <Info className="h-5 w-5 text-[#FF8C00] mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-[#0A0A0A]">Agreement Not Available</p>
+                    <p className="text-sm font-medium text-[#0A0A0A]">
+                      Agreement Not Available
+                    </p>
                     <p className="text-sm text-[#4A4A4A]">
-                      Please complete the previous step (Property Selection) first to generate your agreement.
-                      The agreement requires your legal name and email address to be filled in.
+                      Please complete the previous step (Property Selection)
+                      first to generate your agreement. The agreement requires
+                      your legal name and email address to be filled in.
                     </p>
                   </div>
                 </div>
@@ -3365,14 +3390,14 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
                         transition={{
                           duration: 1,
                           repeat: Infinity,
-                          ease: 'linear',
+                          ease: "linear",
                         }}
                         className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
                       />
                       Processing...
                     </>
                   ) : (
-                    'Open DocuSign to Sign Documents'
+                    "Open DocuSign to Sign Documents"
                   )}
                 </button>
               )}
@@ -3392,7 +3417,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
-              Step 2: Upload{' '}
+              Step 2: Upload{" "}
               <span className="text-[#E1261C] italic font-normal">
                 Supporting Documents
               </span>
@@ -3400,8 +3425,8 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
             <Badge
               className={
                 requiredDocsUploaded
-                  ? 'bg-[#003f2f] text-white border-none'
-                  : 'bg-[#D4D4D4] text-[#4A4A4A] border-none'
+                  ? "bg-[#003f2f] text-white border-none"
+                  : "bg-[#D4D4D4] text-[#4A4A4A] border-none"
               }
             >
               {getRequiredCompletedCount()}/
@@ -3419,12 +3444,13 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
             {requiredDocuments.map((doc) => (
               <div
                 key={doc.id}
-                className={`border rounded-lg p-4 transition-all ${isDocComplete(doc.id)
-                  ? doc.id === 'agreement'
-                    ? 'border-[#003f2f] bg-[#F0FFF4] ring-2 ring-[#003f2f]/30'
-                    : 'border-[#003f2f]/50 bg-[#F0FFF4]'
-                  : 'border-[#E8E6E3]'
-                  }`}
+                className={`border rounded-lg p-4 transition-all ${
+                  isDocComplete(doc.id)
+                    ? doc.id === "agreement"
+                      ? "border-[#003f2f] bg-[#F0FFF4] ring-2 ring-[#003f2f]/30"
+                      : "border-[#003f2f]/50 bg-[#F0FFF4]"
+                    : "border-[#E8E6E3]"
+                }`}
               >
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center">
@@ -3438,17 +3464,17 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
                     <div className="w-[90%]">
                       <h4 className="font-medium text-[#0A0A0A]">{doc.name}</h4>
                       <p className="text-sm text-[#888888]">
-                        {doc.required ? 'Required' : 'Optional'} •
+                        {doc.required ? "Required" : "Optional"} •
                         {isDocComplete(doc.id)
-                          ? doc.id === 'agreement'
-                            ? ' Signed via DocuSign'
-                            : ' Uploaded'
-                          : ' Not uploaded'}
+                          ? doc.id === "agreement"
+                            ? " Signed via DocuSign"
+                            : " Uploaded"
+                          : " Not uploaded"}
                       </p>
                     </div>
                   </div>
 
-                  {isDocComplete(doc.id) && doc.id !== 'agreement' ? (
+                  {isDocComplete(doc.id) && doc.id !== "agreement" ? (
                     <div className="flex space-x-2 flex-wrap gap-2">
                       <button
                         onClick={() => handleRemoveDocument(doc.id)}
@@ -3463,16 +3489,21 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
                   ) : (
                     !isDocComplete(doc.id) && (
                       <div className="flex space-x-2 flex-wrap gap-2">
-                        {doc.id === 'agreement' && (
-                          !isAgreementAvailable ? (
+                        {doc.id === "agreement" &&
+                          (!isAgreementAvailable ? (
                             <div className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium bg-[#FFF4E5] border border-[#FFB347] rounded-lg text-[#FF8C00] cursor-not-allowed w-full min-w-[250px]">
                               <Info className="h-4 w-4" />
-                              <span className="text-left">Agreement required - Complete previous step</span>
+                              <span className="text-left">
+                                Agreement required - Complete previous step
+                              </span>
                             </div>
                           ) : (
                             <button
                               onClick={handleAgreementDocuSign}
-                              disabled={isAgreementDocuSignLoading || !isAgreementAvailable}
+                              disabled={
+                                isAgreementDocuSignLoading ||
+                                !isAgreementAvailable
+                              }
                               className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium bg-[#E1261C] text-white rounded-lg hover:bg-[#B11912] transition-all disabled:opacity-60 disabled:cursor-not-allowed min-w-[250px]"
                             >
                               {isAgreementDocuSignLoading ? (
@@ -3482,21 +3513,20 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
                                     transition={{
                                       duration: 1,
                                       repeat: Infinity,
-                                      ease: 'linear',
+                                      ease: "linear",
                                     }}
                                     className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
                                   />
                                   Opening DocuSign...
                                 </>
                               ) : (
-                                'Open DocuSign to Sign Document'
+                                "Open DocuSign to Sign Document"
                               )}
                             </button>
-                          )
-                        )}
+                          ))}
 
-                        {doc.id !== 'agreement' && (
-                          !canUploadSupportingDocs ? (
+                        {doc.id !== "agreement" &&
+                          (!canUploadSupportingDocs ? (
                             <div className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium bg-[#FFF4E5] border border-[#FFB347] rounded-lg text-[#FF8C00] cursor-not-allowed">
                               <Info className="h-4 w-4" />
                               <span>Complete agreement first</span>
@@ -3505,7 +3535,9 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
                             <>
                               <button
                                 onClick={() => handleUploadClick(doc.id)}
-                                disabled={isScanning || !canUploadSupportingDocs}
+                                disabled={
+                                  isScanning || !canUploadSupportingDocs
+                                }
                                 className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium border border-[#E8E6E3] rounded-lg text-[#0A0A0A] hover:bg-[#FCE9E7] hover:border-[#E1261C]/50 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-[#E8E6E3]"
                               >
                                 <Upload className="h-4 w-4" />
@@ -3513,16 +3545,16 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
                               </button>
                               <button
                                 onClick={() => handleScanDocument(doc.id)}
-                                disabled={isScanning || !canUploadSupportingDocs}
+                                disabled={
+                                  isScanning || !canUploadSupportingDocs
+                                }
                                 className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium border border-[#E8E6E3] rounded-lg text-[#0A0A0A] hover:bg-[#FCE9E7] hover:border-[#E1261C]/50 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-[#E8E6E3]"
                               >
                                 <Camera className="h-4 w-4" />
                                 Scan
                               </button>
                             </>
-                          )
-                        )}
-
+                          ))}
                       </div>
                     )
                   )}
@@ -3551,7 +3583,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
         <div className="bg-white border border-[#E8E6E3] rounded-xl p-6 mb-8 shadow-md relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"></div>
           <h3 className="text-lg font-bold text-[#0A0A0A] mb-4 font-['Fraunces']">
-            Completion{' '}
+            Completion{" "}
             <span className="text-[#E1261C] italic font-normal">Status</span>
           </h3>
           <div className="space-y-3">
@@ -3583,7 +3615,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
                   <CheckCircle className="h-10 w-10 text-[#E1261C]" />
                 </div>
                 <h3 className="text-2xl font-bold text-[#0A0A0A] mb-2 font-['Fraunces']">
-                  All Documents{' '}
+                  All Documents{" "}
                   <span className="text-[#E1261C] italic font-normal">
                     Collected!
                   </span>
@@ -3605,14 +3637,14 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
                       transition={{
                         duration: 1,
                         repeat: Infinity,
-                        ease: 'linear',
+                        ease: "linear",
                       }}
                       className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
                     />
                     Submitting...
                   </>
                 ) : (
-                  'Submit My Case'
+                  "Submit My Case"
                 )}
               </button>
             </div>
@@ -3660,7 +3692,7 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
               ✕
             </button>
             <h3 className="text-lg font-bold text-[#0A0A0A] mb-4 font-['Fraunces']">
-              Scan to Upload:{' '}
+              Scan to Upload:{" "}
               <span className="text-[#E1261C] italic font-normal">
                 {qrPopupDoc.docName}
               </span>
@@ -3697,36 +3729,35 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
         onClose={() => {
           const shouldReturnToDashboard = [
             AGREEMENT_MISSING_TITLE,
-            'Claim Process Pending',
+            "Claim Process Pending",
           ].includes(errorModal.title);
 
           setErrorModal({
             show: false,
-            title: '',
-            message: '',
+            title: "",
+            message: "",
           });
 
-          // Preserve the user's session for these informational modals.
+          // Close the popup and keep the user on the current page.
           if (shouldReturnToDashboard) {
-            router.push('/dashboard');
             return;
           }
 
           // Preserve the existing behavior for other error modals.
           resetAll();
           [
-            'userLogin',
-            'userData',
-            'userAgreement',
-            'userCase',
-            'userAllDocs',
-            'propertyData',
-            'ownPropertyIds',
-            'signedDoc',
-            'filledAgreementDoc',
+            "userLogin",
+            "userData",
+            "userAgreement",
+            "userCase",
+            "userAllDocs",
+            "propertyData",
+            "ownPropertyIds",
+            "signedDoc",
+            "filledAgreementDoc",
           ].forEach((key) => localStorage.removeItem(key));
 
-          router.push('/userLogin');
+          router.push("/userLogin");
         }}
       />
 
@@ -3734,14 +3765,15 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
         show={fileErrorModal.show}
         fileName={fileErrorModal.fileName}
         message={fileErrorModal.message}
-        onClose={() => setFileErrorModal({ show: false, fileName: '', message: '' })}
+        onClose={() =>
+          setFileErrorModal({ show: false, fileName: "", message: "" })
+        }
       />
-
     </div>
   );
 };
 
-const ErrorModal = ({ show, title, message, onClose }) => {
+const ErrorModal = ({ show, title, message, onClose, supportEmail }) => {
   if (!show) return null;
 
   return (
@@ -3755,7 +3787,25 @@ const ErrorModal = ({ show, title, message, onClose }) => {
             {title}
           </h3>
         </div>
-        <p className="text-sm text-[#4A4A4A] mb-6">{message}</p>
+        <p className="text-sm text-[#4A4A4A] mb-3">{message}</p>
+
+        {supportEmail && (
+          <div className="mb-6 rounded-lg bg-[#FCE9E7] border border-[#F5C6C1] p-3">
+            <p className="text-sm font-semibold text-[#0A0A0A] mb-1">
+              Contact Support
+            </p>
+
+            <p className="text-sm text-[#4A4A4A]">
+              Email:{" "}
+              <a
+                href={`mailto:${supportEmail}`}
+                className="text-[#E1261C] font-semibold underline"
+              >
+                {supportEmail}
+              </a>
+            </p>
+          </div>
+        )}
         <button
           onClick={onClose}
           className="w-full px-4 py-2.5 bg-[#E1261C] hover:bg-[#B11912] text-white font-semibold rounded-lg transition-all duration-300"
@@ -3789,7 +3839,17 @@ const FileValidationErrorModal = ({ show, fileName, message, onClose }) => {
           </div>
         )}
 
-        <p className="text-sm text-[#4A4A4A] mb-6">{message}</p>
+        <p className="text-sm text-[#4A4A4A] mb-3">{message}</p>
+
+        <div className="mb-6">
+          <p className="text-sm text-[#4A4A4A]">Contact Support:</p>
+          <a
+            href="mailto:help@catchmycash.com"
+            className="text-sm text-[#E1261C] font-semibold underline"
+          >
+            help@catchmycash.com
+          </a>
+        </div>
 
         <button
           onClick={onClose}
