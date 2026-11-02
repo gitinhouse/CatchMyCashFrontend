@@ -17,6 +17,21 @@ const PRODUCT_PAGES = [
 export default function Footer() {
   const pathname = usePathname();
 
+  const isActivePage = (href) => {
+  const path = href.split('?')[0];
+
+  return path === '/'
+    ? pathname === '/'
+    : pathname === path || pathname?.startsWith(`${path}/`);
+};
+
+const getLinkClass = (href) =>
+  `text-sm transition-colors ${
+    isActivePage(href)
+      ? 'text-[#E1261C] font-semibold'
+      : 'text-[#D4D4D4] hover:text-[#E1261C]'
+  }`;
+
   // The admin console renders its own chrome.
   if (pathname?.startsWith('/admin')) return null;
 
@@ -54,7 +69,7 @@ export default function Footer() {
                     nothing to follow. Home reads the step from the URL. */}
                 <Link
                   href="/?step=search"
-                  className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
+                  className={getLinkClass('/')}
                 >
                   Search now
                 </Link>
@@ -62,7 +77,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/how-it-works"
-                  className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
+                  className={getLinkClass('/how-it-works')}
                 >
                   How it works
                 </Link>
@@ -71,7 +86,7 @@ export default function Footer() {
                 <li key={page.href}>
                   <Link
                     href={page.href}
-                    className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
+                    className={getLinkClass(page.href)}
                   >
                     {page.label}
                   </Link>
@@ -89,7 +104,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/about"
-                  className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
+                  className={getLinkClass('/about')}
                 >
                   About
                 </Link>
@@ -97,7 +112,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/faq"
-                  className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
+                  className={getLinkClass('/faq')}
                 >
                   FAQ
                 </Link>
@@ -105,7 +120,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/contact"
-                  className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
+                  className={getLinkClass('/contact')}
                 >
                   Contact
                 </Link>
@@ -122,7 +137,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/privacy"
-                  className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
+                  className={getLinkClass('/privacy')}
                 >
                   Privacy
                 </Link>
@@ -130,7 +145,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/terms"
-                  className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
+                  className={getLinkClass('/terms')}
                 >
                   Terms
                 </Link>
@@ -138,7 +153,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/cookies"
-                  className="text-[#D4D4D4] text-sm hover:text-[#E1261C] transition-colors"
+                  className={getLinkClass('/cookies')}
                 >
                   Cookies
                 </Link>
