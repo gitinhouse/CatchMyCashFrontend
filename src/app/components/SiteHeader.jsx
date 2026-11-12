@@ -162,11 +162,16 @@ export default function SiteHeader() {
   const navItems = [
     { name: 'About', path: '/about' },
     { name: 'How It Works', path: '/how-it-works' },
+    { name: 'Resources', path: '/resources' },
     { name: 'Track Claim', path: '/track-claim' },
     { name: 'Privacy', path: '/privacy' },
     { name: 'FAQ', path: '/faq' },
     { name: 'Contact', path: '/contact' },
   ];
+
+  // A section's own pages count as the section: /resources/<article> keeps
+  // Resources marked.
+  const isCurrent = (path) => pathname === path || Boolean(pathname?.startsWith(`${path}/`));
 
   // The admin console renders its own chrome.
   if (pathname?.startsWith('/admin')) return null;
@@ -183,7 +188,7 @@ export default function SiteHeader() {
               <Link
                 key={item.name}
                 href={item.path}
-                className={`text-xs lg:text-sm font-medium whitespace-nowrap transition-colors ${pathname === item.path
+                className={`text-xs lg:text-sm font-medium whitespace-nowrap transition-colors ${isCurrent(item.path)
                   ? 'text-[#0A0A0A]'
                   : 'text-[#4A4A4A] hover:text-[#0A0A0A]'
                   }`}
@@ -240,6 +245,8 @@ export default function SiteHeader() {
           <button
             className="md:hidden p-2 shrink-0"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>

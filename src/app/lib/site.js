@@ -78,6 +78,14 @@ export const PUBLIC_PAGES = [
     priority: 0.8,
   },
   {
+    path: '/resources',
+    title: 'Guides and resources',
+    summary:
+      'Plain-English guides to California unclaimed property: searching, filing, timing, inheritances and avoiding scams.',
+    changeFrequency: 'weekly',
+    priority: 0.8,
+  },
+  {
     path: '/track-claim',
     title: 'Track your claim',
     summary:
