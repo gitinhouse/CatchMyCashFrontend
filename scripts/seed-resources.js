@@ -367,6 +367,107 @@ const ARTICLES = [
       focusKeyword: 'documents to claim unclaimed property',
     },
   },
+  {
+    // Researched November 2026: dormancy periods and reporting dates from the
+    // table California files with the National Association of Unclaimed
+    // Property Administrators; Code of Civil Procedure sections 1513, 1513.5,
+    // 1520, 1531, 1540(c) and 1563; the State Controller's IRA reporting
+    // guide, Owner Bill of Rights, claim guidelines and ClaimIt FAQ.
+    topic: 'unclaimed-property-101',
+    title: 'When Does Money Become Unclaimed in California? Dormancy Periods Explained',
+    slug: 'california-dormancy-periods-unclaimed-property',
+    excerpt:
+      'Most forgotten money in California goes to the state after three years without contact, but paychecks go after one year and traveler’s checks after fifteen. How the clock works, and how to stop it.',
+    tags: ['dormancy periods', 'bank accounts', 'uncashed checks', 'wages', 'stocks and dividends', 'California law'],
+    content: `
+<p>Money doesn’t become unclaimed overnight. In California, a business holding your money has to wait out a set stretch of silence, called the dormancy period, before it hands that money to the State Controller’s Office. For most property the dormancy period is three years. Some kinds of money move much faster, and a few take far longer. Here is how the clock works, how long it runs for each kind of property, and what you can do to keep your money out of the state’s hands in the first place.</p>
+<h2>What starts the clock</h2>
+<p>For a bank or credit union account, the clock measures time without any sign of life from you. Under California law, an account counts as abandoned once more than three years pass in which you have not:</p>
+<ul>
+<li>made a deposit or a withdrawal;</li>
+<li>cashed an interest check or presented a passbook;</li>
+<li>written to the bank, or contacted it electronically, about the account; or</li>
+<li>otherwise shown interest in the account in a way the bank has on record.</li>
+</ul>
+<p>The law also looks at your wider relationship with the bank. If you have been active on another account with the same institution in the last three years, including an IRA, a quiet account generally isn’t reported, as long as the bank has been corresponding with you.</p>
+<p>For money that was simply owed to you, such as a paycheck, a refund or an insurance benefit, the clock starts when the money became payable and runs for as long as it stays unclaimed. A check you never cashed starts aging on the day it was issued.</p>
+<h2>California dormancy periods by type of property</h2>
+<p>These are the waiting periods California applies before a business must report property to the state:</p>
+<ul>
+<li><strong>Checking, savings and certificates of deposit:</strong> 3 years</li>
+<li><strong>Cashier’s checks and other official bank checks:</strong> 3 years</li>
+<li><strong>Money orders:</strong> 7 years</li>
+<li><strong>Traveler’s checks:</strong> 15 years</li>
+<li><strong>Wages and paychecks:</strong> 1 year</li>
+<li><strong>Refunds ordered by a court or government agency:</strong> 1 year</li>
+<li><strong>Stocks, dividends and bonds:</strong> 3 years</li>
+<li><strong>Life insurance benefits that have become payable:</strong> 3 years</li>
+<li><strong>IRA and Keogh retirement accounts:</strong> 3 years after the funds become payable or distributable</li>
+<li><strong>Safe deposit box contents:</strong> 3 years</li>
+<li><strong>Utility deposits and refunds:</strong> 3 years</li>
+<li><strong>Money held by courts and government agencies:</strong> 3 years</li>
+<li><strong>Payouts from a company that is dissolving or liquidating:</strong> 6 months</li>
+<li><strong>Everything else</strong>, including vendor payments, customer refunds and credit balances: 3 years</li>
+</ul>
+<p>Gift cards are a special case. Most gift cards sold in California can’t carry an expiration date, and those aren’t turned over to the state. Gift certificates that do carry an expiration date follow the three-year rule.</p>
+<h2>What happens when the dormancy period runs out</h2>
+<p>California uses a two-step process, so in most cases you get two warnings before your money moves:</p>
+<ol>
+<li><strong>The business tries to reach you.</strong> It generally has to mail you a notice six to twelve months before it reports your property. A notice from a bank opens with the words “THE STATE OF CALIFORNIA REQUIRES US TO NOTIFY YOU”. Banks don’t have to send one for balances under $50.</li>
+<li><strong>The business reports the property.</strong> Most businesses file their report with the State Controller by October 31; life insurers file by April 30.</li>
+<li><strong>The State Controller writes to you.</strong> For owners it has an address for, it mails a notice by mid-April (mid-October for life insurance). The notice gives a date by which you can still claim the money from the business itself.</li>
+<li><strong>The business sends the money to the state.</strong> Payment is due in June for most property, and in December for life insurance. From then on, you claim from the state.</li>
+</ol>
+<p>If the letters went to an old address, you may never see them. That is the most common reason people learn about their property only when they search for it.</p>
+<h2>What changes once the state holds it</h2>
+<ul>
+<li><strong>There is no deadline.</strong> The State Controller holds the property for you or your heirs for as long as it takes, and claiming it from the state is free.</li>
+<li><strong>No interest is added.</strong> California stopped paying interest on unclaimed property claims in August 2003.</li>
+<li><strong>Stocks may be sold.</strong> The state generally sells securities 18 to 20 months after they are reported. If yours have been sold, a claim pays the sale proceeds, not the shares, and not any growth after the sale.</li>
+<li><strong>Claims take time.</strong> The State Controller’s Office has up to 180 days to decide a complete claim.</li>
+<li><strong>Real estate isn’t included.</strong> California’s unclaimed property law covers money and other financial assets, not land or homes.</li>
+</ul>
+<h2>How to keep your money from going dormant</h2>
+<ul>
+<li><strong>Touch every account at least once a year.</strong> A small deposit or withdrawal, or a message to the bank about the account, restarts the clock.</li>
+<li><strong>Update your address everywhere when you move:</strong> banks, brokerages, insurers, utilities, your employer and any former employer that still owes you a final paycheck.</li>
+<li><strong>Cash checks when they arrive.</strong> A final paycheck has only a one-year dormancy period.</li>
+<li><strong>Open letters that mention unclaimed property.</strong> A notice from your bank or the State Controller is your chance to keep the money where it is.</li>
+<li><strong>Keep a list of your accounts</strong> and tell someone you trust where it is, so your family can find them if they ever need to.</li>
+<li><strong>Search once a year.</strong> New property is reported every year, so a search that finds nothing today can find something next year.</li>
+</ul>
+<h2>Already lost track of something?</h2>
+<p>If a dormancy period has already run out on an account of yours, the money is waiting with the State Controller’s Office. You can search California’s records for free at <a href="${CLAIMIT}">claimit.ca.gov</a> or with the <a href="/?step=search">CatchMyCash search</a>, which uses the same data, and claim it directly from the state at no cost. If you would rather hand over the paperwork, CatchMyCash files the claim for you for 10% of what you recover, and nothing if you recover nothing. <a href="/how-it-works">How it works</a> explains each step, and <a href="/claim-types">claim types</a> covers what California holds.</p>
+`,
+    faqs: [
+      {
+        question: 'How long does money have to sit before California considers it unclaimed?',
+        answer:
+          'Three years for most property, counted from your last contact about the account or from when the money became payable to you. Wages go after one year, money orders after seven years and traveler’s checks after fifteen.',
+      },
+      {
+        question: 'Will I be warned before my money is sent to the state?',
+        answer:
+          'Usually. The business generally has to mail you a notice six to twelve months before it reports your property (banks don’t have to for balances under $50), and the State Controller’s Office mails a notice to owners it has an address for before the money is transferred.',
+      },
+      {
+        question: 'Does California pay interest on unclaimed property?',
+        answer:
+          'No. California stopped paying interest on unclaimed property claims in August 2003. You receive the property itself: the amount that was reported, or for securities the state has sold, the sale proceeds.',
+      },
+      {
+        question: 'Can an account go dormant if I still use the same bank?',
+        answer:
+          'Recent activity on another account you hold at the same bank, including an IRA, generally keeps a quiet account from being reported, as long as the bank has been corresponding with you. The safest habit is still to use every account at least once a year.',
+      },
+    ],
+    seo: {
+      metaTitle: 'California Dormancy Periods: When Money Becomes Unclaimed',
+      metaDescription:
+        'How long money can sit untouched before California treats it as unclaimed: the dormancy period for bank accounts, paychecks, checks, stocks and more.',
+      focusKeyword: 'dormancy period',
+    },
+  },
 ];
 
 function fail(message) {
