@@ -468,6 +468,95 @@ const ARTICLES = [
       focusKeyword: 'dormancy period',
     },
   },
+  {
+    // Researched November 2026 against the State Controller's own ClaimIt
+    // site (search instructions, claim and general FAQs, search result
+    // fields, and its notices for property still being transferred) and the
+    // investigator handbook (property arrives twice a year, mostly in June).
+    topic: 'unclaimed-property-101',
+    title: 'How to Search California Unclaimed Property and Find Everything in Your Name',
+    slug: 'california-unclaimed-property-search-tips',
+    excerpt:
+      'A quick search on your current name can miss money listed under an old name, an old address or a relative’s name. Which names and places to try, what the results mean, and what to do next.',
+    tags: ['searching', 'name variations', 'Property ID', 'heirs', 'claimit.ca.gov'],
+    content: `
+<p>The California unclaimed property search is free and takes about a minute. It covers the accounts, checks, deposits and other property that businesses have turned over to the State Controller’s Office. But a quick search on your current name can easily miss money listed under an old name, a former address or a relative who has died. This guide explains how the search works, which names and places to try, what the results mean, and what to do when you find something.</p>
+<h2>How the California unclaimed property search works</h2>
+<p>The State Controller’s official search is at <a href="${CLAIMIT}">claimit.ca.gov</a>. It has two boxes: a last name or business name, and an optional first name.</p>
+<ul>
+<li><strong>Start broad.</strong> Leave the first name blank to see listings for every first name under a last name, then add a first name if there are too many.</li>
+<li><strong>Narrow by place.</strong> Add a city or ZIP code to cut a long list down to the places you have lived.</li>
+<li><strong>Use a Property ID if you have one.</strong> If a letter gave you a Property ID, searching it brings up exactly one record.</li>
+</ul>
+<p>Searching is free, and so is claiming from the state. The <a href="/?step=search">CatchMyCash search</a> uses the same records the state publishes, if you would rather search here.</p>
+<h2>Every name to try</h2>
+<p>Property is listed under the name the business had on file, and that may not be the name you use today. Search for:</p>
+<ul>
+<li><strong>Every name you have used:</strong> your maiden name, any former married names, your name with and without a middle initial, and spellings a business may have gotten wrong.</li>
+<li><strong>Your businesses</strong>, including ones you have closed. Enter the business name in the first box.</li>
+<li><strong>Relatives who have died</strong>, such as parents, grandparents or a spouse. Their heirs, trustees and estate representatives can claim what is listed in their names.</li>
+<li><strong>Your children.</strong> A parent or legal guardian can file the claim for a minor named as the owner.</li>
+</ul>
+<p>Joint property shows a second owner in the results, so an account you shared with someone may turn up under either name.</p>
+<h2>Every place to check</h2>
+<p>Results show the city and ZIP code the property was reported under, which is usually the owner’s last address on the business’s records. Search with each California city you have lived in, especially places you moved away from, since those are the addresses businesses lost track of.</p>
+<p>If you also lived in other states, search each of their official programs too. Every state runs its own, and the National Association of Unclaimed Property Administrators lists them all at <a href="https://unclaimed.org/">unclaimed.org</a>. You don’t need to live in California to claim California property: the claim form accepts addresses in other states and outside the United States.</p>
+<h2>What your search results show</h2>
+<p>Each listing shows the owner’s name, any co-owner, the business that reported the property, the city and ZIP code it was reported under, an indication of its value, and a Property ID. To decide whether a listing is yours:</p>
+<ul>
+<li><strong>Match the place.</strong> The reported city and ZIP code should be somewhere you lived or received mail.</li>
+<li><strong>Look at the business.</strong> A former employer, an old bank, a utility or an insurer you once used is a strong sign the listing is yours.</li>
+<li><strong>Be careful with common names.</strong> Claim only what you can connect to your own name and address. You sign the claim form under penalty of perjury.</li>
+</ul>
+<p>The Property ID is the state’s reference number for that property, used on every form and letter about it. Keep it, along with your Claim ID once you file, until your claim is paid in full.</p>
+<h2>Listings that are still being transferred</h2>
+<p>Some results are for property the state doesn’t hold yet. The business has reported it, but hasn’t sent it to the State Controller’s Office. These listings name the business and give a date:</p>
+<ul>
+<li><strong>Before that date</strong>, you can get the property back directly from the business, free, by contacting it with proof that you are the owner. The amount isn’t shown until the property reaches the state.</li>
+<li><strong>After that date</strong>, the business must send the property to the state. Processing can take several months, and you can’t file a claim on the website until it is finished. After that, you claim it from the state like any other listing.</li>
+</ul>
+<p>Recovery services aren’t allowed to sign you up for property that hasn’t reached the state yet, so a fee for one of these listings is a red flag.</p>
+<h2>When to search again</h2>
+<p>A search that finds nothing today can find something later. Businesses report unclaimed property every year, and the State Controller’s Office receives most of it in June, with life insurance arriving in December. New listings can take a few months to appear while they are processed. Search at least once a year, and again after a move, a job change or a death in the family.</p>
+<h2>If you can’t find something you expected</h2>
+<ul>
+<li><strong>Try the other names and cities above.</strong> A missing middle initial or an old address is the most common reason a search comes up empty.</li>
+<li><strong>The business may still have it.</strong> Property only goes to the state after a period without contact, usually three years. Until then, contact the business directly.</li>
+<li><strong>Ask the state.</strong> If you have reason to believe your property was sent to the State Controller’s Office but you can’t find it, call its Unclaimed Property Division at (800) 992-4647.</li>
+</ul>
+<h2>Found something? Here is what happens next</h2>
+<p>Select each listing that is yours and file a claim from the search results. There is no blank claim form; every claim starts from a search. You will then need to prove who you are and your link to the property, usually with a photo ID and documents showing the reported address. <a href="/eligibility">Who can claim</a> explains what the state asks for, and <a href="/how-it-works">how it works</a> covers each step after you file.</p>
+<p>You can file directly with the State Controller’s Office for free. If you would rather hand over the paperwork, CatchMyCash files the claim for you for 10% of what you recover, and only if you recover it. <a href="/?step=search">Start a free search</a> to see what California is holding in your name.</p>
+`,
+    faqs: [
+      {
+        question: 'Is the California unclaimed property search free?',
+        answer:
+          'Yes. Searching California’s records is free on the State Controller’s site, claimit.ca.gov, and with the CatchMyCash search, which uses the same data. Claiming directly from the state is free too.',
+      },
+      {
+        question: 'Why can’t I find property I think is mine?',
+        answer:
+          'Try every name and city you have used, since property is listed under the name and address the business had on file. It may also still be with the business, or on its way to the state. If you believe it was sent to the State Controller’s Office, call (800) 992-4647.',
+      },
+      {
+        question: 'Can I search for a relative who has died?',
+        answer:
+          'Yes. Search their name the same way you would search your own. Heirs, trustees and estate representatives can claim property listed in a deceased owner’s name, with extra documents such as the death certificate and proof of their right to the property.',
+      },
+      {
+        question: 'What is a Property ID?',
+        answer:
+          'A unique number the State Controller’s Office gives each property it holds. It appears in the search results and on every form and letter about that property, so keep a copy until your claim is paid in full.',
+      },
+    ],
+    seo: {
+      metaTitle: 'California Unclaimed Property Search: A Step-by-Step Guide',
+      metaDescription:
+        'How to use the California unclaimed property search: which names and places to try, what the results mean, and what to do when you find a match.',
+      focusKeyword: 'California unclaimed property search',
+    },
+  },
 ];
 
 function fail(message) {
