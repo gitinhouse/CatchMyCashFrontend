@@ -1,15 +1,18 @@
-// Starter topics, and optionally starter draft guides, for the Resources
-// section (/resources).
+// Starter topics, and optionally draft guides, for the Resources section
+// (/resources).
 //
-//   node scripts/seed-resources.js            create the topics
-//   node scripts/seed-resources.js --drafts   also create the starter guides
+//   node scripts/seed-resources.js                  create the topics
+//   node scripts/seed-resources.js --drafts         also create every guide below
+//   node scripts/seed-resources.js --only=<slug>    create just that guide (and its
+//                                                   topic); separate several slugs
+//                                                   with commas
 //
 // Safe to run more than once: a topic or article whose slug is already taken
 // is left as it is. Guides are created as drafts, so nothing appears on the
 // site until someone reviews and publishes it in Admin → Resources. Their
 // facts restate what the site already says (lib/content/guides.js and
-// faqs.js); check them against the State Controller's Office before
-// publishing.
+// faqs.js) or what the State Controller's Office publishes; check them
+// against the State Controller's Office before publishing.
 //
 // Reads MONGO_URI from the environment, .env.local or .env.
 import path from 'path';
@@ -23,6 +26,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), quiet: true });
 dotenv.config({ quiet: true });
 
 const STATE_SEARCH = 'https://ucpi.sco.ca.gov/';
+const CLAIMIT = 'https://claimit.ca.gov/';
 const AUTHOR = 'seed script';
 
 const TOPICS = [
@@ -258,6 +262,111 @@ const ARTICLES = [
       focusKeyword: 'unclaimed money scam',
     },
   },
+  {
+    // Researched November 2026 against the State Controller's claim
+    // instructions, Claim Affirmation Form, claim regulations and document
+    // upload page, and the courts' small estate limits.
+    topic: 'filing-a-claim',
+    title: 'Documents to Claim Unclaimed Property in California: The Complete Checklist',
+    slug: 'documents-to-claim-unclaimed-property-in-california',
+    excerpt:
+      'California pays a claim only when your paperwork proves who you are and that the property is yours. What to send for each type of claim, when you need a notary, and how to avoid delays.',
+    tags: ['documents', 'proof of address', 'notarization', 'claim checklist', 'heirs', 'business claims'],
+    content: `
+<p>California returns unclaimed property only when a claim proves two things: that you are who you say you are, and that the property really is yours. The documents to claim unclaimed property depend on whose name is on the record and what kind of property it is, so a claim for a forgotten paycheck needs less than one for a late parent’s shares. This checklist covers what the State Controller’s Office asks for in each situation, and how to send it without slowing your claim down.</p>
+<h2>The documents to claim unclaimed property, at a glance</h2>
+<p>For a cash claim in your own name, most people need four things:</p>
+<ol>
+<li><strong>A signed Claim Affirmation Form.</strong> This is the claim form the state creates when you file at <a href="${CLAIMIT}">claimit.ca.gov</a>. Your Claim ID is printed in its top corner.</li>
+<li><strong>A copy of your photo ID</strong>, such as a current driver’s license or state ID card.</li>
+<li><strong>Proof of your current mailing address.</strong></li>
+<li><strong>Proof that you lived at, or received mail at, the address on the record</strong>, known as the reported address.</li>
+</ol>
+<p>Add a notary’s stamp if the claim is worth $1,000 or more, or if it includes securities or a safe deposit box. Heirs, businesses and people who share the property with someone else send a few extra papers, covered below.</p>
+<h2>Why California asks for so much</h2>
+<p>The State Controller holds unclaimed property for as long as it takes its owners to come forward, and it never meets you in person. Your paperwork is how it tells you apart from someone with a similar name, or from someone trying to collect money that isn’t theirs. The claim form asks for details such as your Social Security number and date of birth, and you sign it under penalty of perjury. Your documents then back up two things: <strong>identity</strong> (you are the person named on the record) and <strong>entitlement</strong> (the property belongs to you).</p>
+<h2>A claim in your own name</h2>
+<h3>Photo identification</h3>
+<p>Send a clear copy of a current government-issued photo ID, such as a driver’s license or state ID card. Copy the whole card, with your name, photo and expiration date readable.</p>
+<h3>Proof of your current address</h3>
+<p>The state needs to know where to send your payment, and that you really live there. A recent document with your name and current address works, such as a mortgage statement, a property tax bill, a pay stub, or a bank or credit card statement.</p>
+<h3>Proof of the reported address</h3>
+<p>This is the step that trips most people up. Every unclaimed property record carries the address the business had for its owner when it lost touch, and that address appears on the claim details printed with your claim form. You need to show a link to it: a document from that time with your name at that address, such as an old utility bill, a tax document or a bank statement. It doesn’t need to be recent. It needs to match.</p>
+<p>If the record shows no address at all, send something else that ties the property to you, such as the original account statement, the uncashed check or the policy paperwork.</p>
+<h3>If your name has changed</h3>
+<p>Property is listed under the name the business had on file, which may be a maiden name or a former married name. Include the document that links the two names, such as a marriage certificate, a divorce decree or a court order for a name change.</p>
+<h2>When your claim needs a notary</h2>
+<p>Most small claims don’t. California requires your signature on the Claim Affirmation Form to be notarized when:</p>
+<ul>
+<li>the claim is worth <strong>$1,000 or more</strong> in total;</li>
+<li>it includes <strong>securities</strong>, such as stocks, bonds or mutual fund shares, whatever their value; or</li>
+<li>it includes the contents of a <strong>safe deposit box</strong>, whatever their value.</li>
+</ul>
+<p>Don’t sign the form until you are with the notary, and bring a current photo ID.</p>
+<h2>Extra documents for other kinds of claims</h2>
+<h3>Property you share with someone else</h3>
+<p>When a record lists more than one owner, such as a joint bank account, each owner signs a Claim Affirmation Form. Owners can file together and share the same supporting documents; if they file separately, each claim needs the full set. Safe deposit box contents are released to one person, so the other owners or heirs sign a release form authorizing it.</p>
+<h3>A relative who has died</h3>
+<p>Heirs and beneficiaries prove both the death and their right to the property. Expect to send:</p>
+<ul>
+<li>a <strong>certified copy of the death certificate</strong>;</li>
+<li>if the estate went through probate, a certified or court-endorsed copy of the <strong>Letters Testamentary or Letters of Administration</strong>, or the Final Decree of Distribution if the probate has closed, along with the estate’s federal employer identification number (FEIN);</li>
+<li>if there was no probate and the estate was small enough, a <strong>small estate declaration</strong> under California Probate Code section 13101. For deaths on or after April 1, 2025, the limit is $208,850 of the person’s California personal property, and it is adjusted every few years;</li>
+<li>documents showing how you are related to the owner, such as birth or marriage certificates, and your own photo ID.</li>
+</ul>
+<p>If the property passed through a trust with more than one trustee, every trustee signs the claim unless the trust lets them act alone. Our <a href="/claim-types">claim types</a> page explains heir claims in more detail.</p>
+<h3>A business</h3>
+<p>A business claim has to show that the company owns the property and that the person filing may act for it. That usually means proof of the filer’s role, such as an officer’s title, the company’s federal employer identification number, and records tying the company to the property, such as its name and address at the time. A company that has closed adds its certificate of dissolution. If a claim can’t show both ownership and authority, the state may not be able to pay it.</p>
+<h2>How to send your documents</h2>
+<ol>
+<li><strong>Find your property.</strong> Search at claimit.ca.gov, or with the free <a href="/?step=search">CatchMyCash search</a>, which uses the same records, and select everything that is yours.</li>
+<li><strong>File the claim.</strong> If your claim qualifies, you can file it online. Otherwise the site gives you a Claim Affirmation Form to print, sign and, when required, have notarized.</li>
+<li><strong>Upload your documents.</strong> The state’s upload page asks for your Claim ID and email address and takes up to five files at a time. Upload only to the claim the documents belong to: files sent to a closed or different claim are not reviewed.</li>
+<li><strong>Watch your email.</strong> A few claims need original documents, and the State Controller’s Office emails you if yours does. It also writes if anything is missing.</li>
+</ol>
+<p>Scan or photograph each page flat, in full and in good light. A copy the reviewer can’t read is treated the same as a missing one.</p>
+<h2>Mistakes that slow a claim down</h2>
+<ul>
+<li><strong>Proving the wrong address.</strong> A current utility bill doesn’t show where you lived when the property was reported. Send proof of both addresses.</li>
+<li><strong>A name that doesn’t match.</strong> If the record uses a former name, include the document that connects it to your current one.</li>
+<li><strong>A missing notary stamp</strong> on a claim of $1,000 or more, or on any securities or safe deposit box claim.</li>
+<li><strong>A missing co-owner.</strong> Every listed owner signs the claim, or releases their share.</li>
+<li><strong>Cropped or blurry copies.</strong> Every corner of the page should be visible.</li>
+<li><strong>An unanswered letter.</strong> The state has up to 180 days to decide a claim, counted from when it is complete, so a request left unanswered means a longer wait.</li>
+</ul>
+<p>Once the state has everything, cash-only claims by owners are often paid in 30 to 60 days. Heir, business and securities claims usually take closer to the full 180 days. <a href="/how-it-works">How it works</a> walks through each stage.</p>
+<h2>Getting the paperwork right the first time</h2>
+<p>You can file directly with the State Controller’s Office for free, and many people do. If you would rather not work out which documents your claim needs, CatchMyCash files it for you: we tell you exactly what to upload for your claim type, check every document before it goes to the state, and track the claim until it is paid. Our fee is 10% of what you recover, and only if you recover it. <a href="/?step=search">Start a free search</a> to see what California is holding in your name.</p>
+`,
+    faqs: [
+      {
+        question: 'Do I have to mail original documents?',
+        answer:
+          'Usually not. Most documents can be uploaded as clear copies with your Claim ID. A few claims need originals, and the State Controller’s Office tells you by email when yours does.',
+      },
+      {
+        question: 'What if I have nothing from my old address?',
+        answer:
+          'Look for anything from the years you lived there that shows your name and that address, such as a tax document, a bank or credit card statement, a utility bill or a pay stub. If you still come up empty, call the State Controller’s Office at (800) 992-4647 and ask what it will accept before you file.',
+      },
+      {
+        question: 'Does my claim need to be notarized?',
+        answer:
+          'Only if the claim totals $1,000 or more, or includes securities (such as stocks or mutual fund shares) or the contents of a safe deposit box. Smaller cash claims do not need a notary.',
+      },
+      {
+        question: 'How long does the state take once it has my documents?',
+        answer:
+          'The State Controller’s Office has up to 180 days to decide a complete claim. Cash-only owner claims are often paid in 30 to 60 days; claims for heirs, businesses and securities usually take longer.',
+      },
+    ],
+    seo: {
+      metaTitle: 'Documents to Claim Unclaimed Property in California',
+      metaDescription:
+        'The documents to claim unclaimed property in California: ID, proof of address, when you need a notary, and the extra papers heirs and businesses must send.',
+      focusKeyword: 'documents to claim unclaimed property',
+    },
+  },
 ];
 
 function fail(message) {
@@ -265,9 +374,10 @@ function fail(message) {
   process.exitCode = 1;
 }
 
-async function seedTopics() {
+async function seedTopics(only = null) {
   const bySlug = new Map();
   for (const topic of TOPICS) {
+    if (only && !only.has(topic.slug)) continue;
     const existing = await ResourceTopic.findOne({ slug: topic.slug }).lean();
     if (existing) {
       console.log(`  = topic "${existing.name}" already exists`);
@@ -286,8 +396,8 @@ async function seedTopics() {
   return bySlug;
 }
 
-async function seedDrafts(topicIds) {
-  for (const article of ARTICLES) {
+async function seedDrafts(topicIds, articles) {
+  for (const article of articles) {
     const taken = await ResourcePost.exists({ $or: [{ slug: article.slug }, { previous_slugs: article.slug }] });
     if (taken) {
       console.log(`  = article "${article.slug}" already exists`);
@@ -314,14 +424,25 @@ async function main() {
     fail('MONGO_URI is not set (environment, .env.local or .env).');
     return;
   }
-  const withDrafts = process.argv.includes('--drafts');
+  const onlyArg = process.argv.find((arg) => arg.startsWith('--only='));
+  const onlySlugs = onlyArg ? onlyArg.slice('--only='.length).split(',').map((s) => s.trim()).filter(Boolean) : null;
+  let articles = process.argv.includes('--drafts') ? ARTICLES : [];
+  if (onlySlugs) {
+    const unknown = onlySlugs.filter((slug) => !ARTICLES.some((a) => a.slug === slug));
+    if (unknown.length) {
+      fail(`no guide with slug ${unknown.join(', ')}. Known: ${ARTICLES.map((a) => a.slug).join(', ')}`);
+      return;
+    }
+    articles = ARTICLES.filter((a) => onlySlugs.includes(a.slug));
+  }
   await mongoose.connect(uri);
   try {
     console.log('Topics:');
-    const topicIds = await seedTopics();
-    if (withDrafts) {
+    // With --only, just the topics those guides need.
+    const topicIds = await seedTopics(onlySlugs ? new Set(articles.map((a) => a.topic)) : null);
+    if (articles.length) {
       console.log('Draft articles:');
-      await seedDrafts(topicIds);
+      await seedDrafts(topicIds, articles);
       console.log('\nReview and publish the drafts in Admin → Resources.');
     }
   } finally {

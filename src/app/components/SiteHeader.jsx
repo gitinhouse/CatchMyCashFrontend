@@ -164,7 +164,6 @@ export default function SiteHeader() {
     { name: 'How It Works', path: '/how-it-works' },
     { name: 'Resources', path: '/resources' },
     { name: 'Track Claim', path: '/track-claim' },
-    { name: 'Privacy', path: '/privacy' },
     { name: 'FAQ', path: '/faq' },
     { name: 'Contact', path: '/contact' },
   ];
