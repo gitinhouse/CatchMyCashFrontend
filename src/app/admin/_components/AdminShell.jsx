@@ -7,6 +7,7 @@ import {
   Activity,
   AlertTriangle,
   BarChart3,
+  BookOpen,
   Cpu,
   FileStack,
   FolderKanban,
@@ -29,6 +30,7 @@ const NAV = [
   { href: '/admin/cases', label: 'Claims', icon: FolderKanban },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/documents', label: 'Documents', icon: FileStack },
+  { href: '/admin/resources', label: 'Resources', icon: BookOpen },
   { href: '/admin/automation', label: 'Automation', icon: Cpu },
   { href: '/admin/activity', label: 'Audit Log', icon: Activity },
 ];

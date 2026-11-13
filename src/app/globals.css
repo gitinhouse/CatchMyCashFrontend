@@ -656,3 +656,224 @@ a {
   }
 }
 
+
+/* Article bodies on /resources/<slug>, written in the admin editor. The HTML is
+   sanitized to a short list of elements (lib/resources/content.js); each one is
+   styled here. Unlayered, so it wins over the base typography above. */
+.resource-prose {
+  color: #2a2a2a;
+  font-size: 18px;
+  line-height: 1.75;
+  overflow-wrap: break-word;
+}
+
+.resource-prose > :first-child {
+  margin-top: 0;
+}
+
+.resource-prose p {
+  font-size: inherit;
+  line-height: inherit;
+  margin: 0 0 1.25em;
+}
+
+.resource-prose h2,
+.resource-prose h3,
+.resource-prose h4 {
+  color: #0a0a0a;
+  scroll-margin-top: 112px;
+}
+
+.resource-prose h2 {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: clamp(26px, 3.2vw, 32px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  margin: 2.1em 0 0.6em;
+}
+
+.resource-prose h3 {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: clamp(21px, 2.4vw, 24px);
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 1.8em 0 0.5em;
+}
+
+.resource-prose h4 {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 1.6em 0 0.4em;
+}
+
+.resource-prose a {
+  color: #e1261c;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.resource-prose a:hover {
+  color: #b11912;
+  text-decoration-thickness: 2px;
+}
+
+.resource-prose strong,
+.resource-prose b {
+  color: #0a0a0a;
+  font-weight: 650;
+}
+
+.resource-prose ul,
+.resource-prose ol {
+  margin: 0 0 1.4em;
+  padding-left: 1.5em;
+}
+
+.resource-prose ul {
+  list-style: disc;
+}
+
+.resource-prose ol {
+  list-style: decimal;
+}
+
+.resource-prose li {
+  margin: 0.45em 0;
+  padding-left: 0.25em;
+}
+
+.resource-prose li > p {
+  margin: 0;
+}
+
+.resource-prose li::marker {
+  color: #e1261c;
+}
+
+.resource-prose ol > li::marker {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.85em;
+}
+
+.resource-prose blockquote {
+  margin: 1.8em 0;
+  padding: 1.1em 1.4em;
+  border-left: 3px solid #e1261c;
+  border-radius: 0 14px 14px 0;
+  background: #f7f5f2;
+  color: #0a0a0a;
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 1.1em;
+  line-height: 1.55;
+}
+
+.resource-prose blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.resource-prose hr {
+  border: 0;
+  border-top: 1px solid #e8e6e3;
+  margin: 2.6em 0;
+}
+
+.resource-prose img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 2em auto;
+  border: 1px solid #e8e6e3;
+  border-radius: 16px;
+}
+
+.resource-prose figure {
+  margin: 2em 0;
+}
+
+.resource-prose figure img {
+  margin: 0 auto;
+}
+
+.resource-prose figcaption {
+  margin-top: 0.7em;
+  color: #888888;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.resource-prose code {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.85em;
+  padding: 0.15em 0.4em;
+  border-radius: 6px;
+  background: #f0eeeb;
+  color: #0a0a0a;
+}
+
+.resource-prose pre {
+  margin: 1.8em 0;
+  padding: 1.1em 1.3em;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0a0a0a;
+  color: #f0eeeb;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.resource-prose pre code {
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+}
+
+@media (max-width: 640px) {
+  .resource-prose {
+    font-size: 17px;
+  }
+}
+
+/* The article editor in the admin console (TipTap). It reuses .resource-prose
+   so writers see the article as it will be published. */
+.resource-editor-content {
+  min-height: 480px;
+  padding: 28px 32px 48px;
+  outline: none;
+  cursor: text;
+}
+
+@media (max-width: 640px) {
+  .resource-editor-content {
+    padding: 20px 18px 36px;
+  }
+}
+
+.resource-editor-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: #b4b0aa;
+}
+
+.resource-editor-content a {
+  cursor: text;
+}
+
+.resource-editor-content img {
+  cursor: pointer;
+}
+
+.resource-editor-content img.ProseMirror-selectednode {
+  outline: 3px solid #e1261c;
+  outline-offset: 3px;
+}
+
+.resource-editor-content hr.ProseMirror-selectednode {
+  border-top-color: #e1261c;
+}

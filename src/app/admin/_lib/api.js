@@ -19,10 +19,12 @@ export function isAdminSession(session) {
 }
 
 export class AdminApiError extends Error {
-  constructor(message, status) {
+  /** `data` is the response body, for callers that need more than the message. */
+  constructor(message, status, data = null) {
     super(message);
     this.name = 'AdminApiError';
     this.status = status;
+    this.data = data;
   }
 }
 
@@ -39,7 +41,8 @@ export async function adminFetch(path, options = {}) {
   const res = await fetch(path, {
     ...options,
     headers: {
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      // A FormData body (a file upload) sets its own multipart content type.
+      ...(typeof options.body === 'string' ? { 'Content-Type': 'application/json' } : {}),
       ...(options.headers || {}),
       Authorization: `Bearer ${session.token}`,
     },
@@ -57,7 +60,7 @@ export async function adminFetch(path, options = {}) {
     const message =
       (typeof payload === 'object' && (payload.error || payload.message)) ||
       `Request failed (${res.status})`;
-    throw new AdminApiError(message, res.status);
+    throw new AdminApiError(message, res.status, typeof payload === 'object' ? payload : null);
   }
 
   return payload;

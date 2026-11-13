@@ -9,6 +9,7 @@ import { SOCIAL_LINKS } from '../lib/socialLinks';
 
 // The guides that sit under "How it works" in the Product column.
 const PRODUCT_PAGES = [
+  { href: '/resources', label: 'Guides & resources' },
   { href: '/track-claim', label: 'Track your claim' },
   { href: '/claim-types', label: 'Claim types' },
   { href: '/eligibility', label: 'Who can claim' },

@@ -35,7 +35,13 @@ const KEY_FACTS = [
 
 const bullets = (items) => items.map((item) => `- ${item}`).join('\n');
 
-export function llmsTxt() {
+// One line of plain text: no line breaks, and no characters that would end a
+// Markdown link early.
+const oneLine = (text) => String(text || '').replace(/\s+/g, ' ').trim();
+const linkText = (text) => oneLine(text).replace(/[[\]]/g, '');
+
+/** @param {{ guides?: { title: string, path: string, summary: string }[] }} [options] */
+export function llmsTxt({ guides = [] } = {}) {
   const legalPaths = ['/privacy', '/terms', '/cookies'];
   const pages = PUBLIC_PAGES.filter((p) => !legalPaths.includes(p.path));
   const legal = PUBLIC_PAGES.filter((p) => legalPaths.includes(p.path));
@@ -53,7 +59,19 @@ ${bullets(KEY_FACTS)}
 
 ${pages.map((p) => `- [${p.title}](${absoluteUrl(p.path)}): ${p.summary}`).join('\n')}
 
-## What unclaimed property is
+${
+  guides.length
+    ? `## Guides
+
+Articles from the ${SITE_NAME} resource hub (${absoluteUrl('/resources')}), newest first.
+
+${guides
+  .map((g) => `- [${linkText(g.title)}](${absoluteUrl(g.path)})${g.summary ? `: ${oneLine(g.summary)}` : ''}`)
+  .join('\n')}
+
+`
+    : ''
+}## What unclaimed property is
 
 ${PROPERTY_BASICS.join('\n\n')}
 
