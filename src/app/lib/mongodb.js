@@ -63,7 +63,14 @@ async function connectToDatabase() {
       });
   }
 
-  cached.conn = await cached.promise;
+  try {
+    cached.conn = await cached.promise;
+  } catch (error) {
+    // Forget the failed attempt, so the next call connects again instead of
+    // failing at once until the server restarts.
+    cached.promise = null;
+    throw error;
+  }
   return cached.conn;
 }
 
