@@ -284,7 +284,7 @@ const Leaderboard = dynamic(
   () => import('./components/Leaderboared')
 );
 
-export default function Home() {
+export default function Home({ guides = [] }) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -345,16 +345,14 @@ export default function Home() {
     setStoreSynced(true);
   }, [searchParams, setCurrentStep]);
 
-  // The landing page is already rendered by the server.
-  // Mark it ready without waiting for an entrance animation.
+  // The landing page never animates in (on first load the server has already
+  // painted it, and on the way back it simply appears), so nothing will report
+  // it ready from an animation: mark it ready whenever it is the step shown.
   useEffect(() => {
-    if (urlStep === 'landing') {
+    if (renderedStep === 'landing') {
       setStepReady(true);
     }
-
-    // Only the initially requested step is handled here.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [renderedStep, setStepReady]);
 
   // Handle navigation between workflow steps.
   const handleStepChange = (step, data) => {
@@ -411,6 +409,7 @@ export default function Home() {
     const stepComponents = {
       landing: (
         <LandingPage
+          guides={guides}
           onNext={() => handleStepChange('search')}
         />
       ),
@@ -485,13 +484,13 @@ export default function Home() {
           key={renderedStep ?? 'pending'}
           variants={pageVariants}
 
-          // Do not delay the initial server-rendered landing page.
-          // Subsequent workflow steps retain their entrance animation.
-          initial={storeSynced ? 'initial' : false}
+          // The landing page has no entrance or exit animation; the workflow
+          // steps after it keep theirs.
+          initial={storeSynced && renderedStep !== 'landing' ? 'initial' : false}
           animate="in"
 
-          // Only animate out when a real step is being displayed.
-          exit={renderedStep ? 'out' : undefined}
+          // Only animate out when a real workflow step is being displayed.
+          exit={renderedStep && renderedStep !== 'landing' ? 'out' : undefined}
 
           onAnimationComplete={() => {
             // Only mark the currently visible step as ready.

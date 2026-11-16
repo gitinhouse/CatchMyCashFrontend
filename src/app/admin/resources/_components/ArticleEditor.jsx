@@ -760,8 +760,8 @@ export default function ArticleEditor({ id }) {
                   className="mt-0.5 w-4 h-4 accent-[#E1261C]"
                 />
                 <span>
-                  <span className="block text-xs font-semibold text-[#0A0A0A]">Feature on the Resources page</span>
-                  <span className="block text-[11px] text-[#888888]">The newest featured article leads the hub.</span>
+                  <span className="block text-xs font-semibold text-[#0A0A0A]">Feature this article</span>
+                  <span className="block text-[11px] text-[#888888]">The newest featured article leads the Resources page. The home page shows up to three guides, featured ones first.</span>
                 </span>
               </label>
 

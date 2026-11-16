@@ -58,9 +58,34 @@ export const metadata = pageMetadata({
   path: "/",
 });
 
+// The guides shown on the home page. Loaded lazily, so a database that is down
+// or not configured costs the page that one section and nothing else. They are
+// cached, so this is normally instant; if they are not ready within the wait
+// below (a slow database), the page renders without them rather than waiting.
+const GUIDES_WAIT_MS = 2500;
+
+async function homeGuides() {
+  let timer;
+  try {
+    const { getHomeGuides } = await import("./lib/resources/queries");
+    return await Promise.race([
+      getHomeGuides(3),
+      new Promise((resolve) => {
+        timer = setTimeout(() => resolve([]), GUIDES_WAIT_MS);
+      }),
+    ]);
+  } catch (error) {
+    console.error("home: could not load guides", error);
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export default async function Page({ searchParams }) {
   // Next.js 15 provides searchParams as a Promise.
   const params = await searchParams;
+  const guides = await homeGuides();
 
   // Read the requested step on the server so the initial page
   // can render with the correct state.
@@ -77,7 +102,7 @@ export default async function Page({ searchParams }) {
         ]}
       />
 
-      <HomeContent initialStep={initialStep} />
+      <HomeContent initialStep={initialStep} guides={guides} />
     </>
   );
 }
