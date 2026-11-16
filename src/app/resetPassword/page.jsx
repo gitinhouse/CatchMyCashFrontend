@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Lock, AlertTriangle, CheckCircle } from 'lucide-react';
 import { InputField } from '../components/uicomponents/InputField';
+import GlobalLoader from '../components/uicomponents/GlobalLoader';
 
 const ResetPasswordInner = () => {
   const searchParams = useSearchParams();
@@ -169,7 +170,13 @@ const ResetPasswordInner = () => {
 
 // Wrap in Suspense because useSearchParams requires it in Next.js app router
 const ResetPassword = () => (
-  <Suspense fallback={<div className="min-h-screen bg-[#F7F5F2]" />}>
+  <Suspense
+    fallback={
+      <div className="min-h-screen bg-[#F7F5F2]">
+        <GlobalLoader label="Loading" />
+      </div>
+    }
+  >
     <ResetPasswordInner />
   </Suspense>
 );

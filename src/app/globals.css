@@ -528,6 +528,16 @@ select:focus {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Forms that keep their fields still when focused: the rule above scales a
+   field up and adds a glow, which shifts any icon drawn inside it. A plain,
+   quieter ring instead. Add the class to a form to opt in. */
+.cmc-form input:focus,
+.cmc-form textarea:focus,
+.cmc-form select:focus {
+  transform: none;
+  box-shadow: 0 0 0 4px rgba(225, 38, 28, 0.12);
+}
+
 /* Remove number input arrows */
 .remove-arrow::-webkit-inner-spin-button,
 .remove-arrow::-webkit-outer-spin-button,

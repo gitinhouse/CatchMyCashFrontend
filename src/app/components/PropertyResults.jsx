@@ -13,6 +13,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import JackpotCelebration from './uicomponents/JackpotCelebration';
+import GlobalLoader from './uicomponents/GlobalLoader';
 import { Card } from './uicomponents/Card';
 import { Button } from './uicomponents/Button';
 import { Badge } from './uicomponents/Badge';
@@ -89,8 +90,8 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-[#F7F5F2] flex items-center justify-center">
-        <div className="text-[#4A4A4A]">Loading your results…</div>
+      <div className="min-h-screen bg-[#F7F5F2]">
+        <GlobalLoader message="Loading your results…" />
       </div>
     );
   }

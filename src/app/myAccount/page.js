@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { clearClientSession } from '../lib/session';
+import GlobalLoader from '../components/uicomponents/GlobalLoader';
 import { deriveSubmissionStep } from '../lib/claimLifecycle';
 import { claimIdSummary, propertyClaimId } from '../lib/claimIds';
 
@@ -747,12 +748,11 @@ export default function MyAccountPage() {
 
     // Show loading state while checking authentication
     if (loading) {
+        // The site's one loader; the empty screen behind it keeps the page's
+        // height so the footer does not jump up under it.
         return (
-            <div className="min-h-screen bg-[#F7F5F2] flex items-center justify-center">
-                <div className="text-center text-[#888888] flex items-center gap-3">
-                    <div className="w-6 h-6 border-2 border-[#E1261C] border-t-transparent rounded-full animate-spin" />
-                    Loading...
-                </div>
+            <div className="min-h-screen bg-[#F7F5F2]">
+                <GlobalLoader label="Loading your account" />
             </div>
         );
     }

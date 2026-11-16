@@ -15,7 +15,8 @@ const HOME_FAQS = FAQS;
  * section.
  */
 export default function HomeFaq() {
-  const [open, setOpen] = useState([0]);
+  // Every question starts closed.
+  const [open, setOpen] = useState([]);
   const toggle = (index) =>
     setOpen((prev) => (prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]));
 

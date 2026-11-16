@@ -159,12 +159,15 @@ export default function SiteHeader() {
     router.push(`/?${params.toString()}`);
   };
 
+  // Order: what returning clients come for (Track Claim), then what a new
+  // visitor needs to decide (how it works, the common questions), then the
+  // reading (Resources), then who we are, then how to reach us.
   const navItems = [
-    { name: 'About', path: '/about' },
-    { name: 'How It Works', path: '/how-it-works' },
-    { name: 'Resources', path: '/resources' },
     { name: 'Track Claim', path: '/track-claim' },
+    { name: 'How It Works', path: '/how-it-works' },
     { name: 'FAQ', path: '/faq' },
+    { name: 'Resources', path: '/resources' },
+    { name: 'About', path: '/about' },
     { name: 'Contact', path: '/contact' },
   ];
 
