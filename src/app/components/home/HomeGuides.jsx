@@ -74,18 +74,14 @@ export default function HomeGuides({ guides = [] }) {
   const shown = guides.slice(0, 3);
   return (
     <section aria-labelledby="home-guides-heading">
-      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 mb-6">
-        <div>
-          <p className="font-['JetBrains_Mono'] text-[12px] tracking-[0.15em] uppercase text-[#E1261C] mb-2">
-            From Resources
-          </p>
-          <h2
-            id="home-guides-heading"
-            className="font-['Fraunces'] text-[28px] sm:text-[34px] font-semibold leading-tight tracking-[-0.01em] text-[#0A0A0A]"
-          >
-            Plain-English guides
-          </h2>
-        </div>
+      {/* The small label is the section's heading; the guide titles carry it. */}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 mb-5">
+        <h2
+          id="home-guides-heading"
+          className="font-['JetBrains_Mono'] text-[12px] sm:text-[13px] font-normal tracking-[0.15em] uppercase text-[#E1261C]"
+        >
+          From Resources
+        </h2>
         <Link
           href={RESOURCES_PATH}
           className="text-[15px] font-semibold text-[#E1261C] underline-offset-4 hover:underline"

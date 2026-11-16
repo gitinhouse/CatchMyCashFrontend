@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import GlobalLoader from './uicomponents/GlobalLoader';
 
 const MIN_VISIBLE_MS = 240;
 const NAVIGATION_TIMEOUT_MS = 15000;
@@ -128,14 +129,5 @@ export default function NavigationLoader() {
 
   if (!isVisible) return null;
 
-  return (
-    <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center bg-white/80 backdrop-blur-[2px]"
-      role="status"
-      aria-live="polite"
-      aria-label="Loading page"
-    >
-      <span className="loading-spinner h-8 w-8" aria-hidden="true" />
-    </div>
-  );
+  return <GlobalLoader label="Loading page" />;
 }

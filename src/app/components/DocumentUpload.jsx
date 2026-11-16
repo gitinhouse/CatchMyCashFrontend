@@ -1903,6 +1903,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "./uicomponents/Button";
 import { Card } from "./uicomponents/Card";
 import { Badge } from "./uicomponents/Badge";
+import GlobalLoader from "./uicomponents/GlobalLoader";
 import { useWebSocket } from "../hooks/useWebSocket";
 import axios from "axios";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -3201,27 +3202,11 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
   return (
     <div className="min-h-screen bg-[#F7F5F2] pt-4 relative">
       {isLoading && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          role="status"
-          aria-live="polite"
+        <GlobalLoader
+          message={loadingText}
+          detail="Please wait, this may take a moment."
           data-testid="docusign-loader"
-          className="fixed inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center z-[100] px-6 text-center"
-        >
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="w-12 h-12 border-4 border-[#E1261C]/30 border-t-[#E1261C] rounded-full"
-          />
-          <p className="mt-4 text-lg font-semibold text-[#0A0A0A]">
-            {loadingText}
-          </p>
-          <p className="text-[#4A4A4A] mt-1">
-            Please wait, this may take a moment.
-          </p>
-        </motion.div>
+        />
       )}
 
       {socketMessage && (

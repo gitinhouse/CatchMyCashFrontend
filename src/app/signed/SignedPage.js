@@ -2,8 +2,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSearchStore } from "../store/searchStore";
-import { motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import GlobalLoader from "../components/uicomponents/GlobalLoader";
 
 // AUTO-DOWNLOAD (testing) — disable via NEXT_PUBLIC_AUTO_DOWNLOAD_AGREEMENT=false
 const AUTO_DOWNLOAD_AGREEMENT =
@@ -105,22 +104,7 @@ export default function SignedPage() {
         Please wait while your signed PDF is being downloaded.
       </p>
 
-      {loading && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 flex flex-col items-center justify-center bg-black/70 z-50"
-        >
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }}
-          >
-            <Loader2 className="w-12 h-12 text-[#E1261C]" />
-          </motion.div>
-          <p className="mt-4 text-gray-300">Downloading your signed file...</p>
-        </motion.div>
-      )}
+      {loading && <GlobalLoader message="Downloading your signed file..." />}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from './uicomponents/Button';
+import GlobalLoader from './uicomponents/GlobalLoader';
 import { Card } from './uicomponents/Card';
 import { Badge } from './uicomponents/Badge';
 import { Progress } from './uicomponents/Progress';
@@ -585,11 +586,8 @@ const CaseTracking = ({ onViewLeaderboard, onCreateReferral }) => {
   // ============================================================
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F7F5F2] flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#E1261C] mx-auto mb-4"></div>
-          <p className="text-[#4A4A4A]">Loading your case data...</p>
-        </div>
+      <div className="min-h-screen bg-[#F7F5F2]">
+        <GlobalLoader message="Loading your case data..." />
       </div>
     );
   }
