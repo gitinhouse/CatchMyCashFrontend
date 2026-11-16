@@ -877,3 +877,37 @@ a {
 .resource-editor-content hr.ProseMirror-selectednode {
   border-top-color: #e1261c;
 }
+
+/* The site header's height at each breakpoint (it is sticky and in the flow),
+   so a section can fill exactly the rest of the first screen. Keep in step
+   with SiteHeader's padding and button sizes. */
+:root {
+  --site-header-h: 65px;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --site-header-h: 73px;
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --site-header-h: 61px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --site-header-h: 77px;
+  }
+}
+
+/* The home page hero fills the first screen below the header, so on a laptop
+   at 100% zoom nothing from the next section peeks in under it. Capped so a
+   very tall monitor doesn't get an empty acre of hero. svh where supported
+   (it ignores a phone's collapsing toolbars), vh otherwise. */
+.home-hero {
+  min-height: min(calc(100vh - var(--site-header-h)), 960px);
+  min-height: min(calc(100svh - var(--site-header-h)), 960px);
+}

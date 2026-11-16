@@ -101,6 +101,33 @@ export const getLeadPost = unstable_cache(
 );
 
 /**
+ * Up to `limit` articles for the home page: featured ones first, then the
+ * newest, so an admin chooses what shows there by featuring it.
+ */
+export const getHomeGuides = unstable_cache(
+  async (limit = 3) => {
+    await connectToDatabase();
+    const featured = await ResourcePost.find({ ...visible(), featured: true })
+      .select(LIST_FIELDS)
+      .sort(byNewest)
+      .limit(limit)
+      .lean();
+    const rest =
+      featured.length < limit
+        ? await ResourcePost.find({ ...visible(), _id: { $nin: featured.map((d) => d._id) } })
+            .select(LIST_FIELDS)
+            .sort(byNewest)
+            .limit(limit - featured.length)
+            .lean()
+        : [];
+    const topicsById = topicIndex(await loadTopics());
+    return [...featured, ...rest].map((d) => toPostDTO(d, topicsById, { withContent: false }));
+  },
+  ['resources:home'],
+  CACHE,
+);
+
+/**
  * A published article by its slug.
  * @returns {Promise<{ post: object } | { redirectTo: string } | null>}
  *   redirectTo when the slug is one the article used to have.

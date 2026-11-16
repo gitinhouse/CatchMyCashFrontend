@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { motion } from 'framer-motion';
 import axios from 'axios';
 import {
   AlertTriangle,
@@ -139,17 +138,16 @@ export default function ClaimTracker({
         </button>
       </div>
       {searchError && (
-        <motion.p
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
+        <p
+          role="alert"
           className="text-[#E1261C] text-sm mt-2 flex items-center gap-1"
         >
           <AlertTriangle className="h-4 w-4" />
           {searchError}
-        </motion.p>
+        </p>
       )}
-      {/* Portalled: the landing card around this animates with a transform,
-          which would otherwise become the containing block of a fixed dialog. */}
+      {/* Portalled, so no transformed ancestor can become the containing
+          block of the fixed dialog. */}
       {showModal &&
         searchResult &&
         createPortal(
@@ -266,18 +264,11 @@ const ClaimProgressModal = ({ claim, onClose }) => {
   const progressPercentage = (completedSteps / totalSteps) * 100;
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
       onClick={onClose}
     >
-      <motion.div
-        initial={{ scale: 0.9, y: 20 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.9, y: 20 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+      <div
         className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-[#E8E6E3]"
         onClick={(e) => e.stopPropagation()}
       >
@@ -314,10 +305,8 @@ const ClaimProgressModal = ({ claim, onClose }) => {
               <span>{Math.round(progressPercentage)}%</span>
             </div>
             <div className="w-full h-2 bg-[#F0EEEB] rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${progressPercentage}%` }}
-                transition={{ duration: 0.8, ease: 'easeOut' }}
+              <div
+                style={{ width: `${progressPercentage}%` }}
                 className="h-full bg-gradient-to-r from-[#E1261C] to-[#B11912] rounded-full"
               />
             </div>
@@ -348,12 +337,9 @@ const ClaimProgressModal = ({ claim, onClose }) => {
 
           {activeTab === 'progress' && (
             <div className="space-y-4">
-              {progressSteps.map((step, index) => (
-                <motion.div
+              {progressSteps.map((step) => (
+                <div
                   key={step.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
                   className={`flex items-start gap-4 p-4 rounded-xl border transition-all ${step.failed // ← ADD this branch first
                     ? 'bg-[#FCE9E7] border-[#E1261C]/40'
                     : step.completed
@@ -397,7 +383,7 @@ const ClaimProgressModal = ({ claim, onClose }) => {
                       {step.description}
                     </p>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
           )}
@@ -520,7 +506,7 @@ const ClaimProgressModal = ({ claim, onClose }) => {
             </button>
           </div>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 };
