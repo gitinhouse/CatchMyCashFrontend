@@ -417,6 +417,81 @@ function getUniquePropertiesById(properties) {
   );
 }
 
+// What a search returns for each property: enough for someone to recognise
+// their own (owner name and address, the business that reported it, any
+// securities), the fields the State's own search shows.
+const RESULT_FIELDS = [
+  'property_id',
+  'property_type',
+  'owner_name',
+  'owner_street_1',
+  'owner_street_2',
+  'owner_street_3',
+  'owner_city',
+  'owner_state',
+  'owner_zip',
+  'no_of_owners',
+  'cash_reported',
+  'shares_reported',
+  'name_of_security_reported',
+  'current_cash_balance',
+  'holder_name',
+  'holder_city',
+  'holder_state',
+].join(' ');
+
+const CO_OWNER_LOOKUP_MS = 2500;
+const MAX_CO_OWNERS = 5;
+
+/**
+ * The State's file lists a property once per owner, under the same property
+ * ID. For hits the file marks as having more than one owner, find the other
+ * names, as the State's own search does in its Co-Owner column. Best effort:
+ * if the lookup is slow or fails, the results go out without them.
+ */
+async function attachCoOwners(Property, properties) {
+  const shared = properties.filter((p) => Number.parseInt(p.no_of_owners, 10) > 1);
+  if (shared.length === 0) return properties;
+
+  // The IDs exactly as stored (the other owners' rows carry the same value),
+  // through the driver so Mongoose does not recast them.
+  const storedIds = [...new Set(shared.map((p) => p.property_id).filter((id) => id !== undefined && id !== null))];
+  if (storedIds.length === 0) return properties;
+
+  try {
+    const rows = await Property.collection
+      .find(
+        { property_id: { $in: storedIds } },
+        {
+          projection: { property_id: 1, owner_name: 1 },
+          limit: storedIds.length * (MAX_CO_OWNERS + 1) * 2,
+          maxTimeMS: CO_OWNER_LOOKUP_MS,
+        },
+      )
+      .toArray();
+
+    const namesById = new Map();
+    for (const row of rows) {
+      const id = String(row.property_id ?? '').trim();
+      const name = String(row.owner_name ?? '').trim();
+      if (!id || !name) continue;
+      if (!namesById.has(id)) namesById.set(id, new Set());
+      namesById.get(id).add(name);
+    }
+
+    return properties.map((p) => {
+      const names = namesById.get(String(p.property_id ?? '').trim());
+      if (!names) return p;
+      const own = String(p.owner_name ?? '').trim();
+      const others = [...names].filter((name) => name !== own).slice(0, MAX_CO_OWNERS);
+      return others.length ? { ...p, co_owners: others } : p;
+    });
+  } catch (error) {
+    console.error('[filterProperty] co-owner lookup failed:', error.message);
+    return properties;
+  }
+}
+
 // Cache for frequent searches
 const searchCache = new Map();
 const CACHE_TTL = 60000; // 1 minute
@@ -506,12 +581,15 @@ export async function POST(req) {
         .limit(limit)
         .maxTimeMS(10000)
         .lean()
-        .select('property_id property_type owner_name owner_street_1 owner_city owner_state owner_zip cash_reported shares_reported current_cash_balance'),
+        .select(RESULT_FIELDS),
     ]);
 
     console.log(`✅ Found ${totalMatched} results in ${Date.now() - startTime}ms`);
 
-    const uniqueMatchedProperties = getUniquePropertiesById(matchedProperties);
+    const uniqueMatchedProperties = await attachCoOwners(
+      Property,
+      getUniquePropertiesById(matchedProperties),
+    );
 
     const { visible, hiddenCount } = await applyClaimState(
       uniqueMatchedProperties,

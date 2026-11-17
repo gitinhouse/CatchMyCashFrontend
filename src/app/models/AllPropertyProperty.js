@@ -10,10 +10,22 @@ const AllPropertySchema = new mongoose.Schema({
   owner_city: String,
   owner_state: String,
   owner_zip: String,
+  owner_country_code: String,
+  no_of_owners: String,
   cash_reported: String,
   shares_reported: String,
+  name_of_security_reported: String,
   current_cash_balance: String,
-}, { 
+  // The business that reported the property to the State.
+  holder_name: String,
+  holder_street_1: String,
+  holder_street_2: String,
+  holder_street_3: String,
+  holder_city: String,
+  holder_state: String,
+  holder_zip: String,
+  cusip: String,
+}, {
   collection: 'allproperties',
   timestamps: true 
 });

@@ -5,13 +5,11 @@ import axios from 'axios';
 import {
   ArrowLeft,
   CheckCircle,
-  DollarSign,
-  Calendar,
-  Building,
   AlertTriangle,
   Sparkles,
   TrendingUp,
 } from 'lucide-react';
+import { describeProperty } from '../lib/propertyDetails';
 import JackpotCelebration from './uicomponents/JackpotCelebration';
 import GlobalLoader from './uicomponents/GlobalLoader';
 import { Card } from './uicomponents/Card';
@@ -63,6 +61,109 @@ const getTotalPropertyAmount = (properties = []) =>
     0,
   );
 
+const formatMoney = (value) =>
+  parsePropertyAmount(value).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+const NotOnFile = () => <span className="text-[#888888]">Not on file</span>;
+
+const Detail = ({ label, children }) => (
+  <div className="min-w-0">
+    <dt className="font-['JetBrains_Mono'] text-[11px] uppercase tracking-[0.12em] text-[#888888]">
+      {label}
+    </dt>
+    <dd className="mt-1 text-[14px] sm:text-[15px] leading-snug text-[#0A0A0A] break-words">
+      {children}
+    </dd>
+  </div>
+);
+
+/**
+ * One property. The whole card is the checkbox's label, so a tap anywhere on
+ * it selects it. Who reported it and the amount come first; then the facts
+ * that tell someone whether it is theirs. Anything the State's file does not
+ * have is left out, or shown as "Not on file" for the name and address.
+ */
+const PropertyCard = ({ property, selected, onToggle }) => {
+  const d = describeProperty(property);
+  const title = d.holderName || d.type || 'Unclaimed property';
+  const titleLabel = d.holderName ? 'Reported by' : 'Property type';
+  const inputId = `property-${property.id}`;
+  const otherOwners = d.coOwners.length
+    ? d.coOwners.join(', ')
+    : d.otherOwnersCount
+      ? `${d.otherOwnersCount} other owner${d.otherOwnersCount > 1 ? 's' : ''} on record`
+      : '';
+
+  return (
+    <label
+      htmlFor={inputId}
+      className={`block cursor-pointer rounded-xl border bg-white p-4 shadow-sm transition-colors sm:p-6 ${
+        selected
+          ? 'border-[#E1261C] ring-1 ring-[#E1261C]'
+          : 'border-[#E8E6E3] hover:border-[#BDBDBD]'
+      }`}
+    >
+      <div className="flex items-start gap-3 sm:gap-4">
+        <input
+          id={inputId}
+          type="checkbox"
+          checked={selected}
+          onChange={onToggle}
+          aria-label={`Select property ${property.id}: ${title}, $${formatMoney(property.amount)}`}
+          className="mt-1 h-5 w-5 shrink-0 cursor-pointer accent-[#E1261C]"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+            <div className="min-w-0">
+              <p className="font-['JetBrains_Mono'] text-[11px] uppercase tracking-[0.12em] text-[#888888]">
+                {titleLabel}
+              </p>
+              <p className="mt-0.5 font-['Fraunces'] text-[18px] sm:text-[20px] font-semibold leading-snug text-[#0A0A0A] break-words">
+                {title}
+              </p>
+              {d.holderLocation && (
+                <p className="mt-0.5 text-[13px] text-[#4A4A4A]">{d.holderLocation}</p>
+              )}
+            </div>
+            <div className="shrink-0 sm:text-right">
+              <p className="hidden sm:block font-['JetBrains_Mono'] text-[11px] uppercase tracking-[0.12em] text-[#888888]">
+                Amount
+              </p>
+              <p className="font-['Fraunces'] text-[22px] sm:text-2xl font-bold text-[#E1261C] whitespace-nowrap">
+                ${' '}
+                <span className="text-[#0A0A0A]">{formatMoney(property.amount)}</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {d.holderName && d.type && (
+              <span className="rounded-full bg-[#FCE9E7] px-3 py-1 text-[12px] font-semibold text-[#B11912] break-words">
+                {d.type}
+              </span>
+            )}
+            <span className="rounded-full border border-[#E8E6E3] bg-[#F7F5F2] px-3 py-1 font-['JetBrains_Mono'] text-[12px] text-[#4A4A4A]">
+              ID {property.id}
+            </span>
+          </div>
+
+          <dl className="mt-4 grid gap-x-6 gap-y-3 border-t border-[#F0EEEB] pt-4 sm:grid-cols-2">
+            <Detail label="Name on record">{d.owner || <NotOnFile />}</Detail>
+            <Detail label="Last known address">{d.address || <NotOnFile />}</Detail>
+            {otherOwners && (
+              <Detail label={d.coOwners.length > 1 ? 'Co-owners' : 'Co-owner'}>{otherOwners}</Detail>
+            )}
+            {d.securities && <Detail label="Securities">{d.securities}</Detail>}
+          </dl>
+        </div>
+      </div>
+    </label>
+  );
+};
+
 const PropertyResults = ({ propertyData, onNext, onBack }) => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [animatedAmount, setAnimatedAmount] = useState(0);
@@ -87,14 +188,6 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
   const netAmountValue = selectedTotalAmount - commissionValue;
   const commission = commissionValue.toFixed(2);
   const netAmount = netAmountValue.toFixed(2);
-
-  if (!data) {
-    return (
-      <div className="min-h-screen bg-[#F7F5F2]">
-        <GlobalLoader message="Loading your results…" />
-      </div>
-    );
-  }
 
   const handleCheckboxChange = (propertyId) => {
     setSelectedProperties((prev) => {
@@ -141,6 +234,15 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
     return () => clearInterval(timer);
   }, [totalAmount]);
 
+  // After the hooks, so they run in the same order whether or not the results
+  // have arrived yet (an early return above them crashes React when they do).
+  if (!data) {
+    return (
+      <div className="min-h-screen bg-[#F7F5F2]">
+        <GlobalLoader message="Loading your results…" />
+      </div>
+    );
+  }
 
   // In handleClaim:
   const handleClaim = async () => {
@@ -422,96 +524,44 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
           </motion.div>
         </motion.div>
 
-        {/* Property Details */}
-        <motion.div
-          className="space-y-4 mb-8"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.8 }}
-        >
-          <h3 className="text-xl font-bold text-[#0A0A0A] flex items-center gap-2 font-['Fraunces']">
-            <Sparkles className="h-5 w-5 text-[#E1261C]" />
+        {/* The properties. Each card carries what the State's own search
+            lists, so someone can tell whether a property is theirs before
+            they select it. No motion: the cards are there as soon as the
+            page is, however many there are. */}
+        <section className="mb-8" aria-labelledby="results-list-heading">
+          <h3
+            id="results-list-heading"
+            className="text-xl font-bold text-[#0A0A0A] flex items-center gap-2 font-['Fraunces']"
+          >
+            <Sparkles className="h-5 w-5 text-[#E1261C]" aria-hidden="true" />
             Property Details
           </h3>
+          {uniqueProperties.length > 0 && (
+            <p className="mt-1 mb-4 text-[14px] sm:text-[15px] leading-relaxed text-[#4A4A4A]">
+              Tick the ones that are yours. The name, last known address and the
+              business that reported each one help you check.
+            </p>
+          )}
           {uniqueProperties.length > 0 ? (
-            uniqueProperties.map((property, index) => (
-              <motion.div
-                key={property.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 2 + index * 0.2 }}
-                whileHover={{ scale: 1.02, y: -2 }}
-              >
-                <div className="bg-white p-4 sm:p-6 border border-[#E8E6E3] rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
-                  <div className="flex items-start justify-between flex-wrap gap-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedProperties.includes(property.id)}
-                      onChange={() => handleCheckboxChange(property.id)}
-                      aria-label={`Select property ${property.id}`}
-                      className="mt-2 h-5 w-5 shrink-0 cursor-pointer accent-[#E1261C]" 
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center flex-wrap gap-3 mb-2">
-                        <span className="bg-[#FCE9E7] text-[#E1261C] text-xs font-semibold px-3 py-1 rounded-full border border-[#E8E6E3]">
-                          {property.id}
-                        </span>
-                        <span className="bg-[#FCE9E7] text-[#E1261C] text-xs font-semibold px-3 py-1 rounded-full border border-[#E8E6E3]">
-                          {property.type}
-                        </span>
-                      </div>
-                      <div className="flex items-center flex-wrap gap-4 text-[#4A4A4A] text-sm">
-                        <div className="flex items-center min-w-0">
-                          <Building className="h-4 w-4 mr-1 text-[#E1261C] shrink-0" />
-                          <span className="break-words">{property.holder}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <Calendar className="h-4 w-4 mr-1 text-[#E1261C] shrink-0" />
-                          <span>Reported: {property.reportDate}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Its own column at the end of the row, so the figure lands
-                        in the same place on every listing instead of trailing the
-                        badges at whatever width they happen to be. A phone has no
-                        room for a column, so there it is a row of its own under the
-                        details, with the figure still at the far right. */}
-                    <div className="w-full flex items-baseline justify-between gap-3 border-t border-[#E8E6E3] pt-3 sm:block sm:w-auto sm:ml-auto sm:border-t-0 sm:pt-0 sm:text-right shrink-0">
-                      <p className="text-[11px] uppercase tracking-wide text-[#888888] font-['JetBrains_Mono']">
-                        Amount
-                      </p>
-                      <motion.span
-                        className="block text-xl sm:text-2xl font-bold text-[#E1261C] font-['Fraunces'] whitespace-nowrap"
-                        animate={{ scale: [1, 1.05, 1] }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          delay: index * 0.5,
-                        }}
-                        style={{ transformOrigin: 'right center' }}
-                      >
-                        ${' '}
-                        <span className="text-black">
-                          {parseFloat(property.amount).toLocaleString('en-US', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </span>
-                      </motion.span>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))
+            <ul className="space-y-4">
+              {uniqueProperties.map((property) => (
+                <li key={property.id}>
+                  <PropertyCard
+                    property={property}
+                    selected={selectedProperties.includes(property.id)}
+                    onToggle={() => handleCheckboxChange(property.id)}
+                  />
+                </li>
+              ))}
+            </ul>
           ) : (
-            <div className="bg-white p-6 border border-[#E8E6E3] rounded-xl text-center shadow-md">
+            <div className="mt-4 bg-white p-6 border border-[#E8E6E3] rounded-xl text-center shadow-md">
               <div className="text-[#E1261C] font-semibold text-lg">
                 ⚠ No properties found
               </div>
             </div>
           )}
-        </motion.div>
+        </section>
 
         {/* Warning about DIY - Red Themed */}
         <motion.div
