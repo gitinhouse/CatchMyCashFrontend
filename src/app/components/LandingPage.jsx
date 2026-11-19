@@ -1,8 +1,12 @@
 'use client';
 import React from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { AlertTriangle, Check, ChevronDown, Clock, FileText } from 'lucide-react';
 import { FEE_PERCENT } from '../lib/site';
+// Served from the site and resized by next/image for each screen. Unsplash
+// photo-1521791055366-0d553872125f, free to use under the Unsplash License.
+import paperworkPhoto from '../../../public/images/home/signing-claim-paperwork.jpg';
 import TrackClaimCard from './home/TrackClaimCard';
 import HeirsCallout from './home/HeirsCallout';
 import HomeFaq from './home/HomeFaq';
@@ -187,16 +191,49 @@ const LandingPage = ({ onNext, guides = [] }) => {
         </dl>
       </section>
 
-      {/* Why most people never get their money back */}
-      <section aria-labelledby="home-why-heading" className={`bg-[#F7F5F2] ${SECTION_SPACE}`}>
-        <div className={`${HOME_CONTAINER} grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-20`}>
+      {/* Why most people never get their money back. On a laptop the photo
+          runs the full height of the section, beside the heading and the
+          three reasons (mirroring the hero, whose text is on the left). On
+          smaller screens it sits between the heading and the reasons. */}
+      <section
+        aria-labelledby="home-why-heading"
+        className={`overflow-hidden bg-[#F7F5F2] ${SECTION_SPACE}`}
+      >
+        <div
+          className={`${HOME_CONTAINER} grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-x-14 lg:gap-y-10 xl:gap-x-20`}
+        >
           <SectionHeader
+            className="lg:col-start-2 lg:row-start-1"
             id="home-why-heading"
             eyebrow="The problem"
             title="Why most people never get their money back"
             intro="We handle the process for you: we prepare the paperwork, file the claim and track it to payout."
           />
-          <ul className="divide-y divide-[#E8E6E3] border-y border-[#E8E6E3]">
+
+          <div className="relative lg:col-start-1 lg:row-span-2 lg:row-start-1">
+            {/* The brand's soft ring, behind the photo's lower corner, as
+                behind the Track Your Claim card in the hero. */}
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute -bottom-16 -left-16 hidden h-72 w-72 rounded-full border-[44px] border-[#E1261C]/[0.07] lg:block"
+            />
+            <div className="relative aspect-[16/10] overflow-hidden rounded-2xl bg-[#E8E6E3] shadow-[0_24px_48px_-24px_rgba(10,10,10,0.3)] ring-1 ring-black/5 sm:aspect-[2/1] lg:aspect-auto lg:h-full lg:min-h-[480px]">
+              <Image
+                src={paperworkPhoto}
+                alt="A person signing a printed form with a fountain pen"
+                fill
+                placeholder="blur"
+                // The photo is landscape, so in the tall laptop frame it is
+                // scaled to the frame's height and drawn about 900px wide,
+                // more than the frame itself: ask for that size, or it would
+                // be blurry. Below that it spans the page.
+                sizes="(min-width: 1024px) 900px, 100vw"
+                className="object-cover object-[50%_30%]"
+              />
+            </div>
+          </div>
+
+          <ul className="divide-y divide-[#E8E6E3] border-y border-[#E8E6E3] lg:col-start-2 lg:row-start-2">
             {REASONS.map((item) => (
               <li key={item.title} className="flex gap-5 py-6 sm:py-7">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#E8E6E3] bg-white">
