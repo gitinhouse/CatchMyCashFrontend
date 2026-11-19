@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { FAQS } from '../../lib/content/faqs';
+import { HOME_CONTAINER, SECTION_SPACE, SectionHeader, TEXT_LINK } from './Section';
 
 // The FAQ page's own questions and answers, read from the same list, so the
 // two never drift apart. To show fewer here, slice it (FAQS.slice(0, 5)).
@@ -21,31 +22,18 @@ export default function HomeFaq() {
     setOpen((prev) => (prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]));
 
   return (
-    <section
-      aria-labelledby="home-faq-heading"
-      className="relative overflow-hidden bg-white border border-[#E8E6E3] rounded-xl px-5 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-12 shadow-md"
-    >
-      <div aria-hidden="true" className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]" />
+    <section aria-labelledby="home-faq-heading" className={`bg-white ${SECTION_SPACE}`}>
       {/* Heading beside the questions on a laptop, above them on smaller screens. */}
-      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:gap-14">
-        <div className="mb-6 lg:mb-0">
-          <p className="font-['JetBrains_Mono'] text-[12px] tracking-[0.15em] uppercase text-[#E1261C] mb-2">
-            Questions people ask first
-          </p>
-          <h2
+      <div className={`${HOME_CONTAINER} lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:gap-16`}>
+        <div className="mb-8 lg:mb-0">
+          <SectionHeader
             id="home-faq-heading"
-            className="font-['Fraunces'] text-[28px] sm:text-[34px] font-semibold leading-tight tracking-[-0.01em] text-[#0A0A0A]"
-          >
-            Before you search
-          </h2>
-          <p className="mt-3 text-[15px] sm:text-base leading-relaxed text-[#4A4A4A] max-w-sm">
-            Straight answers about cost, paperwork and timing.
-          </p>
-          <Link
-            href="/faq"
-            className="mt-4 inline-block text-[15px] font-semibold text-[#E1261C] underline-offset-4 hover:underline"
-          >
-            Open the FAQ page →
+            eyebrow="Questions people ask first"
+            title="Before you search"
+            intro="Straight answers about cost, paperwork and timing."
+          />
+          <Link href="/faq" className={`${TEXT_LINK} mt-5 inline-block text-[15px]`}>
+            Open the FAQ page
           </Link>
         </div>
 

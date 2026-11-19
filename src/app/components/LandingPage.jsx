@@ -1,57 +1,48 @@
 'use client';
 import React from 'react';
 import Link from 'next/link';
-import {
-  AlertTriangle,
-  ChevronDown,
-  Clock,
-  FileText,
-  DollarSign,
-  TrendingUp,
-  Users,
-  Award,
-} from 'lucide-react';
-import { ImageWithFallback } from './uicomponents/ImageWithFallback';
-import ClaimTracker from './ClaimTracker';
+import { AlertTriangle, Check, ChevronDown, Clock, FileText } from 'lucide-react';
+import { FEE_PERCENT } from '../lib/site';
+import TrackClaimCard from './home/TrackClaimCard';
 import HeirsCallout from './home/HeirsCallout';
 import HomeFaq from './home/HomeFaq';
 import HomeGuides from './home/HomeGuides';
+import { EYEBROW, HOME_CONTAINER, SECTION_SPACE, SectionHeader, TEXT_LINK } from './home/Section';
 
-const SolutionArray = [
+const STEPS = [
   {
-    num: '1',
-    title: 'We Search & Find',
+    title: 'We search & find',
     desc: 'Our advanced system scans all California databases',
   },
   {
-    num: '2',
-    title: 'We Handle Everything',
+    title: 'We handle everything',
     desc: 'Professional case preparation and submission',
   },
   {
-    num: '3',
-    title: 'You Get Paid',
-    desc: '94% success rate - money in your account',
+    title: 'You get paid',
+    desc: '94% success rate – money in your account',
   },
 ];
 
-const ResonsArray = [
+const REASONS = [
   {
     icon: Clock,
-    title: 'Extremely Time-Consuming',
-    desc: 'Average claim takes 6-18 months to process',
+    title: 'Extremely time-consuming',
+    desc: 'Average claim takes 6–18 months to process',
   },
   {
     icon: FileText,
-    title: 'Complex Legal Documentation',
+    title: 'Complex legal documentation',
     desc: 'Requires multiple forms, notarizations, and proof documents',
   },
   {
     icon: AlertTriangle,
-    title: 'High Rejection Rate',
+    title: 'High rejection rate',
     desc: 'Over 70% of DIY claims are rejected due to errors',
   },
 ];
+
+const PROMISES = ['No upfront costs', 'No hidden fees', 'No risk to you'];
 
 const GUIDE_LINKS = [
   { href: '/eligibility', label: 'Who can claim' },
@@ -79,8 +70,18 @@ const formatCurrency = (amount) =>
     maximumFractionDigits: 0,
   }).format(amount);
 
+const STATS = [
+  { value: formatCurrency(stats.totalRecovered), label: 'Total recovered' },
+  { value: stats.happyClients.toLocaleString('en-US'), label: 'Happy clients' },
+  { value: `${stats.successRate}%`, label: 'Success rate' },
+];
+
+// The fee worked through on a round sum, so the percentage reads as dollars.
+const EXAMPLE_RECOVERED = 1000;
+const EXAMPLE_FEE = (EXAMPLE_RECOVERED * FEE_PERCENT) / 100;
+
 const ArrowRight = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
     <path
       d="M4 12H20M20 12L14 6M20 12L14 18"
       stroke="currentColor"
@@ -91,262 +92,274 @@ const ArrowRight = () => (
   </svg>
 );
 
-// The brand rule along the top edge of a card.
-const CardTopRule = () => (
-  <div
-    aria-hidden="true"
-    className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E1261C] to-[#B11912]"
-  />
-);
-
-const CARD = 'relative overflow-hidden bg-white border border-[#E8E6E3] rounded-xl shadow-md';
+const PRIMARY_BUTTON =
+  'inline-flex w-full sm:w-auto items-center justify-center gap-2 sm:gap-3 rounded-xl bg-[#E1261C] px-5 sm:px-8 py-4 text-center text-[16px] sm:text-[18px] font-semibold text-white shadow-md transition-colors hover:bg-[#B11912] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#E1261C]';
 
 // The home page has no motion: everything is on screen as soon as it loads.
+// Each section is a full-width band whose content lines up with the site
+// header (see home/Section.jsx).
 const LandingPage = ({ onNext, guides = [] }) => {
   return (
     <div className="bg-[#F7F5F2] font-body">
       {/* Hero. It fills the first screen under the site header (see .home-hero
-          in globals.css), so on a laptop at 100% the next section no longer
-          peeks in under it. */}
-      <section className="home-hero relative overflow-hidden flex flex-col">
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute -left-40 -top-40 hidden h-[460px] w-[460px] rounded-full border-[56px] border-[#E1261C]/[0.06] md:block"
-        />
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-32 -bottom-48 hidden h-[520px] w-[520px] rounded-full border-[64px] border-[#E1261C]/[0.07] md:block"
-        />
+          in globals.css). The pitch on the left, Track Your Claim on the right;
+          on smaller screens the card follows the pitch. */}
+      <section
+        aria-labelledby="home-hero-heading"
+        className="home-hero relative flex flex-col overflow-hidden"
+      >
+        <div className="relative flex flex-1 items-center">
+          <div className={`${HOME_CONTAINER} py-12 sm:py-16 lg:py-12`}>
+            <div className="grid items-center gap-10 sm:gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,27rem)] lg:gap-14 xl:gap-20">
+              <div className="max-w-2xl">
+                <p className={`${EYEBROW} mb-5`}>California unclaimed property</p>
+                <h1
+                  id="home-hero-heading"
+                  className="font-['Fraunces'] text-[36px] sm:text-[48px] xl:text-[60px] font-bold leading-[1.06] tracking-[-0.02em] text-[#0A0A0A] mb-6 text-balance"
+                >
+                  Millions in Unclaimed Property
+                  <span className="block text-[#E1261C] italic font-normal">Waiting for You</span>
+                </h1>
 
-        <div className="relative flex-1 flex items-center">
-          <div className="w-full max-w-5xl mx-auto px-5 sm:px-6 lg:px-8 py-14 sm:py-16 text-center">
-            <p className="font-['JetBrains_Mono'] text-[12px] sm:text-[13px] tracking-[0.18em] uppercase text-[#E1261C] mb-5">
-              California unclaimed property
-            </p>
-            <h1 className="font-['Fraunces'] text-[34px] sm:text-[46px] lg:text-[60px] font-bold leading-[1.06] tracking-[-0.02em] text-[#0A0A0A] mb-6 text-balance">
-              Millions in Unclaimed Property
-              <span className="block text-[#E1261C] italic font-normal">Waiting for You</span>
-            </h1>
+                <p className="text-[17px] sm:text-[19px] xl:text-[20px] leading-relaxed text-[#4A4A4A] max-w-[36rem] mb-8">
+                  The California unclaimed property process is complex,
+                  time-consuming, and often unsuccessful. Let our expert investigators
+                  recover what&apos;s rightfully yours.
+                </p>
 
-            <p className="text-[17px] sm:text-[20px] leading-relaxed text-[#4A4A4A] max-w-3xl mx-auto mb-9">
-              The California unclaimed property process is complex,
-              time-consuming, and often unsuccessful. Let our expert investigators
-              recover what&apos;s rightfully yours.
-            </p>
+                <button type="button" onClick={onNext} className={PRIMARY_BUTTON}>
+                  Catch My Cash Now
+                  <ArrowRight />
+                </button>
 
-            <button
-              type="button"
-              onClick={onNext}
-              className="inline-flex w-full sm:w-auto items-center justify-center gap-3 px-8 sm:px-12 py-5 bg-[#E1261C] text-white text-[17px] sm:text-[20px] font-semibold rounded-xl shadow-md transition-colors hover:bg-[#B11912] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#E1261C]"
-            >
-              Catch My Cash Now
-              <ArrowRight />
-            </button>
+                {/* 13px in the narrow two-column hero of a small laptop, so the
+                    three stay on one line. */}
+                <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-[13px] sm:text-[14px] lg:text-[13px] xl:text-[14px] text-[#4A4A4A] font-['JetBrains_Mono']">
+                  {['Free search', 'No upfront costs', `${FEE_PERCENT}% only if we recover`].map((item) => (
+                    <li key={item} className="flex items-center gap-2">
+                      <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[#E1261C]" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-            <ul className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-[13px] sm:text-[14px] text-[#4A4A4A] font-['JetBrains_Mono']">
-              {['Free search', 'No upfront costs', '10% only if we recover'].map((item) => (
-                <li key={item} className="flex items-center gap-2">
-                  <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-[#E1261C]" />
-                  {item}
-                </li>
-              ))}
-            </ul>
+              <div className="relative w-full max-w-xl lg:max-w-none">
+                {/* A soft ring behind the card's top corner, anchored to the
+                    card so it stays with it on any screen width. */}
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -right-40 -top-40 hidden h-[440px] w-[440px] rounded-full border-[56px] border-[#E1261C]/[0.07] lg:block"
+                />
+                <TrackClaimCard />
+              </div>
+            </div>
           </div>
         </div>
 
+        {/* Only where the hero is a single screen: on a phone or tablet the
+            card already runs past the fold. */}
         <a
-          href="#home-details"
-          className="relative mx-auto mb-6 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium text-[#888888] transition-colors hover:text-[#0A0A0A]"
+          href="#home-how"
+          className="relative mx-auto mb-5 hidden items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium text-[#888888] transition-colors hover:text-[#0A0A0A] lg:inline-flex"
         >
           See how it works
           <ChevronDown className="h-4 w-4" aria-hidden="true" />
         </a>
       </section>
 
-      <div
-        id="home-details"
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-16 sm:pb-20 space-y-10 sm:space-y-14 scroll-mt-24"
-      >
-        <div className={`${CARD} p-5 sm:p-6 max-w-3xl mx-auto`}>
-          <ClaimTracker />
-        </div>
-
-        {/* Stats: a row of three from tablet up; on a phone each is a short
-            line (icon beside the figure) so the three do not fill a screen. */}
-        <div className="grid md:grid-cols-3 grid-cols-1 gap-3 md:gap-6">
-          {[
-            { icon: TrendingUp, value: formatCurrency(stats.totalRecovered), label: 'Total Recovered' },
-            { icon: Users, value: stats.happyClients.toLocaleString('en-US'), label: 'Happy Clients' },
-            { icon: Award, value: `${stats.successRate}%`, label: 'Success Rate' },
-          ].map((item) => (
+      {/* Figures: a row of three from tablet up, a short list on a phone. */}
+      <section aria-label="CatchMyCash in numbers" className="border-y border-[#E8E6E3] bg-white">
+        <dl className={`${HOME_CONTAINER} grid divide-y divide-[#E8E6E3] md:grid-cols-3 md:divide-x md:divide-y-0`}>
+          {STATS.map((item) => (
             <div
               key={item.label}
-              className={`${CARD} flex items-center gap-4 px-5 py-4 md:flex-col md:gap-0 md:p-6 md:text-center`}
+              className="flex items-baseline justify-between gap-4 py-5 md:flex-col-reverse md:items-start md:justify-end md:gap-2 md:px-8 md:py-9 md:first:pl-0 lg:px-12"
             >
-              <div className="w-12 h-12 shrink-0 bg-[#FCE9E7] rounded-full flex items-center justify-center md:mb-3">
-                <item.icon className="h-6 w-6 text-[#E1261C]" aria-hidden="true" />
-              </div>
-              <div>
-                <div className="sm:text-[30px] text-[24px] leading-tight font-bold text-[#0A0A0A] md:mb-1 font-['Fraunces']">
-                  {item.value}
-                </div>
-                <p className="text-[#4A4A4A] text-sm font-['JetBrains_Mono']">{item.label}</p>
-              </div>
+              <dt className="font-['JetBrains_Mono'] text-[12px] sm:text-[13px] tracking-[0.14em] uppercase text-[#4A4A4A]">
+                {item.label}
+              </dt>
+              <dd className="font-['Fraunces'] text-[26px] md:text-[34px] lg:text-[40px] font-semibold leading-none tracking-[-0.01em] text-[#0A0A0A]">
+                {item.value}
+              </dd>
             </div>
           ))}
-        </div>
+        </dl>
+      </section>
 
-        {/* Why most people never get their money back */}
-        <section aria-labelledby="home-why-heading" className={`${CARD} p-6 sm:p-8`}>
-          <CardTopRule />
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 shrink-0 bg-[#FCE9E7] rounded-full flex items-center justify-center">
-              <AlertTriangle className="h-5 w-5 text-[#E1261C]" aria-hidden="true" />
-            </div>
-            <h2
-              id="home-why-heading"
-              className="sm:text-[26px] text-[22px] font-bold leading-tight text-[#0A0A0A] font-['Fraunces']"
-            >
-              Why Most People Never Get Their Money Back
-            </h2>
+      {/* Why most people never get their money back */}
+      <section aria-labelledby="home-why-heading" className={`bg-[#F7F5F2] ${SECTION_SPACE}`}>
+        <div className={`${HOME_CONTAINER} grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-20`}>
+          <SectionHeader
+            id="home-why-heading"
+            eyebrow="The problem"
+            title="Why most people never get their money back"
+            intro="We handle the process for you: we prepare the paperwork, file the claim and track it to payout."
+          />
+          <ul className="divide-y divide-[#E8E6E3] border-y border-[#E8E6E3]">
+            {REASONS.map((item) => (
+              <li key={item.title} className="flex gap-5 py-6 sm:py-7">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#E8E6E3] bg-white">
+                  <item.icon className="h-5 w-5 text-[#E1261C]" aria-hidden="true" />
+                </span>
+                <div>
+                  <h3 className="text-[17px] sm:text-[18px] font-semibold text-[#0A0A0A]">{item.title}</h3>
+                  <p className="mt-1 text-[15px] sm:text-[16px] leading-relaxed text-[#4A4A4A]">{item.desc}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section
+        id="home-how"
+        aria-labelledby="home-how-heading"
+        className={`scroll-mt-20 bg-white ${SECTION_SPACE}`}
+      >
+        <div className={HOME_CONTAINER}>
+          <div className="mb-10 flex flex-col gap-4 sm:mb-14 md:flex-row md:items-end md:justify-between">
+            <SectionHeader
+              id="home-how-heading"
+              eyebrow="How it works"
+              // No-break space before the dash, so a line never starts with it.
+              title={'We make it simple\u00A0– you get paid'}
+            />
+            <Link href="/how-it-works" className={`${TEXT_LINK} shrink-0 text-[15px]`}>
+              See the full process
+            </Link>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 md:gap-8 items-center">
-            <div className="hidden md:block w-full h-56 lg:h-60">
-              <ImageWithFallback
-                src="https://images.unsplash.com/photo-1590966550724-e041c146b85f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb25leSUyMGNhc2glMjBwcm9wZXJ0eSUyMGRvY3VtZW50cyUyMGxlZ2FsfGVufDF8fHx8MTc1NzA0MjE1Mnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-                alt="Complex legal documents"
-                loading="lazy"
-                className="w-full h-full object-cover rounded-lg shadow-sm"
-              />
-            </div>
+          <ol className="grid gap-10 md:grid-cols-3 md:gap-8 lg:gap-12">
+            {STEPS.map((step, index) => (
+              <li key={step.title} className="relative border-t border-[#E8E6E3] pt-6">
+                <span aria-hidden="true" className="absolute -top-px left-0 h-[3px] w-12 bg-[#E1261C]" />
+                <p aria-hidden="true" className="font-['JetBrains_Mono'] text-[13px] tracking-[0.14em] uppercase text-[#E1261C]">
+                  Step {String(index + 1).padStart(2, '0')}
+                </p>
+                <h3 className="mt-3 font-['Fraunces'] text-[22px] sm:text-[24px] font-semibold leading-snug tracking-[-0.01em] text-[#0A0A0A]">
+                  {step.title}
+                </h3>
+                <p className="mt-2 text-[15px] sm:text-[16px] leading-relaxed text-[#4A4A4A]">{step.desc}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
 
-            <ul className="divide-y divide-[#E8E6E3]">
-              {ResonsArray.map((item) => (
-                <li key={item.title} className="flex items-start gap-3 py-4 first:pt-0 last:pb-0">
-                  <item.icon className="h-6 w-6 shrink-0 text-[#E1261C] mt-0.5" aria-hidden="true" />
-                  <div>
-                    <div className="font-semibold font-['JetBrains_Mono'] text-[#0A0A0A]">
-                      {item.title}
-                    </div>
-                    <div className="text-[#4A4A4A] font-['Inter'] text-[15px] mt-1">
-                      {item.desc}
-                    </div>
-                  </div>
+      {/* Simple pricing */}
+      <section aria-labelledby="home-pricing-heading" className={`bg-[#F7F5F2] ${SECTION_SPACE}`}>
+        <div className={`${HOME_CONTAINER} grid items-center gap-10 lg:grid-cols-2 lg:gap-20`}>
+          <div>
+            <SectionHeader
+              id="home-pricing-heading"
+              eyebrow="Pricing"
+              title="Simple pricing"
+              intro="You only pay when we successfully recover your money."
+            />
+            <ul className="mt-8 space-y-3.5">
+              {PROMISES.map((item) => (
+                <li key={item} className="flex items-center gap-3 text-[16px] sm:text-[17px] font-medium text-[#0A0A0A]">
+                  <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#E1261C]">
+                    <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+                  </span>
+                  {item}
                 </li>
               ))}
             </ul>
           </div>
-        </section>
 
-        {/* We make it simple */}
-        <section aria-labelledby="home-simple-heading" className={`${CARD} p-6 sm:p-8`}>
-          <CardTopRule />
-          <h2
-            id="home-simple-heading"
-            className="sm:text-[26px] text-[22px] font-bold text-[#0A0A0A] mb-8 text-center font-['Fraunces']"
-          >
-            We Make It Simple – You Get Paid
-          </h2>
+          <div className="rounded-2xl border border-[#E8E6E3] bg-white p-6 shadow-sm sm:p-10">
+            <p className="font-['JetBrains_Mono'] text-[12px] tracking-[0.16em] uppercase text-[#4A4A4A]">Our fee</p>
+            <p className="mt-3 font-['Fraunces'] text-[64px] sm:text-[80px] font-bold leading-none tracking-[-0.03em] text-[#0A0A0A]">
+              {FEE_PERCENT}
+              <span className="text-[#E1261C]">%</span>
+            </p>
+            <p className="mt-4 text-[16px] leading-relaxed text-[#4A4A4A]">
+              of the money we recover, taken at payout. If we recover nothing, you owe nothing.
+            </p>
 
-          {/* Three columns from tablet up; on a phone each step is a row with
-              its number beside it. */}
-          <ol className="grid md:grid-cols-3 grid-cols-1 gap-3 md:gap-6">
-            {SolutionArray.map((item) => (
-              <li
-                key={item.num}
-                className="flex items-start gap-4 p-4 border border-[#E8E6E3] rounded-xl bg-white md:block md:p-6 md:text-center"
-              >
-                <div className="bg-[#FCE9E7] rounded-full w-12 h-12 md:w-16 md:h-16 shrink-0 flex items-center justify-center md:mx-auto md:mb-4">
-                  <span className="text-xl md:text-2xl font-bold text-[#E1261C] font-['Fraunces']">{item.num}</span>
+            <div className="mt-8 border-t border-[#E8E6E3] pt-6">
+              <p className="font-['JetBrains_Mono'] text-[11px] tracking-[0.16em] uppercase text-[#888888] mb-3">
+                For example
+              </p>
+              <dl className="space-y-2.5 text-[15px] sm:text-[16px] tabular-nums">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-[#4A4A4A]">We recover</dt>
+                  <dd className="font-medium text-[#0A0A0A]">{formatCurrency(EXAMPLE_RECOVERED)}</dd>
                 </div>
-                <div>
-                  <h3 className="text-base font-semibold font-['JetBrains_Mono'] mb-1 md:mb-2 text-[#0A0A0A]">{item.title}</h3>
-                  <p className="text-[#4A4A4A] text-sm">{item.desc}</p>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-[#4A4A4A]">Our fee ({FEE_PERCENT}%)</dt>
+                  <dd className="font-medium text-[#0A0A0A]">−{formatCurrency(EXAMPLE_FEE)}</dd>
                 </div>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        {/* Simple pricing */}
-        <section aria-labelledby="home-pricing-heading" className={`${CARD} text-center p-6 sm:p-8`}>
-          <CardTopRule />
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-10 h-10 bg-[#FCE9E7] rounded-full flex items-center justify-center">
-              <DollarSign className="h-5 w-5 text-[#E1261C]" aria-hidden="true" />
+                <div className="flex justify-between gap-4 border-t border-[#E8E6E3] pt-2.5">
+                  <dt className="font-semibold text-[#0A0A0A]">You receive</dt>
+                  <dd className="font-semibold text-[#0A0A0A]">{formatCurrency(EXAMPLE_RECOVERED - EXAMPLE_FEE)}</dd>
+                </div>
+              </dl>
             </div>
-            <h2
-              id="home-pricing-heading"
-              className="sm:text-[26px] text-[22px] font-bold text-[#0A0A0A] font-['Fraunces']"
-            >
-              Simple Pricing
-            </h2>
           </div>
-
-          <div className="text-5xl sm:text-6xl font-bold text-[#E1261C] mb-2 font-['Fraunces']">
-            <span className="text-black">10</span>%
-          </div>
-
-          <p className="text-[#4A4A4A] mb-6 sm:text-[18px] text-[16px]">
-            You only pay when we successfully recover your money
-          </p>
-          <ul className="flex flex-wrap justify-center items-center gap-x-5 gap-y-2 sm:text-[14px] text-[13px] text-[#888888] font-['JetBrains_Mono']">
-            {['No upfront costs', 'No hidden fees', 'No risk to you'].map((item) => (
-              <li key={item} className="flex items-center gap-2">
-                <span aria-hidden="true" className="w-2 h-2 bg-[#E1261C] rounded-full" />
-                {item}
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        {/* Optional sections: each is its own component, so removing one line
-            here removes that section and nothing else. */}
-        <HeirsCallout onSearch={onNext} />
-        <HomeFaq />
-        <HomeGuides guides={guides} />
-
-        {/* Closing call to action */}
-        <div className="text-center pt-2">
-          <button
-            type="button"
-            onClick={onNext}
-            className="inline-flex w-full sm:w-auto items-center justify-center gap-2 sm:gap-3 px-5 sm:px-14 py-5 bg-[#E1261C] text-white text-[16px] sm:text-[20px] font-semibold rounded-xl shadow-md transition-colors hover:bg-[#B11912] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#E1261C]"
-          >
-            Start Your Free Property Search
-            <ArrowRight />
-          </button>
-
-          <p className="text-[#888888] mt-5 sm:text-[18px] text-[16px]">
-            Join{' '}
-            <span className="text-[#E1261C] font-semibold">
-              {stats.happyClients.toLocaleString('en-US')}+
-            </span>{' '}
-            people who have recovered their money
-          </p>
         </div>
+      </section>
 
-        {/* Plain links into the guides, so they are reachable from the body of
-            the page and not only from the header and footer. */}
-        <nav aria-label="Guides" className="pt-8 border-t border-[#E8E6E3] text-center">
-          <p className="font-['JetBrains_Mono'] text-[12px] tracking-[0.15em] uppercase text-[#888888] mb-4">
-            Before you start
-          </p>
-          <ul className="flex flex-wrap justify-center gap-x-6 gap-y-3 text-[15px]">
-            {GUIDE_LINKS.map((link) => (
-              <li key={link.href}>
-                <Link
-                  href={link.href}
-                  className="text-[#0A0A0A] underline decoration-[#E1261C] decoration-2 underline-offset-4 hover:text-[#E1261C] transition-colors"
-                >
-                  {link.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </div>
+      {/* Optional sections: each is its own component, so removing one line
+          here removes that section and nothing else. */}
+      <HeirsCallout onSearch={onNext} />
+      <HomeFaq />
+      <HomeGuides guides={guides} />
+
+      {/* Closing call to action, with plain links into the guides so they are
+          reachable from the body of the page and not only from the header and
+          footer. */}
+      <section
+        aria-labelledby="home-cta-heading"
+        className="border-b border-white/10 bg-[#0A0A0A] text-white"
+      >
+        <div className={`${HOME_CONTAINER} py-16 sm:py-20`}>
+          <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
+            <div className="max-w-[40rem]">
+              <h2
+                id="home-cta-heading"
+                className="font-['Fraunces'] text-[30px] sm:text-[36px] lg:text-[40px] font-semibold leading-[1.1] tracking-[-0.015em] text-balance"
+              >
+                See what California is holding in your name.
+              </h2>
+              <p className="mt-4 text-[16px] sm:text-[18px] text-[#D4D4D4]">
+                Join{' '}
+                <span className="font-semibold text-white">{stats.happyClients.toLocaleString('en-US')}+</span>{' '}
+                people who have recovered their money.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onNext}
+              className={`${PRIMARY_BUTTON} shrink-0 shadow-none focus-visible:outline-white`}
+            >
+              Start Your Free Property Search
+              <ArrowRight />
+            </button>
+          </div>
+
+          <nav aria-label="Guides" className="mt-12 border-t border-white/15 pt-8">
+            <p className="font-['JetBrains_Mono'] text-[12px] tracking-[0.16em] uppercase text-[#888888] mb-4">
+              Before you start
+            </p>
+            <ul className="flex flex-wrap gap-x-6 gap-y-3 text-[15px]">
+              {GUIDE_LINKS.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="text-white underline decoration-[#E1261C] decoration-2 underline-offset-4 transition-colors hover:text-[#FCE9E7]"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+      </section>
     </div>
   );
 };

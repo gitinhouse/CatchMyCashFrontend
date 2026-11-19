@@ -233,9 +233,11 @@ export default function SiteHeader() {
                   </button>
                 </>
               ) : (
+                // Outlined, so Search Now stays the one filled button. An inset
+                // ring rather than a border keeps it the same height as Search Now.
                 <button
                   onClick={handleLogin}
-                  className="inline-flex items-center gap-1.5 px-2 py-1.5 lg:px-5 lg:py-3 bg-[#E1261C] text-white text-xs lg:text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md whitespace-nowrap"
+                  className="inline-flex items-center gap-1.5 px-2 py-1.5 lg:px-5 lg:py-3 bg-white ring-1 ring-inset ring-[#E1261C] text-[#E1261C] text-xs lg:text-sm font-semibold rounded-lg hover:bg-[#FCE9E7] transition-colors whitespace-nowrap"
                 >
                   Login
                 </button>
@@ -309,7 +311,7 @@ export default function SiteHeader() {
                     setMobileMenuOpen(false);
                     handleLogin();
                   }}
-                  className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#E1261C] text-white text-sm font-semibold rounded-lg hover:bg-[#B11912] transition-all w-full shadow-sm"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white ring-1 ring-inset ring-[#E1261C] text-[#E1261C] text-sm font-semibold rounded-lg hover:bg-[#FCE9E7] transition-colors w-full"
                 >
                   Login
                 </button>

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { RESOURCES_PATH, articlePath } from '../../lib/resources/constants';
 import { formatShortDate } from '../../lib/resources/format';
+import { EYEBROW, HOME_CONTAINER, SECTION_SPACE, TEXT_LINK } from './Section';
 
 // Written out in full so Tailwind's scanner sees each class. Below the large
 // breakpoint the guides stack in one column, so a third card never sits alone
@@ -19,7 +20,7 @@ const COLUMNS = {
 function HomeGuideCard({ post }) {
   const image = post.coverImage?.url;
   return (
-    <article className="group relative flex flex-col bg-white border border-[#E8E6E3] rounded-xl overflow-hidden shadow-md transition-colors hover:border-[#D4D4D4]">
+    <article className="group relative flex flex-col bg-white border border-[#E8E6E3] rounded-xl overflow-hidden shadow-sm transition-colors hover:border-[#D4D4D4] hover:shadow-md">
       {image ? (
         <div className="relative aspect-[16/9] overflow-hidden bg-[#F0EEEB]">
           {/* A plain img, as on the Resources cards: covers can come from any
@@ -73,26 +74,22 @@ export default function HomeGuides({ guides = [] }) {
   if (!guides.length) return null;
   const shown = guides.slice(0, 3);
   return (
-    <section aria-labelledby="home-guides-heading">
-      {/* The small label is the section's heading; the guide titles carry it. */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 mb-5">
-        <h2
-          id="home-guides-heading"
-          className="font-['JetBrains_Mono'] text-[12px] sm:text-[13px] font-normal tracking-[0.15em] uppercase text-[#E1261C]"
-        >
-          From Resources
-        </h2>
-        <Link
-          href={RESOURCES_PATH}
-          className="text-[15px] font-semibold text-[#E1261C] underline-offset-4 hover:underline"
-        >
-          All guides →
-        </Link>
-      </div>
-      <div className={`grid gap-4 sm:gap-6 ${COLUMNS[shown.length]}`}>
-        {shown.map((post) => (
-          <HomeGuideCard key={post.id} post={post} />
-        ))}
+    <section aria-labelledby="home-guides-heading" className={`bg-[#F7F5F2] ${SECTION_SPACE}`}>
+      <div className={HOME_CONTAINER}>
+        {/* The small label is the section's heading; the guide titles carry it. */}
+        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 mb-6">
+          <h2 id="home-guides-heading" className={`${EYEBROW} font-normal`}>
+            From Resources
+          </h2>
+          <Link href={RESOURCES_PATH} className={`${TEXT_LINK} text-[15px]`}>
+            All guides
+          </Link>
+        </div>
+        <div className={`grid gap-4 sm:gap-6 ${COLUMNS[shown.length]}`}>
+          {shown.map((post) => (
+            <HomeGuideCard key={post.id} post={post} />
+          ))}
+        </div>
       </div>
     </section>
   );
