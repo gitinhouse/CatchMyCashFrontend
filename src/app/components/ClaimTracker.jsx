@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
 import {
@@ -16,9 +16,21 @@ import {
 import { deriveSubmissionStep } from '../lib/claimLifecycle';
 import { claimIdSummary, propertyClaimId } from '../lib/claimIds';
 
+// The lookup button: red where looking up a claim is the page's main action,
+// ink where a red call to action already leads (the home page hero).
+const BUTTON_TONES = {
+  red: 'bg-[#E1261C] hover:bg-[#B11912] focus-visible:outline-[#E1261C]',
+  ink: 'bg-[#0A0A0A] hover:bg-[#333333] focus-visible:outline-[#0A0A0A]',
+};
+
 /**
- * Case ID lookup and the claim progress dialog it opens. Shared by the landing
- * page card and the Track Your Claim page.
+ * Case ID lookup and the claim progress dialog it opens. Shared by the home
+ * page hero and the Track Your Claim page.
+ *
+ * Pass title={null} and description={null} when the surrounding card supplies
+ * its own heading. The field and its button sit side by side only when the
+ * form itself is wide enough (a container query), so it fits a narrow card as
+ * well as a full-width page.
  */
 export default function ClaimTracker({
   headingLevel = 'h2',
@@ -28,8 +40,11 @@ export default function ClaimTracker({
   // Look up the Case ID in the page's ?case= parameter on arrival, so a link in
   // an email can open straight onto the claim.
   readCaseFromUrl = false,
+  buttonTone = 'red',
 }) {
   const Heading = headingLevel;
+  const inputRef = useRef(null);
+  const errorId = `${inputId}-error`;
   const [searchCaseId, setSearchCaseId] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResult, setSearchResult] = useState(null);
@@ -89,63 +104,93 @@ export default function ClaimTracker({
     setShowModal(false);
     setSearchResult(null);
     setSearchCaseId('');
+    // Back to the field the lookup started from.
+    inputRef.current?.focus();
   };
 
   return (
     <>
-      <div className="flex items-center gap-2 mb-3">
-        <Search className="h-5 w-5 text-[#E1261C]" />
-        <Heading className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
-          {title}
-        </Heading>
-      </div>
-      <p className="text-sm text-[#4A4A4A] mb-4">
-        {description}
-      </p>
-      <div className="flex flex-col sm:flex-row gap-3">
-        <input
-          id={inputId}
-          type="text"
-          aria-label="Case ID"
-          autoComplete="off"
-          value={searchCaseId}
-          onChange={(e) => {
-            setSearchCaseId(e.target.value);
-            setSearchError('');
-          }}
-          placeholder="Enter Case ID (e.g. CM-2026-123456)"
-          className="flex-1 px-4 py-3 border border-[#E8E6E3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E1261C] focus:border-transparent transition-all text-[#0A0A0A]"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSearchClaim();
-          }}
-        />
-        <button
-          onClick={handleSearchClaim}
-          disabled={isSearching}
-          className="px-6 py-3 bg-[#E1261C] text-white font-semibold rounded-lg hover:bg-[#B11912] transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-w-[140px]"
-        >
-          {isSearching ? (
-            <>
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Searching...
-            </>
-          ) : (
-            <>
-              <Search className="h-4 w-4" />
-              Track Claim
-            </>
-          )}
-        </button>
-      </div>
-      {searchError && (
-        <p
-          role="alert"
-          className="text-[#E1261C] text-sm mt-2 flex items-center gap-1"
-        >
-          <AlertTriangle className="h-4 w-4" />
-          {searchError}
+      {title && (
+        <div className="flex items-center gap-2 mb-3">
+          <Search className="h-5 w-5 text-[#E1261C]" aria-hidden="true" />
+          <Heading className="text-lg font-bold text-[#0A0A0A] font-['Fraunces']">
+            {title}
+          </Heading>
+        </div>
+      )}
+      {description && (
+        <p className="text-sm text-[#4A4A4A] mb-4">
+          {description}
         </p>
       )}
+      {/* A real form, so Enter and a phone keyboard's Go key submit it.
+          cmc-form keeps the field still when focused (see globals.css). */}
+      <form
+        noValidate
+        className="cmc-form @container"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSearchClaim();
+        }}
+      >
+        <label
+          htmlFor={inputId}
+          className="block mb-1.5 text-sm font-medium text-[#0A0A0A]"
+        >
+          Case ID
+        </label>
+        <div className="flex flex-col gap-3 @md:flex-row">
+          <input
+            ref={inputRef}
+            id={inputId}
+            type="text"
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            value={searchCaseId}
+            aria-invalid={searchError ? true : undefined}
+            aria-describedby={searchError ? errorId : undefined}
+            onChange={(e) => {
+              setSearchCaseId(e.target.value);
+              setSearchError('');
+            }}
+            placeholder="e.g. CM-2026-123456"
+            // flex-1 only beside the button: in the stacked layout it would set
+            // the field's height to zero (flex-basis runs along the column).
+            className="w-full min-w-0 h-12 px-4 bg-white border border-[#D4D4D4] rounded-lg text-[16px] text-[#0A0A0A] placeholder:text-[#888888] transition-colors focus:outline-none focus:border-[#E1261C] @md:flex-1"
+          />
+          <button
+            type="submit"
+            disabled={isSearching}
+            className={`inline-flex h-12 shrink-0 items-center justify-center gap-2 px-6 rounded-lg text-[15px] font-semibold text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60 disabled:cursor-wait @md:min-w-[150px] ${BUTTON_TONES[buttonTone] || BUTTON_TONES.red}`}
+          >
+            {isSearching ? (
+              <>
+                <span
+                  aria-hidden="true"
+                  className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
+                />
+                Searching...
+              </>
+            ) : (
+              <>
+                <Search className="h-4 w-4" aria-hidden="true" />
+                Track Claim
+              </>
+            )}
+          </button>
+        </div>
+        {searchError && (
+          <p
+            id={errorId}
+            role="alert"
+            className="text-[#E1261C] text-sm mt-2 flex items-center gap-1.5"
+          >
+            <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {searchError}
+          </p>
+        )}
+      </form>
       {/* Portalled, so no transformed ancestor can become the containing
           block of the fixed dialog. */}
       {showModal &&
@@ -160,6 +205,22 @@ export default function ClaimTracker({
 
 const ClaimProgressModal = ({ claim, onClose }) => {
   const [activeTab, setActiveTab] = useState('progress');
+  const closeButtonRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
+  // Opens with focus on its close button, and Escape closes it.
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') onCloseRef.current();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   const properties = claim?.user_properties || [];
   const details = claim?.user_details?.[0] || {};
 
@@ -269,6 +330,9 @@ const ClaimProgressModal = ({ claim, onClose }) => {
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="claim-progress-title"
         className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-[#E8E6E3]"
         onClick={(e) => e.stopPropagation()}
       >
@@ -277,7 +341,7 @@ const ClaimProgressModal = ({ claim, onClose }) => {
           <div className="flex items-start justify-between">
             <div>
               <div className="flex items-center gap-3 mb-1">
-                <h2 className="text-2xl font-bold text-[#0A0A0A] font-['Fraunces']">
+                <h2 id="claim-progress-title" className="text-2xl font-bold text-[#0A0A0A] font-['Fraunces']">
                   Claim Progress
                 </h2>
                 {claimIdSummary(claim) && (
@@ -291,10 +355,13 @@ const ClaimProgressModal = ({ claim, onClose }) => {
               </p>
             </div>
             <button
+              ref={closeButtonRef}
+              type="button"
               onClick={onClose}
-              className="p-2 hover:bg-[#FCE9E7] rounded-lg transition-all"
+              aria-label="Close"
+              className="p-2 hover:bg-[#FCE9E7] rounded-lg transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#E1261C]"
             >
-              <X className="h-6 w-6 text-[#4A4A4A]" />
+              <X className="h-6 w-6 text-[#4A4A4A]" aria-hidden="true" />
             </button>
           </div>
 
