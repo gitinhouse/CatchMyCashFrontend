@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import {
@@ -16,13 +16,11 @@ import { Card } from './uicomponents/Card';
 import { Button } from './uicomponents/Button';
 import { Badge } from './uicomponents/Badge';
 import { useSearchStore } from '../store/searchStore';
-import { NOTARY_CLAIM_THRESHOLD, requiresNotary } from '../lib/notary';
+import { NOTARY_THRESHOLD_LABEL, requiresNotary } from '../lib/notary';
 
-// Selecting more than this many properties in one submission sends the
+// A selection worth NOTARY_THRESHOLD_LABEL or more in one submission sends the
 // agreement through the remote online notary (RON) flow instead of a plain
-// e-signature. Change it in ../lib/notary so the server agrees; it is low
-// while the notary path is being tested and goes up in production.
-const NOTARY_THRESHOLD = NOTARY_CLAIM_THRESHOLD;
+// e-signature. The threshold lives in ../lib/notary so the server agrees.
 
 const infoArray = [
   'Provide your information for our investigator agreement',
@@ -195,13 +193,7 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
         return prev.filter((id) => id !== propertyId);
       }
 
-      const next = [...prev, propertyId];
-      // Crossing the threshold is allowed; it changes how the agreement is
-      // signed, so say so once rather than blocking the selection.
-      if (requiresNotary(next.length) && !requiresNotary(prev.length)) {
-        setShowSelectionLimitPopup(true);
-      }
-      return next;
+      return [...prev, propertyId];
     });
   };
 
@@ -211,6 +203,18 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
       .reduce((sum, p) => sum + parsePropertyAmount(p.amount), 0);
     setSelectedTotalAmount(newTotal);
   }, [selectedProperties, uniqueProperties]);
+
+  // Crossing the notary threshold is allowed; it changes how the agreement is
+  // signed, so say so once each time the total climbs over it rather than
+  // blocking the selection.
+  const wasNotaryRequired = useRef(false);
+  useEffect(() => {
+    const nowRequired = requiresNotary(selectedTotalAmount);
+    if (nowRequired && !wasNotaryRequired.current) {
+      setShowSelectionLimitPopup(true);
+    }
+    wasNotaryRequired.current = nowRequired;
+  }, [selectedTotalAmount]);
 
   useEffect(() => {
     console.log('---user data--', userData);
@@ -308,7 +312,7 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
 
 
   const isButtonDisabled = selectedTotalAmount <= 0 || isClaiming;
-  const notaryRequired = requiresNotary(selectedProperties.length);
+  const notaryRequired = requiresNotary(selectedTotalAmount);
 
   const propertyCount = uniqueProperties?.length || 0;
   const isJackpot = propertyCount > 0;
@@ -667,8 +671,8 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
                 <span className="font-semibold text-[#B11912]">
                   Notarised signing required.
                 </span>{' '}
-                You have selected {selectedProperties.length} properties, which
-                is more than {NOTARY_THRESHOLD}. Your agreement will be signed
+                Your claim totals ${formatMoney(selectedTotalAmount)}, which is{' '}
+                {NOTARY_THRESHOLD_LABEL} or more. Your agreement will be signed
                 with a notary online instead of a plain electronic signature.
               </p>
             </div>
@@ -749,9 +753,8 @@ const PropertyResults = ({ propertyData, onNext, onBack }) => {
                 This Claim Needs a Notary
               </h2>
               <p className="text-[#4A4A4A] mb-6">
-                Claiming more than {NOTARY_THRESHOLD} propert
-                {NOTARY_THRESHOLD === 1 ? 'y' : 'ies'} at once means your
-                agreement is signed with a notary online, rather than with a
+                Claims of {NOTARY_THRESHOLD_LABEL} or more need your
+                agreement signed with a notary online, rather than with a
                 plain electronic signature. You can carry on — we will set up
                 the notary session when you sign.
               </p>

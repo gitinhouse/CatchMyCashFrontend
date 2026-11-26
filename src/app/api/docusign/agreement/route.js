@@ -20,7 +20,12 @@ import connectToDatabase from '../../../lib/mongodb';
 import UserDocs from '../../../models/userDocs';
 import UserDetails from '../../../models/userDetails';
 import UserCases from '../../../models/userCases';
-import { NOTARY_CLAIM_THRESHOLD, requiresNotary } from '../../../lib/notary';
+import UserProperty from '../../../models/userProperty';
+import {
+  NOTARY_AMOUNT_THRESHOLD,
+  requiresNotary,
+  totalClaimAmount,
+} from '../../../lib/notary';
 import { resolveAccountUserIds, userIdFilter } from '../../../lib/accountIdentity';
 import { notifyAgreementReadyOnce } from '../../../lib/agreementReady';
 import {
@@ -447,19 +452,45 @@ function buildNotaryRecipient(config, signerRecipientId) {
 }
 
 /**
- * How many properties this claim covers, which is what decides notarisation.
+ * The dollar total of this claim, which is what decides notarisation.
  *
- * Counted from the case rather than trusted from the browser: the envelope is
- * a legal document and the number of properties on it is the server's fact.
+ * Summed from the stored property rows rather than trusted from the browser:
+ * the envelope is a legal document and the claim's value is the server's fact.
+ * Rows are matched the way the case page matches them — by case_id, or for
+ * legacy rows without one, by owner and the property ids the case submitted.
  */
-async function countCaseProperties(caseObjectId) {
-  if (!caseObjectId) return 0;
+async function getCaseClaimAmount(caseObjectId) {
+  if (!caseObjectId) return { amount: 0, propertyCount: 0, rowCount: 0 };
 
   const kase = await UserCases.findById(caseObjectId)
-    .select('property_ids')
+    .select('user_id property_ids')
+    .lean();
+  if (!kase) return { amount: 0, propertyCount: 0, rowCount: 0 };
+
+  const propertyIds = Array.isArray(kase.property_ids) ? kase.property_ids : [];
+
+  const rows = await UserProperty.find({
+    $or: [
+      { case_id: kase._id },
+      ...(propertyIds.length
+        ? [
+            {
+              case_id: null,
+              user_id: kase.user_id,
+              property_id: { $in: propertyIds },
+            },
+          ]
+        : []),
+    ],
+  })
+    .select('amount')
     .lean();
 
-  return Array.isArray(kase?.property_ids) ? kase.property_ids.length : 0;
+  return {
+    amount: totalClaimAmount(rows),
+    propertyCount: propertyIds.length,
+    rowCount: rows.length,
+  };
 }
 
 function splitLegalName(legalName) {
@@ -779,16 +810,30 @@ export async function POST(req) {
       has_signed_url: !!signedUrl,
     });
 
-    // Notarisation is decided from the case, and the page count is read from
-    // the document that actually arrived. They are separate on purpose: the
-    // agreement carries an extra page when it has a notarial certificate, so
-    // the field positions follow the real page count rather than the flag.
-    const propertyCount = await countCaseProperties(userDocs.case_id);
-    const notaryRequired = requiresNotary(propertyCount);
+    // Notarisation is decided from the case's dollar total, and the page count
+    // is read from the document that actually arrived. They are separate on
+    // purpose: the agreement carries an extra page when it has a notarial
+    // certificate, so field positions follow the real page count, not the flag.
+    const {
+      amount: claimAmount,
+      propertyCount,
+      rowCount,
+    } = await getCaseClaimAmount(userDocs.case_id);
+    const notaryRequired = requiresNotary(claimAmount);
+
+    if (propertyCount > 0 && rowCount === 0) {
+      // No amounts to sum means the notary decision is made on $0. Loud in the
+      // logs so a mis-linked case is noticed rather than silently un-notarised.
+      trace.fail('claim_amount_unavailable', {
+        case_id: String(userDocs.case_id),
+        property_count: propertyCount,
+      });
+    }
 
     trace.step('notary_decision', {
+      claim_amount: claimAmount,
       property_count: propertyCount,
-      threshold: NOTARY_CLAIM_THRESHOLD,
+      threshold: NOTARY_AMOUNT_THRESHOLD,
       notary_required: notaryRequired,
     });
 
@@ -803,17 +848,17 @@ export async function POST(req) {
       const missing = missingNotarySettings(notaryConfig);
       if (missing.length > 0) {
         trace.fail('notary_not_configured', {
-          property_count: propertyCount,
-          threshold: NOTARY_CLAIM_THRESHOLD,
+          claim_amount: claimAmount,
+          threshold: NOTARY_AMOUNT_THRESHOLD,
           missing,
         });
         return NextResponse.json(
           {
             error:
-              'This claim covers enough properties to need a notarised signature, but remote notarisation is not configured.',
+              'This claim is large enough to need a notarised signature, but remote notarisation is not configured.',
             notary_required: true,
-            property_count: propertyCount,
-            threshold: NOTARY_CLAIM_THRESHOLD,
+            claim_amount: claimAmount,
+            threshold: NOTARY_AMOUNT_THRESHOLD,
             missing_configuration: missing,
           },
           { status: 503 },
@@ -825,7 +870,7 @@ export async function POST(req) {
       numberOfPages,
       lastPage,
       notary_required: notaryRequired,
-      property_count: propertyCount,
+      claim_amount: claimAmount,
       profile: layout.profile,
       rows: {
         nameRow: layout.nameRow,
