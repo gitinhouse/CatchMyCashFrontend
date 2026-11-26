@@ -388,7 +388,17 @@ function getNotaryConfig() {
     notaryType: process.env.DOCUSIGN_NOTARY_TYPE || 'remote',
     sourceType: process.env.DOCUSIGN_NOTARY_SOURCE_TYPE || 'thirdparty',
     thirdPartyPartner: process.env.DOCUSIGN_NOTARY_THIRD_PARTY_PARTNER || '',
-    signatureProvider: process.env.DOCUSIGN_NOTARY_SIGNATURE_PROVIDER || '',
+    // DocuSign rejects a third-party notary without this provider
+    // (INVALID_SIGNATURE_PROVIDER_FOR_THIRD_PARTY_NOTARY_RECIPIENT).
+    signatureProvider:
+      process.env.DOCUSIGN_NOTARY_SIGNATURE_PROVIDER || 'ds_authority_idv',
+    // Where the notary's seal and signature go on the agreement's last page,
+    // in DocuSign points from the top-left. Below the claimant's signature row
+    // in both layouts; override once the notarial certificate page is final.
+    sealX: process.env.DOCUSIGN_NOTARY_SEAL_X || '360',
+    sealY: process.env.DOCUSIGN_NOTARY_SEAL_Y || '600',
+    signX: process.env.DOCUSIGN_NOTARY_SIGN_X || '72',
+    signY: process.env.DOCUSIGN_NOTARY_SIGN_Y || '640',
     name: process.env.DOCUSIGN_NOTARY_NAME || '',
     email: process.env.DOCUSIGN_NOTARY_EMAIL || '',
   };
@@ -426,11 +436,13 @@ function missingNotarySettings(config) {
  * the signer points at the notary through `notaryId`, and the notary lists the
  * recipient ids it witnesses in `notarySigners`.
  */
-function buildNotaryRecipient(config, signerRecipientId) {
+function buildNotaryRecipient(config, signerRecipientId, pageNumber) {
   const notary = new docusign.NotaryRecipient();
 
   notary.recipientId = '2';
   notary.routingOrder = '1';
+  // A placeholder: the on-demand provider replaces it with the assigned notary.
+  notary.name = 'Notary';
   notary.notaryType = config.notaryType;
   notary.notarySourceType = config.sourceType;
   notary.notarySigners = [String(signerRecipientId)];
@@ -444,9 +456,33 @@ function buildNotaryRecipient(config, signerRecipientId) {
 
   if (config.signatureProvider) {
     notary.recipientSignatureProviders = [
-      { signatureProviderName: config.signatureProvider },
+      {
+        signatureProviderName: config.signatureProvider,
+        sealDocumentsWithTabsOnly: 'false',
+      },
     ];
   }
+
+  // DocuSign requires a notary to have at least a seal and a signature tab.
+  const page = String(pageNumber);
+  notary.tabs = {
+    notarySealTabs: [
+      {
+        documentId: '1',
+        pageNumber: page,
+        xPosition: config.sealX,
+        yPosition: config.sealY,
+      },
+    ],
+    signHereTabs: [
+      {
+        documentId: '1',
+        pageNumber: page,
+        xPosition: config.signX,
+        yPosition: config.signY,
+      },
+    ],
+  };
 
   return notary;
 }
@@ -928,7 +964,11 @@ export async function POST(req) {
     if (notaryRequired) {
       // The two recipients reference each other by id: the signer names the
       // notary witnessing it, and the notary lists the signers it witnesses.
-      const notary = buildNotaryRecipient(notaryConfig, signer.recipientId);
+      const notary = buildNotaryRecipient(
+        notaryConfig,
+        signer.recipientId,
+        lastPage,
+      );
       signer.notaryId = notary.recipientId;
       envelopeDefinition.recipients = {
         signers: [signer],
@@ -954,6 +994,21 @@ export async function POST(req) {
 
     const envelopeId = envelopeResponse.envelopeId;
     trace.step('envelope_created', { envelope_id: envelopeId });
+
+    // Notary On-Demand does not support embedded signing: the notary partner
+    // emails the claimant a link to the live session instead. So there is no
+    // signing URL to hand back — the page tells the claimant to check email.
+    if (notaryRequired) {
+      trace.step('notary_invitation_pending', { envelope_id: envelopeId });
+      return NextResponse.json({
+        success: true,
+        notary_required: true,
+        envelopeId,
+        claim_amount: claimAmount,
+        message:
+          'Your claim needs a notarised signature. Our online notary partner will email you a link to join a short video session where you sign in front of a notary.',
+      });
+    }
 
     const viewRequest = new docusign.RecipientViewRequest();
     viewRequest.returnUrl = `${getAppBaseUrl()}/signed?envelopeId=${envelopeId}&type=agreement&user_id=${user_id}&case_id=${userDocs.case_id}`;

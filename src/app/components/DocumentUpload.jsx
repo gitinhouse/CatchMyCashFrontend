@@ -2883,6 +2883,19 @@ const DocumentUpload = ({ onNext, onFieldFilled }) => {
         throw new Error(data.error || "Failed to open DocuSign for agreement");
       }
 
+      // Large claims are signed in a live session with an online notary,
+      // reached from an emailed link rather than an embedded signing page.
+      if (data.notary_required) {
+        setErrorModal({
+          show: true,
+          title: "Check Your Email for the Notary Session",
+          message:
+            data.message ||
+            "Your claim needs a notarised signature. Our online notary partner will email you a link to the session.",
+        });
+        return;
+      }
+
       if (data.signingUrl) {
         window.location.href = data.signingUrl;
         return;
